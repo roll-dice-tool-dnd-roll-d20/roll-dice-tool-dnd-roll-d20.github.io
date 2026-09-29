@@ -191,6 +191,10 @@
   }
   .roll-btn:hover{background:var(--moss);color:#fff;}
   .roll-btn.save{border-color:var(--ochre);color:var(--ochre);}
+  .roll-btn.crit-armed{
+    background:var(--berry);border-color:var(--berry);color:#fff;font-weight:700;
+  }
+  .roll-btn.crit-armed:hover{background:var(--berry);color:#fff;opacity:0.88;}
   .roll-btn.save:hover{background:var(--ochre);color:#fff;}
   .attack{
     border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;margin-bottom:10px;
@@ -212,6 +216,31 @@
   .attack-note{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.75rem;font-style:italic;color:var(--ink-soft);margin:-4px 0 8px;
+  }
+  .attack-note-details{
+    margin:-4px 0 8px;
+  }
+  .attack-note-details summary{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.75rem;color:var(--moss-dark);cursor:pointer;
+    list-style:none;display:inline-flex;align-items:center;gap:4px;
+  }
+  .attack-note-details summary::-webkit-details-marker{display:none;}
+  .attack-note-details summary::before{
+    content:"▸";font-size:0.65rem;transition:transform .12s ease;
+  }
+  .attack-note-details[open] summary::before{transform:rotate(90deg);}
+  .attack-note-details summary:hover{color:var(--moss);}
+  .weapon-category-tag{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.62rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+    color:var(--ink-soft);background:var(--bg);border:1px solid var(--border-soft);
+    border-radius:4px;padding:2px 6px;margin-left:6px;
+  }
+  .attack-note-details .attack-note-body{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.75rem;font-style:italic;color:var(--ink-soft);
+    margin:4px 0 0 14px;
   }
   .roll-btn[disabled]{
     opacity:0.45;cursor:not-allowed;
@@ -299,10 +328,9 @@
   <header>
     <div>
       <h1>Roll Tracker</h1>
-      <p>Ability checks, saving throws, and attacks — works fully offline.</p>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.22.0</div>
+      <div class="version-tag">Version 1.27.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -361,58 +389,58 @@
     custom: {label:"Custom", name:"New Attack", dice:"1d6", note:"", noAttackRoll:false, ability:null},
 
     // Special / Unarmed
-    unarmedstrike: {label:"Unarmed Strike", name:"Unarmed Strike", dice:"1d1", note:"Melee Weapon Attack — bludgeoning, deals a flat 1 (add your STR mod in the + field). Monks may use DEX and a larger die.", noAttackRoll:false, ability:"STR"},
-    grapple: {label:"Grapple", name:"Grapple", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target becomes grappled.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Grapple Check", athleticsLinked:true},
-    shove: {label:"Shove", name:"Shove", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target is knocked prone or pushed 5 ft.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Shove Check", athleticsLinked:true},
+    unarmedstrike: {label:"Unarmed Strike", name:"Unarmed Strike", dice:"1d1", note:"Melee Weapon Attack — bludgeoning, deals a flat 1 (add your STR mod in the + field). Monks may use DEX and a larger die.", noAttackRoll:false, ability:"STR", category:"Special"},
+    grapple: {label:"Grapple", name:"Grapple", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target becomes grappled.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Grapple Check", athleticsLinked:true, category:"Special"},
+    shove: {label:"Shove", name:"Shove", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target is knocked prone or pushed 5 ft.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Shove Check", athleticsLinked:true, category:"Special"},
 
     // Simple Melee
-    club: {label:"Club", name:"Club", dice:"1d4", note:"Melee Weapon Attack — bludgeoning (Light)", noAttackRoll:false, ability:"STR"},
-    dagger: {label:"Dagger", name:"Dagger", dice:"1d4", note:"Melee/Thrown Weapon Attack (Finesse) — piercing", noAttackRoll:false, ability:"finesse"},
-    greatclub: {label:"Greatclub", name:"Greatclub", dice:"1d8", note:"Melee Weapon Attack (Two-Handed) — bludgeoning", noAttackRoll:false, ability:"STR"},
-    handaxe: {label:"Handaxe", name:"Handaxe", dice:"1d6", note:"Melee/Thrown Weapon Attack — slashing (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR"},
-    javelin: {label:"Javelin", name:"Javelin", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 30/120)", noAttackRoll:false, ability:"STR"},
-    lighthammer: {label:"Light Hammer", name:"Light Hammer", dice:"1d4", note:"Melee/Thrown Weapon Attack — bludgeoning (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR"},
-    mace: {label:"Mace", name:"Mace", dice:"1d6", note:"Melee Weapon Attack — bludgeoning", noAttackRoll:false, ability:"STR"},
-    quarterstaff: {label:"Quarterstaff", name:"Quarterstaff", dice:"1d6", note:"Melee Weapon Attack — bludgeoning (Versatile 1d8 two-handed)", noAttackRoll:false, ability:"STR"},
-    sickle: {label:"Sickle", name:"Sickle", dice:"1d4", note:"Melee Weapon Attack — slashing (Light)", noAttackRoll:false, ability:"STR"},
-    spear: {label:"Spear", name:"Spear", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR"},
+    club: {label:"Club", name:"Club", dice:"1d4", note:"Melee Weapon Attack — bludgeoning (Light)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    dagger: {label:"Dagger", name:"Dagger", dice:"1d4", note:"Melee/Thrown Weapon Attack (Finesse, Light) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Melee"},
+    greatclub: {label:"Greatclub", name:"Greatclub", dice:"1d8", note:"Melee Weapon Attack (Two-Handed) — bludgeoning", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    handaxe: {label:"Handaxe", name:"Handaxe", dice:"1d6", note:"Melee/Thrown Weapon Attack — slashing (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    javelin: {label:"Javelin", name:"Javelin", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 30/120)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    lighthammer: {label:"Light Hammer", name:"Light Hammer", dice:"1d4", note:"Melee/Thrown Weapon Attack — bludgeoning (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    mace: {label:"Mace", name:"Mace", dice:"1d6", note:"Melee Weapon Attack — bludgeoning", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    quarterstaff: {label:"Quarterstaff", name:"Quarterstaff", dice:"1d6", versatileDice:"1d8", note:"Melee Weapon Attack — bludgeoning (Versatile 1d8 two-handed)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    sickle: {label:"Sickle", name:"Sickle", dice:"1d4", note:"Melee Weapon Attack — slashing (Light)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    spear: {label:"Spear", name:"Spear", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
 
     // Simple Ranged
-    dart: {label:"Dart", name:"Dart", dice:"1d4", note:"Thrown Weapon Attack (Finesse) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse"},
-    crossbow: {label:"Light Crossbow", name:"Light Crossbow", dice:"1d8", note:"Ranged Weapon Attack — piercing", noAttackRoll:false, ability:"DEX"},
-    shortbow: {label:"Shortbow", name:"Shortbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Two-Handed)", noAttackRoll:false, ability:"DEX"},
-    sling: {label:"Sling", name:"Sling", dice:"1d4", note:"Ranged Weapon Attack — bludgeoning (Ammunition 30/120)", noAttackRoll:false, ability:"DEX"},
+    dart: {label:"Dart", name:"Dart", dice:"1d4", note:"Thrown Weapon Attack (Finesse) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Ranged"},
+    crossbow: {label:"Light Crossbow", name:"Light Crossbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
+    shortbow: {label:"Shortbow", name:"Shortbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
+    sling: {label:"Sling", name:"Sling", dice:"1d4", note:"Ranged Weapon Attack — bludgeoning (Ammunition 30/120)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
 
     // Martial Melee
-    battleaxe: {label:"Battleaxe", name:"Battleaxe", dice:"1d8", note:"Melee Weapon Attack — slashing (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR"},
-    flail: {label:"Flail", name:"Flail", dice:"1d8", note:"Melee Weapon Attack — bludgeoning", noAttackRoll:false, ability:"STR"},
-    glaive: {label:"Glaive", name:"Glaive", dice:"1d10", note:"Melee Weapon Attack — slashing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    greataxe: {label:"Greataxe", name:"Greataxe", dice:"1d12", note:"Melee Weapon Attack — slashing (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    greatsword: {label:"Greatsword", name:"Greatsword", dice:"2d6", note:"Melee Weapon Attack — slashing (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    halberd: {label:"Halberd", name:"Halberd", dice:"1d10", note:"Melee Weapon Attack — slashing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    lance: {label:"Lance", name:"Lance", dice:"1d12", note:"Melee Weapon Attack — piercing (Reach; disadvantage within 5 ft unless mounted)", noAttackRoll:false, ability:"STR"},
-    longsword: {label:"Longsword", name:"Longsword", dice:"1d8", note:"Melee Weapon Attack — slashing (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR"},
-    maul: {label:"Maul", name:"Maul", dice:"2d6", note:"Melee Weapon Attack — bludgeoning (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    morningstar: {label:"Morningstar", name:"Morningstar", dice:"1d8", note:"Melee Weapon Attack — piercing", noAttackRoll:false, ability:"STR"},
-    pike: {label:"Pike", name:"Pike", dice:"1d10", note:"Melee Weapon Attack — piercing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR"},
-    rapier: {label:"Rapier", name:"Rapier", dice:"1d8", note:"Melee Weapon Attack (Finesse) — piercing", noAttackRoll:false, ability:"finesse"},
-    scimitar: {label:"Scimitar", name:"Scimitar", dice:"1d6", note:"Melee Weapon Attack (Finesse) — slashing", noAttackRoll:false, ability:"finesse"},
-    shortsword: {label:"Shortsword", name:"Shortsword", dice:"1d6", note:"Melee Weapon Attack (Finesse) — piercing (Light)", noAttackRoll:false, ability:"finesse"},
-    trident: {label:"Trident", name:"Trident", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR"},
-    warpick: {label:"War Pick", name:"War Pick", dice:"1d8", note:"Melee Weapon Attack — piercing", noAttackRoll:false, ability:"STR"},
-    warhammer: {label:"Warhammer", name:"Warhammer", dice:"1d8", note:"Melee Weapon Attack — bludgeoning (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR"},
-    whip: {label:"Whip", name:"Whip", dice:"1d4", note:"Melee Weapon Attack (Finesse, Reach) — slashing", noAttackRoll:false, ability:"finesse"},
+    battleaxe: {label:"Battleaxe", name:"Battleaxe", dice:"1d8", versatileDice:"1d10", note:"Melee Weapon Attack — slashing (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    flail: {label:"Flail", name:"Flail", dice:"1d8", note:"Melee Weapon Attack — bludgeoning", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    glaive: {label:"Glaive", name:"Glaive", dice:"1d10", note:"Melee Weapon Attack — slashing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    greataxe: {label:"Greataxe", name:"Greataxe", dice:"1d12", note:"Melee Weapon Attack — slashing (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    greatsword: {label:"Greatsword", name:"Greatsword", dice:"2d6", note:"Melee Weapon Attack — slashing (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    halberd: {label:"Halberd", name:"Halberd", dice:"1d10", note:"Melee Weapon Attack — slashing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    lance: {label:"Lance", name:"Lance", dice:"1d12", note:"Melee Weapon Attack — piercing (Reach; disadvantage within 5 ft; Two-Handed unless mounted)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    longsword: {label:"Longsword", name:"Longsword", dice:"1d8", versatileDice:"1d10", note:"Melee Weapon Attack — slashing (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    maul: {label:"Maul", name:"Maul", dice:"2d6", note:"Melee Weapon Attack — bludgeoning (Heavy, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    morningstar: {label:"Morningstar", name:"Morningstar", dice:"1d8", note:"Melee Weapon Attack — piercing", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    pike: {label:"Pike", name:"Pike", dice:"1d10", note:"Melee Weapon Attack — piercing (Heavy, Reach, Two-Handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    rapier: {label:"Rapier", name:"Rapier", dice:"1d8", note:"Melee Weapon Attack (Finesse) — piercing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
+    scimitar: {label:"Scimitar", name:"Scimitar", dice:"1d6", note:"Melee Weapon Attack (Finesse, Light) — slashing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
+    shortsword: {label:"Shortsword", name:"Shortsword", dice:"1d6", note:"Melee Weapon Attack (Finesse) — piercing (Light)", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
+    trident: {label:"Trident", name:"Trident", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    warpick: {label:"War Pick", name:"War Pick", dice:"1d8", note:"Melee Weapon Attack — piercing", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    warhammer: {label:"Warhammer", name:"Warhammer", dice:"1d8", versatileDice:"1d10", note:"Melee Weapon Attack — bludgeoning (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    whip: {label:"Whip", name:"Whip", dice:"1d4", note:"Melee Weapon Attack (Finesse, Reach) — slashing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
 
     // Martial Ranged
-    blowgun: {label:"Blowgun", name:"Blowgun", dice:"1d1", note:"Ranged Weapon Attack — piercing (Ammunition 25/100, Loading)", noAttackRoll:false, ability:"DEX"},
-    handcrossbow: {label:"Hand Crossbow", name:"Hand Crossbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 30/120, Light, Loading)", noAttackRoll:false, ability:"DEX"},
-    heavycrossbow: {label:"Heavy Crossbow", name:"Heavy Crossbow", dice:"1d10", note:"Ranged Weapon Attack — piercing (Ammunition 100/400, Heavy, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX"},
-    longbow: {label:"Longbow", name:"Longbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 150/600, Heavy, Two-Handed)", noAttackRoll:false, ability:"DEX"},
-    net: {label:"Net", name:"Net", dice:"0d4", note:"Ranged Weapon Attack, deals no damage — restrains target (Thrown 5/15, Special)", noAttackRoll:false, noDamage:true, ability:"DEX"},
+    blowgun: {label:"Blowgun", name:"Blowgun", dice:"1d1", note:"Ranged Weapon Attack — piercing (Ammunition 25/100, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
+    handcrossbow: {label:"Hand Crossbow", name:"Hand Crossbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 30/120, Light, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
+    heavycrossbow: {label:"Heavy Crossbow", name:"Heavy Crossbow", dice:"1d10", note:"Ranged Weapon Attack — piercing (Ammunition 100/400, Heavy, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
+    longbow: {label:"Longbow", name:"Longbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 150/600, Heavy, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
+    net: {label:"Net", name:"Net", dice:"0d4", note:"Ranged Weapon Attack, deals no damage — restrains target (Thrown 5/15, Special)", noAttackRoll:false, noDamage:true, ability:"DEX", category:"Martial Ranged"},
 
     // Spells (character-specific, not official weapons)
-    thornwhip: {label:"Thorn Whip", name:"Thorn Whip", dice:"1d6", note:"Melee Spell Attack — piercing, pulls target 10 ft", noAttackRoll:false, ability:"WIS"},
-    poisonspray: {label:"Poison Spray", name:"Poison Spray", dice:"1d12", note:"Con Save (no attack roll) — poison", noAttackRoll:true, ability:null}
+    thornwhip: {label:"Thorn Whip", name:"Thorn Whip", dice:"1d6", note:"Melee Spell Attack — piercing, pulls target 10 ft", noAttackRoll:false, ability:"WIS", category:"Spell"},
+    poisonspray: {label:"Poison Spray", name:"Poison Spray", dice:"1d12", note:"Con Save (no attack roll) — poison", noAttackRoll:true, ability:null, category:"Spell"}
   };
   var PRESET_ORDER = [
     "custom",
@@ -465,7 +493,7 @@
       return s;
     })(),
     attacks: [
-      {preset:"scimitar", name:"Scimitar", atk:4, dice:"1d6", dmgBonus:0, prof:true}
+      {preset:"scimitar", name:"Scimitar", atk:4, dice:"1d6", dmgBonus:0, prof:true, twoHanded:false, dice2h:""}
     ],
     proficiencies: [
       "Clubs (Druid)",
@@ -493,7 +521,7 @@
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: blankSkillList(),
     attacks: [
-      {preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false}
+      {preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, twoHanded:false, dice2h:""}
     ],
     proficiencies: [],
     log: []
@@ -558,7 +586,12 @@
     c.skills.forEach(function(sk){ if(typeof sk.expertise === "undefined") sk.expertise = false; });
     if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
     if(!c.attacks) c.attacks = [];
-    c.attacks.forEach(function(a){ if(typeof a.prof === "undefined") a.prof = false; });
+    c.attacks.forEach(function(a){
+      if(typeof a.prof === "undefined") a.prof = false;
+      if(typeof a.critArmed === "undefined") a.critArmed = false;
+      if(typeof a.twoHanded === "undefined") a.twoHanded = false;
+      if(typeof a.dice2h === "undefined") a.dice2h = "";
+    });
     if(!c.log) c.log = [];
     if(typeof c.profBonus === "undefined") c.profBonus = 2;
     if(!c.mode) c.mode = "normal";
@@ -943,20 +976,36 @@
 
       var presetSelect = document.createElement("select");
       presetSelect.className = "attack-preset";
-      PRESET_ORDER.forEach(function(key){
-        var opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = PRESETS[key].label;
-        if((atk.preset || "custom") === key) opt.selected = true;
-        presetSelect.appendChild(opt);
+      var CATEGORY_ORDER = ["Simple Melee","Simple Ranged","Martial Melee","Martial Ranged","Special","Spell"];
+      var customOpt = document.createElement("option");
+      customOpt.value = "custom";
+      customOpt.textContent = PRESETS.custom.label;
+      if((atk.preset || "custom") === "custom") customOpt.selected = true;
+      presetSelect.appendChild(customOpt);
+      CATEGORY_ORDER.forEach(function(cat){
+        var keysInCat = PRESET_ORDER.filter(function(key){ return PRESETS[key].category === cat; });
+        if(!keysInCat.length) return;
+        var group = document.createElement("optgroup");
+        group.label = cat;
+        keysInCat.forEach(function(key){
+          var opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = PRESETS[key].label;
+          if((atk.preset || "custom") === key) opt.selected = true;
+          group.appendChild(opt);
+        });
+        presetSelect.appendChild(group);
       });
       presetSelect.addEventListener("change", function(){
         var key = presetSelect.value;
         var preset = PRESETS[key];
         state.attacks[idx].preset = key;
+        state.attacks[idx].critArmed = false;
+        state.attacks[idx].twoHanded = false;
         if(key !== "custom"){
           state.attacks[idx].name = preset.name;
           state.attacks[idx].dice = preset.dice;
+          state.attacks[idx].dice2h = preset.versatileDice || "";
         }
         saveState();
         renderAttacks();
@@ -986,11 +1035,23 @@
 
       var currentPreset = PRESETS[atk.preset || "custom"];
       if(currentPreset && currentPreset.note){
-        var noteEl = document.createElement("div");
-        noteEl.className = "attack-note";
-        noteEl.textContent = currentPreset.note;
+        var noteDetails = document.createElement("details");
+        noteDetails.className = "attack-note-details";
+        var noteSummary = document.createElement("summary");
+        noteSummary.appendChild(document.createTextNode("More Information"));
+        if(currentPreset.category){
+          var catTag = document.createElement("span");
+          catTag.className = "weapon-category-tag";
+          catTag.textContent = currentPreset.category;
+          noteSummary.appendChild(catTag);
+        }
+        var noteBody = document.createElement("div");
+        noteBody.className = "attack-note-body";
+        noteBody.textContent = currentPreset.note;
+        noteDetails.appendChild(noteSummary);
+        noteDetails.appendChild(noteBody);
         box.appendChild(top);
-        box.appendChild(noteEl);
+        box.appendChild(noteDetails);
       } else {
         box.appendChild(top);
       }
@@ -1064,9 +1125,12 @@
       atkProfLabel.appendChild(document.createTextNode("prof"));
 
       var noDamageField = currentPreset && currentPreset.noDamage;
+      var versatileCapable = !noDamageField && ((atk.preset === "custom") || !!(currentPreset && currentPreset.versatileDice));
+      var twoHandedOn = versatileCapable && !!atk.twoHanded;
+      var activeDiceField = twoHandedOn ? "dice2h" : "dice";
 
       var diceLabel = document.createElement("label");
-      diceLabel.textContent = "Damage";
+      diceLabel.textContent = "Damage" + (twoHandedOn ? " (2H)" : "");
       var diceInput = document.createElement("input");
       diceInput.type = "text";
       diceInput.className = "dice";
@@ -1076,31 +1140,60 @@
         diceInput.title = "This weapon deals no damage — it restrains the target instead.";
         diceLabel.classList.add("disabled-field");
       } else {
-        diceInput.value = atk.dice;
-        diceInput.placeholder = "1d6";
+        diceInput.value = atk[activeDiceField] || "";
+        diceInput.placeholder = twoHandedOn ? "e.g. 1d8" : "1d6";
       }
       diceInput.addEventListener("input", function(){
         if(diceInput.disabled) return;
-        state.attacks[idx].dice = diceInput.value;
+        state.attacks[idx][activeDiceField] = diceInput.value;
         saveState();
       });
       diceLabel.appendChild(diceInput);
 
+      var versatileLabel = null;
+      if(versatileCapable){
+        versatileLabel = document.createElement("label");
+        versatileLabel.className = "prof";
+        var versatileCheck = document.createElement("input");
+        versatileCheck.type = "checkbox";
+        versatileCheck.checked = !!atk.twoHanded;
+        versatileCheck.title = atk.preset === "custom"
+          ? "Toggle to switch the Damage field to a separate two-handed die you set yourself."
+          : "Toggle to use this weapon's two-handed Versatile die instead.";
+        versatileCheck.addEventListener("change", function(){
+          state.attacks[idx].twoHanded = versatileCheck.checked;
+          saveState();
+          renderAttacks();
+        });
+        versatileLabel.appendChild(versatileCheck);
+        versatileLabel.appendChild(document.createTextNode("2H"));
+      }
+
+      var dmgAutoEligible = abilityBonus !== null && !noDamageField &&
+        currentPreset.category && currentPreset.category !== "Spell";
+
       var dmgBonusLabel = document.createElement("label");
-      dmgBonusLabel.textContent = "+";
+      dmgBonusLabel.textContent = "+" + (dmgAutoEligible ? " (auto)" : "");
       var dmgBonusInput = document.createElement("input");
-      dmgBonusInput.type = noDamageField ? "text" : "number";
-      dmgBonusInput.className = "dmg-bonus";
+      dmgBonusInput.type = (noDamageField || dmgAutoEligible) ? "text" : "number";
+      dmgBonusInput.className = "dmg-bonus" + (dmgAutoEligible ? " auto-value" : "");
       if(noDamageField){
         dmgBonusInput.value = "N/A";
         dmgBonusInput.disabled = true;
         dmgBonusInput.title = "This weapon deals no damage — it restrains the target instead.";
         dmgBonusLabel.classList.add("disabled-field");
+      } else if(dmgAutoEligible){
+        dmgBonusInput.value = signStr(abilityBonus);
+        dmgBonusInput.readOnly = true;
+        var dmgAbilityUsed = currentPreset.ability === "finesse"
+          ? (getAbilityMod("STR") >= getAbilityMod("DEX") ? "STR" : "DEX") + " (Finesse: best of STR/DEX)"
+          : currentPreset.ability;
+        dmgBonusInput.title = dmgAbilityUsed + " modifier, auto-calculated — proficiency doesn't apply to damage. Switch to Custom to enter this manually.";
       } else {
         dmgBonusInput.value = atk.dmgBonus;
       }
       dmgBonusInput.addEventListener("input", function(){
-        if(dmgBonusInput.disabled) return;
+        if(dmgBonusInput.disabled || dmgBonusInput.readOnly) return;
         state.attacks[idx].dmgBonus = parseInt(dmgBonusInput.value,10) || 0;
         saveState();
       });
@@ -1131,35 +1224,62 @@
         var partsStr = "d20(" + d.rolls.join("/") + ") + " + liveBonus;
         var logLabel = (currentPreset && currentPreset.attackLabel) ? (a.name + " Check") : (a.name + " Attack");
         addLog(logLabel, partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
+
+        // A natural 20 on a damage-dealing attack arms a one-time crit for this weapon's next Damage roll.
+        // Each new attack roll resets it, so an older crit can't carry over to a non-crit hit.
+        var canCrit = !noDamageField && !(currentPreset && currentPreset.attackLabel);
+        var nowArmed = canCrit && d.value === 20;
+        var wasArmed = !!a.critArmed;
+        a.critArmed = nowArmed;
+        if(nowArmed !== wasArmed){
+          saveState();
+          renderAttacks();
+        }
       });
 
       var dmgBtn = document.createElement("button");
-      dmgBtn.className = "roll-btn save";
-      dmgBtn.textContent = noDamageField ? "No damage" : "Damage";
+      var critArmed = !!atk.critArmed && !noDamageField;
+      dmgBtn.className = "roll-btn save" + (critArmed ? " crit-armed" : "");
+      dmgBtn.textContent = noDamageField ? "No damage" : (critArmed ? "Damage (Crit!)" : "Damage");
+      if(critArmed){
+        dmgBtn.title = "Natural 20! The next Damage roll for this weapon will double its dice.";
+      }
       if(noDamageField){
         dmgBtn.disabled = true;
         dmgBtn.title = "This weapon deals no damage — it restrains the target instead.";
       }
       dmgBtn.addEventListener("click", function(){
         if(noDamageField) return;
-        var parsed = parseDice(state.attacks[idx].dice);
+        var a = state.attacks[idx];
+        var diceField = (versatileCapable && a.twoHanded) ? "dice2h" : "dice";
+        var parsed = parseDice(a[diceField]);
         if(!parsed){
-          addLog(state.attacks[idx].name + " Damage", "invalid dice — use format like 1d6", 0, false, null);
+          addLog(a.name + " Damage", "invalid dice — use format like 1d6", 0, false, null);
           return;
         }
-        var isCrit = !!state.critMode;
+        var wasArmed = !!a.critArmed;
+        var isCrit = !!state.critMode || wasArmed;
         var diceCount = isCrit ? parsed.count * 2 : parsed.count;
         var rolls = [];
         for(var i=0;i<diceCount;i++) rolls.push(rollDie(parsed.sides));
-        var sum = rolls.reduce(function(a,b){return a+b;},0);
-        var total = sum + (state.attacks[idx].dmgBonus || 0);
-        var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + (state.attacks[idx].dmgBonus||0);
-        addLog(state.attacks[idx].name + " Damage" + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
+        var sum = rolls.reduce(function(x,y){return x+y;},0);
+        var freshDmgBonus = dmgAutoEligible ? computeAbilityBonus(a.preset || "custom") : (a.dmgBonus || 0);
+        var total = sum + freshDmgBonus;
+        var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + freshDmgBonus;
+        addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
+
+        // The nat-20 crit is one-time: spend it now. (The manual Crit toggle is separate and stays on.)
+        if(wasArmed){
+          a.critArmed = false;
+          saveState();
+          renderAttacks();
+        }
       });
 
       fields.appendChild(atkLabel);
       fields.appendChild(atkProfLabel);
       fields.appendChild(diceLabel);
+      if(versatileLabel) fields.appendChild(versatileLabel);
       fields.appendChild(dmgBonusLabel);
       fields.appendChild(atkBtn);
       fields.appendChild(dmgBtn);
@@ -1170,7 +1290,7 @@
   }
 
   document.getElementById("add-attack").addEventListener("click", function(){
-    state.attacks.push({preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false});
+    state.attacks.push({preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, critArmed:false, twoHanded:false, dice2h:""});
     saveState();
     renderAttacks();
   });
