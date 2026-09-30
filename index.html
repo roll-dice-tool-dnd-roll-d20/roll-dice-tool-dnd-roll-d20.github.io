@@ -330,7 +330,7 @@
       <h1>Roll Tracker</h1>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.27.0</div>
+      <div class="version-tag">Version 1.27.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1007,6 +1007,12 @@
           state.attacks[idx].dice = preset.dice;
           state.attacks[idx].dice2h = preset.versatileDice || "";
         }
+        // Weapons (not spells) get their damage bonus reset to the fresh ability modifier
+        // on switch — this discards any manual edit made for the previous weapon.
+        var freshAbilityBonus = computeAbilityBonus(key);
+        if(freshAbilityBonus !== null && preset.category && preset.category !== "Spell"){
+          state.attacks[idx].dmgBonus = freshAbilityBonus;
+        }
         saveState();
         renderAttacks();
       });
@@ -1169,31 +1175,22 @@
         versatileLabel.appendChild(document.createTextNode("2H"));
       }
 
-      var dmgAutoEligible = abilityBonus !== null && !noDamageField &&
-        currentPreset.category && currentPreset.category !== "Spell";
-
       var dmgBonusLabel = document.createElement("label");
-      dmgBonusLabel.textContent = "+" + (dmgAutoEligible ? " (auto)" : "");
+      dmgBonusLabel.textContent = "+";
       var dmgBonusInput = document.createElement("input");
-      dmgBonusInput.type = (noDamageField || dmgAutoEligible) ? "text" : "number";
-      dmgBonusInput.className = "dmg-bonus" + (dmgAutoEligible ? " auto-value" : "");
+      dmgBonusInput.type = noDamageField ? "text" : "number";
+      dmgBonusInput.className = "dmg-bonus";
       if(noDamageField){
         dmgBonusInput.value = "N/A";
         dmgBonusInput.disabled = true;
         dmgBonusInput.title = "This weapon deals no damage — it restrains the target instead.";
         dmgBonusLabel.classList.add("disabled-field");
-      } else if(dmgAutoEligible){
-        dmgBonusInput.value = signStr(abilityBonus);
-        dmgBonusInput.readOnly = true;
-        var dmgAbilityUsed = currentPreset.ability === "finesse"
-          ? (getAbilityMod("STR") >= getAbilityMod("DEX") ? "STR" : "DEX") + " (Finesse: best of STR/DEX)"
-          : currentPreset.ability;
-        dmgBonusInput.title = dmgAbilityUsed + " modifier, auto-calculated — proficiency doesn't apply to damage. Switch to Custom to enter this manually.";
       } else {
         dmgBonusInput.value = atk.dmgBonus;
+        dmgBonusInput.title = "Editable — switching this row's weapon will refresh it to that weapon's ability modifier.";
       }
       dmgBonusInput.addEventListener("input", function(){
-        if(dmgBonusInput.disabled || dmgBonusInput.readOnly) return;
+        if(dmgBonusInput.disabled) return;
         state.attacks[idx].dmgBonus = parseInt(dmgBonusInput.value,10) || 0;
         saveState();
       });
@@ -1263,7 +1260,7 @@
         var rolls = [];
         for(var i=0;i<diceCount;i++) rolls.push(rollDie(parsed.sides));
         var sum = rolls.reduce(function(x,y){return x+y;},0);
-        var freshDmgBonus = dmgAutoEligible ? computeAbilityBonus(a.preset || "custom") : (a.dmgBonus || 0);
+        var freshDmgBonus = a.dmgBonus || 0;
         var total = sum + freshDmgBonus;
         var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + freshDmgBonus;
         addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
