@@ -56,6 +56,13 @@
     font-weight:600;
     letter-spacing:0.01em;
   }
+  .title-info-icon{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:18px;height:18px;border-radius:50%;border:1.5px solid var(--ink-soft);
+    color:var(--ink-soft);font-size:0.72rem;font-weight:700;font-style:italic;
+    font-family:Georgia,serif;vertical-align:middle;margin-left:4px;
+    cursor:pointer;
+  }
   header p{
     margin:2px 0 0;
     color:var(--ink-soft);
@@ -237,6 +244,37 @@
     color:var(--ink-soft);background:var(--bg);border:1px solid var(--border-soft);
     border-radius:4px;padding:2px 6px;margin-left:6px;
   }
+  .spell-ability-select{
+    display:flex;align-items:center;gap:8px;
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.8rem;color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  .spell-ability-select select{
+    padding:5px 7px;border:1px solid var(--border);border-radius:4px;
+    background:var(--bg-card);color:var(--ink);font-size:0.85rem;
+  }
+  .spell-info-table{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.75rem;color:var(--ink-soft);
+    display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:2px 0 8px;
+  }
+  .spell-info-table dt{font-weight:700;color:var(--ink);}
+  .spell-info-table dd{margin:0;}
+  .spell-description{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.75rem;font-style:italic;color:var(--ink-soft);
+    margin:6px 0 0;padding-top:6px;border-top:1px solid var(--border-soft);
+  }
+  .save-dc-badge{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.72rem;color:var(--ochre);font-weight:700;margin-left:6px;
+  }
+  .spell-notes{
+    width:100%;min-height:70px;margin-top:4px;padding:7px 8px;box-sizing:border-box;
+    border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.78rem;resize:vertical;
+  }
   .attack-note-details .attack-note-body{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.75rem;font-style:italic;color:var(--ink-soft);
@@ -254,6 +292,8 @@
   .attack-fields input[type=number]{width:48px;}
   .attack-fields input.atk-bonus{width:68px;text-align:center;}
   .attack-fields input.dmg-bonus{width:48px;text-align:center;}
+  .attack-fields input.ammo-count{width:48px;text-align:center;}
+  .attack-fields input.ammo-count.ammo-empty{border-color:var(--berry);color:var(--berry);font-weight:700;}
   .attack-fields input:disabled{
     opacity:0.6;
     color:var(--ink-soft);
@@ -277,6 +317,12 @@
     background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:4px;
   }
   #add-attack:hover{border-color:var(--moss);color:var(--moss-dark);}
+  #add-spell{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;
+    background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:4px;
+  }
+  #add-spell:hover{border-color:var(--moss);color:var(--moss-dark);}
   .prof-panel{margin-top:22px;}
   .prof-list{display:flex;flex-direction:column;}
   .prof-row{
@@ -298,6 +344,22 @@
     background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:8px;
   }
   #add-prof:hover{border-color:var(--moss);color:var(--moss-dark);}
+  .prof-bulk-details{margin-top:10px;}
+  .prof-bulk-details summary{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.78rem;color:var(--moss-dark);cursor:pointer;
+  }
+  .prof-bulk-area{
+    width:100%;min-height:80px;margin-top:6px;padding:7px 8px;box-sizing:border-box;
+    border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.8rem;resize:vertical;
+  }
+  #prof-bulk-add{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    margin-top:6px;padding:6px 12px;border:1px solid var(--moss);border-radius:5px;
+    background:transparent;color:var(--moss-dark);cursor:pointer;font-size:0.8rem;
+  }
+  #prof-bulk-add:hover{background:var(--moss);color:#fff;}
   #log{
     margin-top:22px;background:var(--bg-card);border:1px solid var(--border-soft);
     border-radius:10px;padding:14px 18px;
@@ -327,10 +389,10 @@
 
   <header>
     <div>
-      <h1>Roll Tracker</h1>
+      <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.27.1</div>
+      <div class="version-tag">Version 1.30.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -348,16 +410,25 @@
     <button type="button" class="crit-toggle" id="crit-toggle" title="Force the next Damage roll to double its dice — for auto-crit effects like Assassinate.">Crit</button>
   </div>
 
+  <section class="panel">
+    <h2>Ability Checks &amp; Saves</h2>
+    <div id="abilities"></div>
+  </section>
+
   <div class="grid">
     <section class="panel">
-      <h2>Ability Checks &amp; Saves</h2>
-      <div id="abilities"></div>
+      <h2>Weapon Attacks</h2>
+      <div id="attacks"></div>
+      <button id="add-attack">+ Add Weapon Attack</button>
     </section>
 
     <section class="panel">
-      <h2>Attacks</h2>
-      <div id="attacks"></div>
-      <button id="add-attack">+ Add Attack</button>
+      <h2>Spell Attacks</h2>
+      <label class="spell-ability-select">Spellcasting Ability
+        <select id="spell-ability"></select>
+      </label>
+      <div id="spells"></div>
+      <button id="add-spell">+ Add Spell Attack</button>
     </section>
   </div>
 
@@ -371,6 +442,11 @@
     <h2>Proficiencies</h2>
     <div id="proficiencies" class="prof-list"></div>
     <button id="add-prof">+ Add Proficiency</button>
+    <details class="prof-bulk-details">
+      <summary>Paste a list instead</summary>
+      <textarea id="prof-bulk-input" class="prof-bulk-area" placeholder="One per line, e.g.&#10;Clubs (Druid)&#10;Daggers (Druid)&#10;Scimitars (Druid)"></textarea>
+      <button id="prof-bulk-add" type="button">Add all lines</button>
+    </details>
   </section>
 
 </div>
@@ -406,10 +482,10 @@
     spear: {label:"Spear", name:"Spear", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
 
     // Simple Ranged
-    dart: {label:"Dart", name:"Dart", dice:"1d4", note:"Thrown Weapon Attack (Finesse) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Ranged"},
-    crossbow: {label:"Light Crossbow", name:"Light Crossbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
-    shortbow: {label:"Shortbow", name:"Shortbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
-    sling: {label:"Sling", name:"Sling", dice:"1d4", note:"Ranged Weapon Attack — bludgeoning (Ammunition 30/120)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged"},
+    dart: {label:"Dart", name:"Dart", dice:"1d4", note:"Thrown Weapon Attack (Finesse) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Ranged", usesAmmo:true, ammoDefault:10},
+    crossbow: {label:"Light Crossbow", name:"Light Crossbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged", usesAmmo:true, ammoDefault:20},
+    shortbow: {label:"Shortbow", name:"Shortbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 80/320, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged", usesAmmo:true, ammoDefault:20},
+    sling: {label:"Sling", name:"Sling", dice:"1d4", note:"Ranged Weapon Attack — bludgeoning (Ammunition 30/120)", noAttackRoll:false, ability:"DEX", category:"Simple Ranged", usesAmmo:true, ammoDefault:20},
 
     // Martial Melee
     battleaxe: {label:"Battleaxe", name:"Battleaxe", dice:"1d8", versatileDice:"1d10", note:"Melee Weapon Attack — slashing (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
@@ -432,22 +508,53 @@
     whip: {label:"Whip", name:"Whip", dice:"1d4", note:"Melee Weapon Attack (Finesse, Reach) — slashing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
 
     // Martial Ranged
-    blowgun: {label:"Blowgun", name:"Blowgun", dice:"1d1", note:"Ranged Weapon Attack — piercing (Ammunition 25/100, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
-    handcrossbow: {label:"Hand Crossbow", name:"Hand Crossbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 30/120, Light, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
-    heavycrossbow: {label:"Heavy Crossbow", name:"Heavy Crossbow", dice:"1d10", note:"Ranged Weapon Attack — piercing (Ammunition 100/400, Heavy, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
-    longbow: {label:"Longbow", name:"Longbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 150/600, Heavy, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged"},
-    net: {label:"Net", name:"Net", dice:"0d4", note:"Ranged Weapon Attack, deals no damage — restrains target (Thrown 5/15, Special)", noAttackRoll:false, noDamage:true, ability:"DEX", category:"Martial Ranged"},
-
-    // Spells (character-specific, not official weapons)
-    thornwhip: {label:"Thorn Whip", name:"Thorn Whip", dice:"1d6", note:"Melee Spell Attack — piercing, pulls target 10 ft", noAttackRoll:false, ability:"WIS", category:"Spell"},
-    poisonspray: {label:"Poison Spray", name:"Poison Spray", dice:"1d12", note:"Con Save (no attack roll) — poison", noAttackRoll:true, ability:null, category:"Spell"}
+    blowgun: {label:"Blowgun", name:"Blowgun", dice:"1d1", note:"Ranged Weapon Attack — piercing (Ammunition 25/100, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged", usesAmmo:true, ammoDefault:10},
+    handcrossbow: {label:"Hand Crossbow", name:"Hand Crossbow", dice:"1d6", note:"Ranged Weapon Attack — piercing (Ammunition 30/120, Light, Loading)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged", usesAmmo:true, ammoDefault:20},
+    heavycrossbow: {label:"Heavy Crossbow", name:"Heavy Crossbow", dice:"1d10", note:"Ranged Weapon Attack — piercing (Ammunition 100/400, Heavy, Loading, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged", usesAmmo:true, ammoDefault:20},
+    longbow: {label:"Longbow", name:"Longbow", dice:"1d8", note:"Ranged Weapon Attack — piercing (Ammunition 150/600, Heavy, Two-Handed)", noAttackRoll:false, ability:"DEX", category:"Martial Ranged", usesAmmo:true, ammoDefault:20},
+    net: {label:"Net", name:"Net", dice:"0d4", note:"Ranged Weapon Attack, deals no damage — restrains target (Thrown 5/15, Special)", noAttackRoll:false, noDamage:true, ability:"DEX", category:"Martial Ranged", usesAmmo:true, ammoDefault:1}
   };
   var PRESET_ORDER = [
     "custom",
     "battleaxe","blowgun","club","dagger","dart","flail","glaive","grapple","greataxe","greatclub","greatsword",
     "halberd","handcrossbow","handaxe","heavycrossbow","javelin","lance","crossbow","lighthammer","longbow","longsword",
-    "mace","maul","morningstar","net","pike","poisonspray","quarterstaff","rapier","scimitar","shortbow","shortsword",
-    "shove","sickle","sling","spear","thornwhip","trident","unarmedstrike","warpick","warhammer","whip"
+    "mace","maul","morningstar","net","pike","quarterstaff","rapier","scimitar","shortbow","shortsword",
+    "shove","sickle","sling","spear","trident","unarmedstrike","warpick","warhammer","whip"
+  ];
+
+  // ---------- Spell Attacks (separate from weapons) ----------
+  var SPELL_PRESETS = {
+    custom: {label:"Custom", name:"New Spell", dice:"1d6", noAttackRoll:false, ability:null, category:null},
+    thornwhip: {
+      label:"Thorn Whip", name:"Thorn Whip", dice:"1d6", ability:"WIS", noAttackRoll:false, category:"Melee Cantrip",
+      school:"Transmutation", castingTime:"1 action", range:"30 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S, M", material:"the stem of a plant with thorns",
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Artificer, Druid",
+      description:"A melee spell attack that deals piercing damage on a hit. If the target is Large or smaller, it's pulled up to 10 feet closer to the caster."
+    },
+    poisonspray: {
+      label:"Poison Spray", name:"Poison Spray", dice:"1d12", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"10 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d12 at 5th level (2d12), 11th level (3d12), and 17th level (4d12).",
+      spellLists:"Artificer, Druid, Sorcerer, Warlock, Wizard",
+      saveAbility:"CON",
+      description:"The target must succeed on a Constitution saving throw or take poison damage. A successful save negates the damage entirely."
+    }
+  };
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray"];
+  var SPELL_CATEGORY_ORDER = [
+    "Melee Cantrip","Ranged Cantrip",
+    "Melee 1st-Level Spell","Ranged 1st-Level Spell",
+    "Melee 2nd-Level Spell","Ranged 2nd-Level Spell",
+    "Melee 3rd-Level Spell","Ranged 3rd-Level Spell",
+    "Melee 4th-Level Spell","Ranged 4th-Level Spell",
+    "Melee 5th-Level Spell","Ranged 5th-Level Spell",
+    "Melee 6th-Level Spell","Ranged 6th-Level Spell",
+    "Melee 7th-Level Spell","Ranged 7th-Level Spell",
+    "Melee 8th-Level Spell","Ranged 8th-Level Spell",
+    "Melee 9th-Level Spell","Ranged 9th-Level Spell"
   ];
 
   var blankAbilities = [
@@ -493,7 +600,12 @@
       return s;
     })(),
     attacks: [
-      {preset:"scimitar", name:"Scimitar", atk:4, dice:"1d6", dmgBonus:0, prof:true, twoHanded:false, dice2h:""}
+      {preset:"scimitar", name:"Scimitar", atk:4, dice:"1d6", dmgBonus:0, prof:true, twoHanded:false, dice2h:"", ammoEnabled:false, ammo:0}
+    ],
+    spellAbility: "WIS",
+    spells: [
+      {preset:"thornwhip", name:"Thorn Whip", dice:"1d6", dmgBonus:0, critArmed:false},
+      {preset:"poisonspray", name:"Poison Spray", dice:"1d12", dmgBonus:0, critArmed:false}
     ],
     proficiencies: [
       "Clubs (Druid)",
@@ -521,7 +633,11 @@
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: blankSkillList(),
     attacks: [
-      {preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, twoHanded:false, dice2h:""}
+      {preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, twoHanded:false, dice2h:"", ammoEnabled:false, ammo:0}
+    ],
+    spellAbility: "WIS",
+    spells: [
+      {preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false}
     ],
     proficiencies: [],
     log: []
@@ -591,6 +707,31 @@
       if(typeof a.critArmed === "undefined") a.critArmed = false;
       if(typeof a.twoHanded === "undefined") a.twoHanded = false;
       if(typeof a.dice2h === "undefined") a.dice2h = "";
+      if(!PRESETS[a.preset]) a.preset = "custom";
+      if(typeof a.ammoEnabled === "undefined"){
+        var backfillPreset = PRESETS[a.preset];
+        a.ammoEnabled = !!(backfillPreset && backfillPreset.usesAmmo);
+        a.ammo = a.ammoEnabled ? backfillPreset.ammoDefault : 0;
+      }
+      if(typeof a.ammo === "undefined") a.ammo = 0;
+    });
+    if(typeof c.spellAbility !== "string") c.spellAbility = "WIS";
+    if(!c.spells){
+      // Migrate any spells that used to live in the weapon list (Thorn Whip / Poison Spray) before the split.
+      var migratedSpells = [];
+      c.attacks = c.attacks.filter(function(a){
+        if(a.preset === "thornwhip" || a.preset === "poisonspray"){
+          migratedSpells.push({preset:a.preset, name:a.name, dice:a.dice, dmgBonus:a.dmgBonus||0, critArmed:false});
+          return false;
+        }
+        return true;
+      });
+      c.spells = migratedSpells.length ? migratedSpells : [{preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false}];
+    }
+    c.spells.forEach(function(s){
+      if(typeof s.dmgBonus === "undefined") s.dmgBonus = 0;
+      if(typeof s.critArmed === "undefined") s.critArmed = false;
+      if(!SPELL_PRESETS[s.preset]) s.preset = "custom";
     });
     if(!c.log) c.log = [];
     if(typeof c.profBonus === "undefined") c.profBonus = 2;
@@ -656,6 +797,18 @@
     return preset.ability === "finesse"
       ? Math.max(getAbilityMod("STR"), getAbilityMod("DEX"))
       : getAbilityMod(preset.ability);
+  }
+
+  function getSpellAbilityMod(){
+    return getAbilityMod(state.spellAbility || "WIS");
+  }
+
+  function computeSpellAttackBonus(){
+    return (state.profBonus || 0) + getSpellAbilityMod();
+  }
+
+  function computeSpellSaveDC(){
+    return 8 + (state.profBonus || 0) + getSpellAbilityMod();
   }
 
   function addLog(label, parts, total, isD20, critOverride){
@@ -784,6 +937,8 @@
     renderSettingsBar();
     renderAbilities();
     renderAttacks();
+    renderSpellAbilitySelect();
+    renderSpells();
     renderLog();
     renderProficiencies();
   }
@@ -1013,6 +1168,13 @@
         if(freshAbilityBonus !== null && preset.category && preset.category !== "Spell"){
           state.attacks[idx].dmgBonus = freshAbilityBonus;
         }
+        // Ammo-using weapons get a fresh ammo count on switch; other weapons turn ammo tracking off.
+        if(preset.usesAmmo){
+          state.attacks[idx].ammoEnabled = true;
+          state.attacks[idx].ammo = preset.ammoDefault;
+        } else if(key !== "custom"){
+          state.attacks[idx].ammoEnabled = false;
+        }
         saveState();
         renderAttacks();
       });
@@ -1196,16 +1358,22 @@
       });
       dmgBonusLabel.appendChild(dmgBonusInput);
 
+      var ammoActive = !!atk.ammoEnabled;
+      var outOfAmmo = ammoActive && (atk.ammo || 0) <= 0;
+
       var atkBtn = document.createElement("button");
       atkBtn.className = "roll-btn";
       var noAttackRoll = currentPreset && currentPreset.noAttackRoll;
-      atkBtn.textContent = noAttackRoll ? "No attack roll" : ((currentPreset && currentPreset.attackLabel) ? currentPreset.attackLabel : "Attack Roll");
+      atkBtn.textContent = noAttackRoll ? "No attack roll" : (outOfAmmo ? "No Ammo" : ((currentPreset && currentPreset.attackLabel) ? currentPreset.attackLabel : "Attack Roll"));
       if(noAttackRoll){
         atkBtn.disabled = true;
         atkBtn.title = "This uses a saving throw, not an attack roll — the target rolls, not you.";
+      } else if(outOfAmmo){
+        atkBtn.disabled = true;
+        atkBtn.title = "Out of ammo — refill the count to keep attacking with this weapon.";
       }
       atkBtn.addEventListener("click", function(){
-        if(noAttackRoll) return;
+        if(noAttackRoll || outOfAmmo) return;
         var d = rollD20();
         var a = state.attacks[idx];
         var baseBonus = isAuto ? computeAbilityBonus(a.preset || "custom") : (a.atk || 0);
@@ -1222,13 +1390,17 @@
         var logLabel = (currentPreset && currentPreset.attackLabel) ? (a.name + " Check") : (a.name + " Attack");
         addLog(logLabel, partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
 
+        if(ammoActive){
+          a.ammo = Math.max(0, (a.ammo || 0) - 1);
+        }
+
         // A natural 20 on a damage-dealing attack arms a one-time crit for this weapon's next Damage roll.
         // Each new attack roll resets it, so an older crit can't carry over to a non-crit hit.
         var canCrit = !noDamageField && !(currentPreset && currentPreset.attackLabel);
         var nowArmed = canCrit && d.value === 20;
         var wasArmed = !!a.critArmed;
         a.critArmed = nowArmed;
-        if(nowArmed !== wasArmed){
+        if(ammoActive || nowArmed !== wasArmed){
           saveState();
           renderAttacks();
         }
@@ -1273,6 +1445,44 @@
         }
       });
 
+      var ammoToggleLabel = null;
+      if((atk.preset || "custom") === "custom"){
+        ammoToggleLabel = document.createElement("label");
+        ammoToggleLabel.className = "prof";
+        var ammoToggleCheck = document.createElement("input");
+        ammoToggleCheck.type = "checkbox";
+        ammoToggleCheck.checked = !!atk.ammoEnabled;
+        ammoToggleCheck.title = "Track an ammo count for this custom weapon.";
+        ammoToggleCheck.addEventListener("change", function(){
+          state.attacks[idx].ammoEnabled = ammoToggleCheck.checked;
+          if(ammoToggleCheck.checked && !state.attacks[idx].ammo){
+            state.attacks[idx].ammo = 20;
+          }
+          saveState();
+          renderAttacks();
+        });
+        ammoToggleLabel.appendChild(ammoToggleCheck);
+        ammoToggleLabel.appendChild(document.createTextNode("Track Ammo"));
+      }
+
+      var ammoCountLabel = null;
+      if(ammoActive){
+        ammoCountLabel = document.createElement("label");
+        ammoCountLabel.textContent = "Ammo";
+        var ammoCountInput = document.createElement("input");
+        ammoCountInput.type = "number";
+        ammoCountInput.className = "ammo-count" + (outOfAmmo ? " ammo-empty" : "");
+        ammoCountInput.min = "0";
+        ammoCountInput.value = atk.ammo || 0;
+        ammoCountInput.title = "Current ammo count — drops by 1 on every Attack Roll. Edit to restock.";
+        ammoCountInput.addEventListener("input", function(){
+          state.attacks[idx].ammo = Math.max(0, parseInt(ammoCountInput.value,10) || 0);
+          saveState();
+          renderAttacks();
+        });
+        ammoCountLabel.appendChild(ammoCountInput);
+      }
+
       fields.appendChild(atkLabel);
       fields.appendChild(atkProfLabel);
       fields.appendChild(diceLabel);
@@ -1280,6 +1490,8 @@
       fields.appendChild(dmgBonusLabel);
       fields.appendChild(atkBtn);
       fields.appendChild(dmgBtn);
+      if(ammoToggleLabel) fields.appendChild(ammoToggleLabel);
+      if(ammoCountLabel) fields.appendChild(ammoCountLabel);
 
       box.appendChild(fields);
       attacksEl.appendChild(box);
@@ -1287,9 +1499,273 @@
   }
 
   document.getElementById("add-attack").addEventListener("click", function(){
-    state.attacks.push({preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, critArmed:false, twoHanded:false, dice2h:""});
+    state.attacks.push({preset:"custom", name:"New Attack", atk:0, dice:"1d6", dmgBonus:0, prof:false, critArmed:false, twoHanded:false, dice2h:"", ammoEnabled:false, ammo:0});
     saveState();
     renderAttacks();
+  });
+
+  // ---------- Spell Attacks ----------
+  var spellsEl = document.getElementById("spells");
+  var spellAbilitySelectEl = document.getElementById("spell-ability");
+
+  function renderSpellAbilitySelect(){
+    spellAbilitySelectEl.innerHTML = "";
+    ["INT","WIS","CHA"].forEach(function(a){
+      var opt = document.createElement("option");
+      opt.value = a;
+      opt.textContent = a;
+      if((state.spellAbility || "WIS") === a) opt.selected = true;
+      spellAbilitySelectEl.appendChild(opt);
+    });
+  }
+
+  spellAbilitySelectEl.addEventListener("change", function(){
+    state.spellAbility = spellAbilitySelectEl.value;
+    saveState();
+    renderSpells();
+  });
+
+  function renderSpells(){
+    spellsEl.innerHTML = "";
+    state.spells.forEach(function(sp, idx){
+      var box = document.createElement("div");
+      box.className = "attack";
+
+      var presetSelect = document.createElement("select");
+      presetSelect.className = "attack-preset";
+      var customOpt = document.createElement("option");
+      customOpt.value = "custom";
+      customOpt.textContent = SPELL_PRESETS.custom.label;
+      if((sp.preset || "custom") === "custom") customOpt.selected = true;
+      presetSelect.appendChild(customOpt);
+      SPELL_CATEGORY_ORDER.forEach(function(cat){
+        var keysInCat = SPELL_PRESET_ORDER.filter(function(key){ return SPELL_PRESETS[key].category === cat; });
+        if(!keysInCat.length) return;
+        var group = document.createElement("optgroup");
+        group.label = cat;
+        keysInCat.forEach(function(key){
+          var opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = SPELL_PRESETS[key].label;
+          if((sp.preset || "custom") === key) opt.selected = true;
+          group.appendChild(opt);
+        });
+        presetSelect.appendChild(group);
+      });
+      presetSelect.addEventListener("change", function(){
+        var key = presetSelect.value;
+        var preset = SPELL_PRESETS[key];
+        state.spells[idx].preset = key;
+        state.spells[idx].critArmed = false;
+        if(key !== "custom"){
+          state.spells[idx].name = preset.name;
+          state.spells[idx].dice = preset.dice;
+          state.spells[idx].dmgBonus = 0;
+        }
+        saveState();
+        renderSpells();
+      });
+
+      var top = document.createElement("div");
+      top.className = "attack-top";
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = sp.name;
+      nameInput.addEventListener("input", function(){
+        state.spells[idx].name = nameInput.value;
+        saveState();
+      });
+      var delBtn = document.createElement("button");
+      delBtn.className = "del";
+      delBtn.textContent = "✕";
+      delBtn.title = "Remove spell";
+      delBtn.addEventListener("click", function(){
+        state.spells.splice(idx,1);
+        saveState();
+        renderSpells();
+      });
+      top.appendChild(presetSelect);
+      top.appendChild(nameInput);
+      top.appendChild(delBtn);
+
+      var currentSpell = SPELL_PRESETS[sp.preset] || SPELL_PRESETS.custom;
+      var isCustomSpell = (sp.preset || "custom") === "custom";
+
+      var noteDetails = document.createElement("details");
+      noteDetails.className = "attack-note-details";
+      var noteSummary = document.createElement("summary");
+      noteSummary.appendChild(document.createTextNode("More Information"));
+      if(currentSpell.category){
+        var catTag = document.createElement("span");
+        catTag.className = "weapon-category-tag";
+        catTag.textContent = currentSpell.category;
+        noteSummary.appendChild(catTag);
+      }
+      noteDetails.appendChild(noteSummary);
+
+      if(isCustomSpell){
+        var notesArea = document.createElement("textarea");
+        notesArea.className = "spell-notes";
+        notesArea.placeholder = "School, casting time, range, duration, concentration, ritual, components, materials, scaling/upcasting, spell list, description...";
+        notesArea.value = sp.notes || "";
+        notesArea.addEventListener("input", function(){
+          state.spells[idx].notes = notesArea.value;
+          saveState();
+        });
+        noteDetails.appendChild(notesArea);
+      } else {
+        var infoList = document.createElement("dl");
+        infoList.className = "spell-info-table";
+        var addRow = function(label, value){
+          if(!value) return;
+          var dt = document.createElement("dt"); dt.textContent = label;
+          var dd = document.createElement("dd"); dd.textContent = value;
+          infoList.appendChild(dt);
+          infoList.appendChild(dd);
+        };
+        addRow("School", currentSpell.school);
+        addRow("Casting Time", currentSpell.castingTime);
+        addRow("Range", currentSpell.range);
+        addRow("Duration", currentSpell.duration + (currentSpell.concentration ? " (Concentration)" : ""));
+        addRow("Ritual", currentSpell.ritual ? "Yes" : "No");
+        addRow("Components", currentSpell.components);
+        if(currentSpell.material) addRow("Materials", currentSpell.material);
+        addRow("Spell List", currentSpell.spellLists);
+        if(currentSpell.scaling) addRow("Scaling / Upcasting", currentSpell.scaling);
+        noteDetails.appendChild(infoList);
+        if(currentSpell.description){
+          var descEl = document.createElement("div");
+          descEl.className = "spell-description";
+          descEl.textContent = currentSpell.description;
+          noteDetails.appendChild(descEl);
+        }
+      }
+      box.appendChild(top);
+      box.appendChild(noteDetails);
+
+      var fields = document.createElement("div");
+      fields.className = "attack-fields";
+
+      var noAttackRollField = !!currentSpell.noAttackRoll;
+      var spellAtkBonus = computeSpellAttackBonus();
+
+      var atkLabel = document.createElement("label");
+      atkLabel.textContent = "Atk bonus" + (noAttackRollField ? "" : " (auto)");
+      var atkInput = document.createElement("input");
+      atkInput.type = "text";
+      atkInput.className = "atk-bonus" + (noAttackRollField ? "" : " auto-value");
+      if(noAttackRollField){
+        atkInput.value = "N/A";
+        atkInput.disabled = true;
+        atkInput.title = "This spell uses a saving throw, not an attack roll — the target rolls, not you.";
+        atkLabel.classList.add("disabled-field");
+      } else {
+        atkInput.value = signStr(spellAtkBonus);
+        atkInput.readOnly = true;
+        atkInput.title = "Proficiency (" + signStr(state.profBonus||0) + ") + " + (state.spellAbility||"WIS") + " modifier, auto-calculated.";
+      }
+      atkLabel.appendChild(atkInput);
+      if(noAttackRollField){
+        var dcBadge = document.createElement("span");
+        dcBadge.className = "save-dc-badge";
+        dcBadge.textContent = "Save DC " + computeSpellSaveDC() + (currentSpell.saveAbility ? " (" + currentSpell.saveAbility + ")" : "");
+        atkLabel.appendChild(dcBadge);
+      }
+
+      var diceLabel = document.createElement("label");
+      diceLabel.textContent = "Damage";
+      var diceInput = document.createElement("input");
+      diceInput.type = "text";
+      diceInput.className = "dice";
+      diceInput.value = sp.dice || "";
+      diceInput.placeholder = "1d6";
+      diceInput.addEventListener("input", function(){
+        state.spells[idx].dice = diceInput.value;
+        saveState();
+      });
+      diceLabel.appendChild(diceInput);
+
+      var dmgBonusLabel = document.createElement("label");
+      dmgBonusLabel.textContent = "+";
+      var dmgBonusInput = document.createElement("input");
+      dmgBonusInput.type = "number";
+      dmgBonusInput.className = "dmg-bonus";
+      dmgBonusInput.value = sp.dmgBonus || 0;
+      dmgBonusInput.title = "Most cantrips/spells don't add your spellcasting modifier to damage — check the spell's own rules before changing this.";
+      dmgBonusInput.addEventListener("input", function(){
+        state.spells[idx].dmgBonus = parseInt(dmgBonusInput.value,10) || 0;
+        saveState();
+      });
+      dmgBonusLabel.appendChild(dmgBonusInput);
+
+      var atkBtn = document.createElement("button");
+      atkBtn.className = "roll-btn";
+      atkBtn.textContent = noAttackRollField ? "No attack roll" : "Attack Roll";
+      if(noAttackRollField){
+        atkBtn.disabled = true;
+        atkBtn.title = "This spell uses a saving throw — the target rolls, not you.";
+      }
+      atkBtn.addEventListener("click", function(){
+        if(noAttackRollField) return;
+        var d = rollD20();
+        var freshBonus = computeSpellAttackBonus();
+        var total = d.value + freshBonus;
+        var partsStr = "d20(" + d.rolls.join("/") + ") + " + freshBonus;
+        addLog(state.spells[idx].name + " Attack", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
+        var wasArmed = !!state.spells[idx].critArmed;
+        var nowArmed = d.value === 20;
+        if(nowArmed !== wasArmed){
+          state.spells[idx].critArmed = nowArmed;
+          saveState();
+          renderSpells();
+        }
+      });
+
+      var dmgBtn = document.createElement("button");
+      var critArmedSp = !!sp.critArmed;
+      dmgBtn.className = "roll-btn save" + (critArmedSp ? " crit-armed" : "");
+      dmgBtn.textContent = critArmedSp ? "Damage (Crit!)" : "Damage";
+      if(critArmedSp){
+        dmgBtn.title = "Natural 20! The next Damage roll for this spell will double its dice.";
+      }
+      dmgBtn.addEventListener("click", function(){
+        var s = state.spells[idx];
+        var parsed = parseDice(s.dice);
+        if(!parsed){
+          addLog(s.name + " Damage", "invalid dice — use format like 1d6", 0, false, null);
+          return;
+        }
+        var wasArmed = !!s.critArmed;
+        var isCrit = !!state.critMode || wasArmed;
+        var diceCount = isCrit ? parsed.count * 2 : parsed.count;
+        var rolls = [];
+        for(var i=0;i<diceCount;i++) rolls.push(rollDie(parsed.sides));
+        var sum = rolls.reduce(function(x,y){return x+y;},0);
+        var total = sum + (s.dmgBonus || 0);
+        var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + (s.dmgBonus||0);
+        addLog(s.name + " Damage" + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
+        if(wasArmed){
+          s.critArmed = false;
+          saveState();
+          renderSpells();
+        }
+      });
+
+      fields.appendChild(atkLabel);
+      fields.appendChild(diceLabel);
+      fields.appendChild(dmgBonusLabel);
+      fields.appendChild(atkBtn);
+      fields.appendChild(dmgBtn);
+
+      box.appendChild(fields);
+      spellsEl.appendChild(box);
+    });
+  }
+
+  document.getElementById("add-spell").addEventListener("click", function(){
+    state.spells.push({preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false, notes:""});
+    saveState();
+    renderSpells();
   });
 
   document.getElementById("clear-log").addEventListener("click", function(){
@@ -1339,10 +1815,22 @@
     if(inputs.length) inputs[inputs.length-1].focus();
   });
 
+  document.getElementById("prof-bulk-add").addEventListener("click", function(){
+    var bulkInput = document.getElementById("prof-bulk-input");
+    var lines = bulkInput.value.split("\n").map(function(l){ return l.trim(); }).filter(function(l){ return l.length; });
+    if(!lines.length) return;
+    lines.forEach(function(l){ state.proficiencies.push(l); });
+    bulkInput.value = "";
+    saveState();
+    renderProficiencies();
+  });
+
   renderTabs();
   renderSettingsBar();
   renderAbilities();
   renderAttacks();
+  renderSpellAbilitySelect();
+  renderSpells();
   renderLog();
   renderProficiencies();
 })();
