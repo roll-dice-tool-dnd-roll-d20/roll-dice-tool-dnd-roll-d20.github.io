@@ -138,6 +138,28 @@
     border-radius:4px;cursor:pointer;
   }
   .mode-group button.active{background:var(--moss);color:#fff;}
+  /* Disadvantage = light red, Normal = neutral, Advantage = green.
+     Each is softly tinted when idle and fills in when selected. */
+  .mode-group button[data-mode="dis"]{background:#f6dcd8;color:#7c2a22;}
+  .mode-group button[data-mode="normal"]{background:#e0ddd0;color:#4a473a;}
+  .mode-group button[data-mode="adv"]{background:#d3e6c9;color:#2f5a25;}
+  .mode-group button[data-mode="dis"]:hover{background:#f1cbc6;}
+  .mode-group button[data-mode="normal"]:hover{background:#d3d0c1;}
+  .mode-group button[data-mode="adv"]:hover{background:#c3dcb6;}
+  .mode-group button.active[data-mode="dis"]{background:#e07b72;color:#fff;}
+  .mode-group button.active[data-mode="normal"]{background:#8a8672;color:#fff;}
+  .mode-group button.active[data-mode="adv"]{background:#5e9c4d;color:#fff;}
+  @media (prefers-color-scheme: dark){
+    .mode-group button[data-mode="dis"]{background:#4a2a27;color:#f0b5ae;}
+    .mode-group button[data-mode="normal"]{background:#3a3d33;color:#cfcbb6;}
+    .mode-group button[data-mode="adv"]{background:#2c4326;color:#b9d9a9;}
+    .mode-group button[data-mode="dis"]:hover{background:#5a3330;}
+    .mode-group button[data-mode="normal"]:hover{background:#464a3d;}
+    .mode-group button[data-mode="adv"]:hover{background:#365431;}
+    .mode-group button.active[data-mode="dis"]{background:#c0615a;color:#fff;}
+    .mode-group button.active[data-mode="normal"]{background:#77745f;color:#fff;}
+    .mode-group button.active[data-mode="adv"]{background:#5f9a52;color:#fff;}
+  }
   .crit-toggle{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.8rem;padding:6px 12px;border:1px solid var(--berry);border-radius:6px;
@@ -392,7 +414,7 @@
       <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.30.2</div>
+      <div class="version-tag">Version 1.30.3</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1833,7 +1855,8 @@
   renderSpells();
   renderLog();
   renderProficiencies();
- // ---------- Sync bridge (used by the Firebase script below) ----------
+
+  // ---------- Sync bridge (used by the Firebase script below) ----------
   function renderAll(){
     renderTabs();
     renderSettingsBar();
