@@ -1834,21 +1834,163 @@
   renderLog();
   renderProficiencies();
 })();
+ // ---------- Sync bridge (used by the Firebase script below) ----------
+  function renderAll(){
+    renderTabs();
+    renderSettingsBar();
+    renderAbilities();
+    renderAttacks();
+    renderSpellAbilitySelect();
+    renderSpells();
+    renderLog();
+    renderProficiencies();
+  }
+
+  window.rtBridge = {
+    count: function(){ return app.characters.length; },
+    getJson: function(i){ return JSON.stringify(app.characters[i]); },
+    setFromJson: function(i, json){
+      var c;
+      try{ c = JSON.parse(json); }catch(e){ return; }
+      if(!c || typeof c !== "object") return;
+      if(!c.name) c.name = TAB_NAMES[i] || ("Player " + (i+1));
+      if(!c.color) c.color = TAB_COLORS[i % TAB_COLORS.length];
+      if(!c.log) c.log = [];
+      if(!c.proficiencies) c.proficiencies = [];
+      if(!c.attacks) c.attacks = [];
+      if(!c.spells) c.spells = [];
+      if(!c.skills) c.skills = blankSkillList();
+      if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
+      app.characters[i] = c;
+      if(i === app.activeIndex){
+        state = c;
+        renderAll();
+      } else {
+        renderTabs();
+      }
+      saveState();
+    }
+  };
+})();
 </script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCoKItW-sZBT8VciZGHmW33O9qvn-BOnQA",
     authDomain: "roll-tracker-6f955.firebaseapp.com",
+    databaseURL: "https://roll-tracker-6f955-default-rtdb.firebaseio.com",
     projectId: "roll-tracker-6f955",
     storageBucket: "roll-tracker-6f955.firebasestorage.app",
     messagingSenderId: "748004983496",
     appId: "1:748004983496:web:373bbd1fa42d125300dbfd"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const SHARED_EMAIL = "groupemail@rolltracker.app";
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth = getAuth(fbApp);
+  const db = getDatabase(fbApp);
+  const bridge = window.rtBridge;
+
+  // ---------- Password screen ----------
+  function showLogin(){
+    var box = document.getElementById("rt-login");
+    if(box){ box.style.display = "flex"; return; }
+    box = document.createElement("div");
+    box.id = "rt-login";
+    box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;";
+    box.innerHTML =
+      '<div style="background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:320px;width:90%;text-align:center;">' +
+      '<h2 style="margin:0 0 6px;">Roll Tracker</h2>' +
+      '<p style="margin:0 0 14px;color:var(--ink-soft);font-size:0.9rem;">Enter the group password to sync.</p>' +
+      '<input id="rt-pw" type="password" placeholder="Password" style="width:100%;padding:9px;margin-bottom:10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font-size:1rem;box-sizing:border-box;">' +
+      '<button id="rt-go" style="width:100%;padding:9px;border:none;border-radius:5px;background:var(--moss);color:#fff;font-size:1rem;cursor:pointer;">Sign in</button>' +
+      '<div id="rt-msg" style="margin-top:10px;color:var(--berry);font-size:0.85rem;min-height:1em;"></div>' +
+      '</div>';
+    document.body.appendChild(box);
+
+    var pw = document.getElementById("rt-pw");
+    var msg = document.getElementById("rt-msg");
+    async function tryLogin(){
+      msg.textContent = "Signing in...";
+      try{
+        await signInWithEmailAndPassword(auth, SHARED_EMAIL, pw.value);
+      }catch(e){
+        if(e.code === "auth/invalid-credential" || e.code === "auth/wrong-password" || e.code === "auth/invalid-login-credentials"){
+          msg.textContent = "That password didn't work.";
+        } else if(e.code === "auth/too-many-requests"){
+          msg.textContent = "Too many tries. Wait a few minutes and try again.";
+        } else {
+          msg.textContent = "Couldn't sign in (" + (e.code || "unknown error") + ").";
+        }
+      }
+    }
+    document.getElementById("rt-go").addEventListener("click", tryLogin);
+    pw.addEventListener("keydown", function(e){ if(e.key === "Enter") tryLogin(); });
+  }
+
+  function hideLogin(){
+    var box = document.getElementById("rt-login");
+    if(box) box.style.display = "none";
+  }
+
+  // ---------- Syncing ----------
+  var lastSynced = {};  // tab number -> last JSON text known to match the database
+  var ready = {};       // tab number -> true once the database has answered for that tab
+  var started = false;
+
+  function pushChanges(){
+    var n = bridge.count();
+    for(var i = 0; i < n; i++){
+      if(!ready[i]) continue;
+      var local = bridge.getJson(i);
+      if(local !== lastSynced[i]){
+        lastSynced[i] = local;
+        set(ref(db, "rollTracker/chars/" + i), local).catch(function(e){
+          console.error("Sync failed", e);
+        });
+      }
+    }
+  }
+
+  function startSync(){
+    if(started) return;
+    started = true;
+
+    // One-time safety copy of this device's data before syncing touches it.
+    try{
+      if(!localStorage.getItem("roll-tracker-backup-before-sync")){
+        var current = localStorage.getItem("roll-tracker-app-v2");
+        if(current) localStorage.setItem("roll-tracker-backup-before-sync", current);
+      }
+    }catch(e){}
+
+    var n = bridge.count();
+    for(let i = 0; i < n; i++){
+      onValue(ref(db, "rollTracker/chars/" + i), function(snap){
+        var remote = snap.val();
+        if(typeof remote === "string"){
+          if(remote !== lastSynced[i]){
+            lastSynced[i] = remote;
+            if(remote !== bridge.getJson(i)) bridge.setFromJson(i, remote);
+          }
+        } else if(lastSynced[i] === undefined){
+          lastSynced[i] = null;  // database is empty for this tab, so this device will upload it
+        }
+        ready[i] = true;
+      });
+    }
+    setInterval(pushChanges, 1000);
+  }
+
+  onAuthStateChanged(auth, function(user){
+    if(user){ hideLogin(); startSync(); }
+    else { showLogin(); }
+  });
 </script>
 </body>
 </html>
