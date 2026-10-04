@@ -267,6 +267,12 @@
     color:var(--ink-soft);background:var(--bg);border:1px solid var(--border-soft);
     border-radius:4px;padding:2px 6px;margin-left:6px;
   }
+  .damage-type-tag{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.62rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+    color:var(--berry);background:var(--bg);border:1px solid var(--border-soft);
+    border-radius:4px;padding:2px 6px;margin-left:6px;
+  }
   .spell-ability-select{
     display:flex;align-items:center;gap:8px;
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -415,7 +421,7 @@
       <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.30.4</div>
+      <div class="version-tag">Version 1.33.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -491,6 +497,7 @@
     unarmedstrike: {label:"Unarmed Strike", name:"Unarmed Strike", dice:"1d1", note:"Melee Weapon Attack — bludgeoning, deals a flat 1 (add your STR mod in the + field). Monks may use DEX and a larger die.", noAttackRoll:false, ability:"STR", category:"Special"},
     grapple: {label:"Grapple", name:"Grapple", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target becomes grappled.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Grapple Check", athleticsLinked:true, category:"Special"},
     shove: {label:"Shove", name:"Shove", dice:"0d4", note:"Strength (Athletics) check instead of an attack roll, contested by the target's Athletics or Acrobatics — no damage, target is knocked prone or pushed 5 ft.", noAttackRoll:false, noDamage:true, ability:"STR", attackLabel:"Shove Check", athleticsLinked:true, category:"Special"},
+    lycanclaws: {label:"Claws (Hybrid Form)", name:"Claws", dice:"1d6", lycanScaling:true, note:"Melee Weapon Attack (unarmed strike, Order of the Lycan Hybrid Transformation, 3rd level) — bludgeoning or slashing, your choice. Uses STR or DEX, whichever is better, for both the attack and damage rolls. Deals 1d6 (1d8 at 11th level). You can also make one additional unarmed strike as a bonus action when you take the Attack action. Enter your Blood Hunter level below and this row works out Feral Might (melee damage, from 3rd level) and Stalker's Prowess (attack rolls, from 7th level) for you — both scale to +2 at 11th and +3 at 18th.", noAttackRoll:false, ability:"finesse", category:"Special"},
 
     // Simple Melee
     club: {label:"Club", name:"Club", dice:"1d4", note:"Melee Weapon Attack — bludgeoning (Light)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
@@ -541,7 +548,7 @@
     "custom",
     "battleaxe","blowgun","club","dagger","dart","flail","glaive","grapple","greataxe","greatclub","greatsword",
     "halberd","handcrossbow","handaxe","heavycrossbow","javelin","lance","crossbow","lighthammer","longbow","longsword",
-    "mace","maul","morningstar","net","pike","quarterstaff","rapier","scimitar","shortbow","shortsword",
+    "lycanclaws","mace","maul","morningstar","net","pike","quarterstaff","rapier","scimitar","shortbow","shortsword",
     "shove","sickle","sling","spear","trident","unarmedstrike","warpick","warhammer","whip"
   ];
 
@@ -554,6 +561,7 @@
       ritual:false, components:"V, S, M", material:"the stem of a plant with thorns",
       scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
       spellLists:"Artificer, Druid",
+      damageType:"Piercing",
       description:"A melee spell attack that deals piercing damage on a hit. If the target is Large or smaller, it's pulled up to 10 feet closer to the caster."
     },
     poisonspray: {
@@ -563,10 +571,31 @@
       scaling:"Damage increases by 1d12 at 5th level (2d12), 11th level (3d12), and 17th level (4d12).",
       spellLists:"Artificer, Druid, Sorcerer, Warlock, Wizard",
       saveAbility:"CON",
+      damageType:"Poison",
       description:"The target must succeed on a Constitution saving throw or take poison damage. A successful save negates the damage entirely."
+    },
+    sacredflame: {
+      label:"Sacred Flame", name:"Sacred Flame", dice:"1d8", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Cleric",
+      saveAbility:"DEX",
+      damageType:"Radiant",
+      description:"A flame-like radiance descends on a creature you can see within range. The target must succeed on a Dexterity saving throw or take radiant damage. The target gains no benefit from cover for this save."
+    },
+    tolldead: {
+      label:"Toll the Dead", name:"Toll the Dead", dice:"1d8", altDice:"1d12", hpToggle:true, ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Necromancy", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases to 2d8/2d12 at 5th level, 3d8/3d12 at 11th level, and 4d8/4d12 at 17th level.",
+      spellLists:"Cleric, Warlock, Wizard",
+      saveAbility:"WIS",
+      damageType:"Necrotic",
+      description:"You point at a creature you can see within range, and the dire sound of a tolling bell sounds in its head. The target must succeed on a Wisdom saving throw or take necrotic damage — 1d8 if it has all its hit points, or 1d12 if it's missing any of them."
     }
   };
-  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray"];
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead"];
   var SPELL_CATEGORY_ORDER = [
     "Melee Cantrip","Ranged Cantrip",
     "Melee 1st-Level Spell","Ranged 1st-Level Spell",
@@ -737,6 +766,7 @@
         a.ammo = a.ammoEnabled ? backfillPreset.ammoDefault : 0;
       }
       if(typeof a.ammo === "undefined") a.ammo = 0;
+      if(typeof a.lycanLevel === "undefined") a.lycanLevel = 3;
     });
     if(typeof c.spellAbility !== "string") c.spellAbility = "WIS";
     if(!c.spells){
@@ -754,6 +784,7 @@
     c.spells.forEach(function(s){
       if(typeof s.dmgBonus === "undefined") s.dmgBonus = 0;
       if(typeof s.critArmed === "undefined") s.critArmed = false;
+      if(typeof s.notFullHp === "undefined") s.notFullHp = false;
       if(!SPELL_PRESETS[s.preset]) s.preset = "custom";
     });
     if(!c.log) c.log = [];
@@ -791,6 +822,44 @@
     var m = /^\s*(\d+)\s*d\s*(\d+)\s*$/i.exec(str || "");
     if(!m) return null;
     return {count: parseInt(m[1],10), sides: parseInt(m[2],10)};
+  }
+
+  // Finds every "NdM" dice term in a string, however they're joined (1d8+1d4, 1d6, 1 d 6 + 2d4, etc.)
+  // so a damage box can mix dice sizes — e.g. a shortbow's 1d6 plus a 1d4 Hunter's Mark bonus.
+  function parseDiceGroups(str){
+    if(!str) return null;
+    var groups = [];
+    var re = /(\d+)\s*d\s*(\d+)/ig;
+    var m;
+    while((m = re.exec(str))){
+      groups.push({count: parseInt(m[1],10), sides: parseInt(m[2],10)});
+    }
+    return groups.length ? groups : null;
+  }
+
+  // Rolls every dice group found by parseDiceGroups and combines them into one total + log string.
+  function rollDiceGroups(groups, isCrit){
+    var total = 0;
+    var partsArr = [];
+    groups.forEach(function(g){
+      var count = isCrit ? g.count * 2 : g.count;
+      var rolls = [];
+      for(var i=0;i<count;i++) rolls.push(rollDie(g.sides));
+      var sum = rolls.reduce(function(x,y){return x+y;},0);
+      total += sum;
+      partsArr.push(count + "d" + g.sides + "(" + rolls.join(",") + ")");
+    });
+    return {total: total, partsStr: partsArr.join(" + ")};
+  }
+
+  // Order of the Lycan (Blood Hunter) scaling: Feral Might (melee damage, from 3rd level) and
+  // Stalker's Prowess (attack rolls with the unarmed strike only, from 7th level) both scale the
+  // same way off character level, so one lookup covers both.
+  function computeLycanBonuses(level){
+    level = level || 0;
+    var feral = level >= 18 ? 3 : level >= 11 ? 2 : level >= 3 ? 1 : 0;
+    var stalker = level >= 18 ? 3 : level >= 11 ? 2 : level >= 7 ? 1 : 0;
+    return {feral: feral, stalker: stalker};
   }
 
   function getAbilityMod(name){
@@ -1184,6 +1253,15 @@
           state.attacks[idx].name = preset.name;
           state.attacks[idx].dice = preset.dice;
           state.attacks[idx].dice2h = preset.versatileDice || "";
+        } else {
+          // Switching back to Custom should clear out whatever weapon preset was there before,
+          // not leave its name/dice behind in the editable fields.
+          state.attacks[idx].name = PRESETS.custom.name;
+          state.attacks[idx].dice = PRESETS.custom.dice;
+          state.attacks[idx].dice2h = "";
+        }
+        if(preset.lycanScaling && typeof state.attacks[idx].lycanLevel !== "number"){
+          state.attacks[idx].lycanLevel = 3;
         }
         // Weapons (not spells) get their damage bonus reset to the fresh ability modifier
         // on switch — this discards any manual edit made for the previous weapon.
@@ -1260,6 +1338,11 @@
       var effectiveProf = athleticsLinked ? !!(athleticsSkill && athleticsSkill.prof) : !!atk.prof;
       var effectiveProfPart = effectiveProf ? (state.profBonus||0) * ((athleticsLinked && athleticsSkill && athleticsSkill.expertise) ? 2 : 1) : 0;
 
+      var lycanScaling = !!(currentPreset && currentPreset.lycanScaling);
+      var lycanLevel = lycanScaling ? (atk.lycanLevel || 0) : 0;
+      var lycanBonuses = lycanScaling ? computeLycanBonuses(lycanLevel) : {feral:0, stalker:0};
+      var totalAtkAutoPart = effectiveProfPart + (lycanScaling ? lycanBonuses.stalker : 0);
+
       atkLabel.textContent = "Atk bonus" + (isAuto ? " (auto)" : "");
 
       var atkInput = document.createElement("input");
@@ -1271,8 +1354,8 @@
         atkInput.disabled = true;
         atkInput.title = "This uses a saving throw, not an attack roll — there's no attack bonus to add.";
       } else if(isAuto){
-        atkInput.value = effectiveProfPart !== 0
-          ? (signStr(abilityBonus) + " " + signStr(effectiveProfPart))
+        atkInput.value = totalAtkAutoPart !== 0
+          ? (signStr(abilityBonus) + " " + signStr(totalAtkAutoPart))
           : signStr(abilityBonus);
         atkInput.readOnly = true;
         var abilityUsed = currentPreset.ability === "finesse"
@@ -1281,9 +1364,13 @@
         var profNote = athleticsLinked
           ? (effectiveProf ? " + proficiency bonus (from Athletics" + ((athleticsSkill && athleticsSkill.expertise) ? ", doubled by Expertise" : "") + ")" : "")
           : (effectiveProf ? " + proficiency bonus" : "");
-        atkInput.title = abilityUsed + " modifier" + profNote + ", auto-calculated. Switch to Custom to enter this manually.";
+        var lycanAtkNote = (lycanScaling && lycanBonuses.stalker) ? " + Stalker's Prowess (+" + lycanBonuses.stalker + ")" : "";
+        atkInput.title = abilityUsed + " modifier" + profNote + lycanAtkNote + ", auto-calculated. Switch to Custom to enter this manually.";
       } else {
-        atkInput.value = String(atk.atk);
+        atkInput.value = effectiveProfPart !== 0 ? (String(atk.atk) + " " + signStr(effectiveProfPart)) : String(atk.atk);
+        atkInput.title = effectiveProfPart !== 0
+          ? ("Editable — the number before the space is your manual bonus; " + signStr(effectiveProfPart) + " is your proficiency bonus, added automatically because prof is checked below.")
+          : "Editable — check prof below to add your proficiency bonus automatically when rolling.";
       }
 
       if(noAttackRollField) atkLabel.classList.add("disabled-field");
@@ -1315,6 +1402,24 @@
       atkProfLabel.appendChild(atkProfCheck);
       atkProfLabel.appendChild(document.createTextNode("prof"));
 
+      var lycanLevelLabel = null;
+      if(lycanScaling){
+        lycanLevelLabel = document.createElement("label");
+        lycanLevelLabel.textContent = "Blood Hunter Lvl";
+        var lycanLevelInput = document.createElement("input");
+        lycanLevelInput.type = "number";
+        lycanLevelInput.min = "3";
+        lycanLevelInput.max = "20";
+        lycanLevelInput.value = lycanLevel || 3;
+        lycanLevelInput.title = "Your Blood Hunter level — drives Feral Might (damage) and Stalker's Prowess (attack) below automatically.";
+        lycanLevelInput.addEventListener("input", function(){
+          state.attacks[idx].lycanLevel = parseInt(lycanLevelInput.value,10) || 3;
+          saveState();
+          renderAttacks();
+        });
+        lycanLevelLabel.appendChild(lycanLevelInput);
+      }
+
       var noDamageField = currentPreset && currentPreset.noDamage;
       var versatileCapable = !noDamageField && ((atk.preset === "custom") || !!(currentPreset && currentPreset.versatileDice));
       var twoHandedOn = versatileCapable && !!atk.twoHanded;
@@ -1333,6 +1438,7 @@
       } else {
         diceInput.value = atk[activeDiceField] || "";
         diceInput.placeholder = twoHandedOn ? "e.g. 1d8" : "1d6";
+        diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4 for a shortbow plus a Hunter's Mark bonus.";
       }
       diceInput.addEventListener("input", function(){
         if(diceInput.disabled) return;
@@ -1381,6 +1487,19 @@
       });
       dmgBonusLabel.appendChild(dmgBonusInput);
 
+      var feralLabel = null;
+      if(lycanScaling){
+        feralLabel = document.createElement("label");
+        feralLabel.textContent = "Feral Might";
+        var feralInput = document.createElement("input");
+        feralInput.type = "text";
+        feralInput.className = "dmg-bonus auto-value";
+        feralInput.value = signStr(lycanBonuses.feral);
+        feralInput.disabled = true;
+        feralInput.title = "Feral Might — added to the damage roll automatically, based on the Blood Hunter level above (+1 from 3rd level, +2 at 11th, +3 at 18th).";
+        feralLabel.appendChild(feralInput);
+      }
+
       var ammoActive = !!atk.ammoEnabled;
       var outOfAmmo = ammoActive && (atk.ammo || 0) <= 0;
 
@@ -1407,7 +1526,8 @@
         } else {
           profAdd = a.prof ? (state.profBonus||0) : 0;
         }
-        var liveBonus = baseBonus + profAdd;
+        var freshStalkerBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).stalker : 0;
+        var liveBonus = baseBonus + profAdd + freshStalkerBonus;
         var total = d.value + liveBonus;
         var partsStr = "d20(" + d.rolls.join("/") + ") + " + liveBonus;
         var logLabel = (currentPreset && currentPreset.attackLabel) ? (a.name + " Check") : (a.name + " Attack");
@@ -1444,20 +1564,18 @@
         if(noDamageField) return;
         var a = state.attacks[idx];
         var diceField = (versatileCapable && a.twoHanded) ? "dice2h" : "dice";
-        var parsed = parseDice(a[diceField]);
+        var parsed = parseDiceGroups(a[diceField]);
         if(!parsed){
-          addLog(a.name + " Damage", "invalid dice — use format like 1d6", 0, false, null);
+          addLog(a.name + " Damage", "invalid dice — use format like 1d6 or 1d8+1d4", 0, false, null);
           return;
         }
         var wasArmed = !!a.critArmed;
         var isCrit = !!state.critMode || wasArmed;
-        var diceCount = isCrit ? parsed.count * 2 : parsed.count;
-        var rolls = [];
-        for(var i=0;i<diceCount;i++) rolls.push(rollDie(parsed.sides));
-        var sum = rolls.reduce(function(x,y){return x+y;},0);
+        var rolled = rollDiceGroups(parsed, isCrit);
         var freshDmgBonus = a.dmgBonus || 0;
-        var total = sum + freshDmgBonus;
-        var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + freshDmgBonus;
+        var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
+        var total = rolled.total + freshDmgBonus + freshFeralBonus;
+        var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "");
         addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
 
         // The nat-20 crit is one-time: spend it now. (The manual Crit toggle is separate and stays on.)
@@ -1508,9 +1626,11 @@
 
       fields.appendChild(atkLabel);
       fields.appendChild(atkProfLabel);
+      if(lycanLevelLabel) fields.appendChild(lycanLevelLabel);
       fields.appendChild(diceLabel);
       if(versatileLabel) fields.appendChild(versatileLabel);
       fields.appendChild(dmgBonusLabel);
+      if(feralLabel) fields.appendChild(feralLabel);
       fields.appendChild(atkBtn);
       fields.appendChild(dmgBtn);
       if(ammoToggleLabel) fields.appendChild(ammoToggleLabel);
@@ -1580,9 +1700,16 @@
         var preset = SPELL_PRESETS[key];
         state.spells[idx].preset = key;
         state.spells[idx].critArmed = false;
+        state.spells[idx].notFullHp = false;
         if(key !== "custom"){
           state.spells[idx].name = preset.name;
           state.spells[idx].dice = preset.dice;
+          state.spells[idx].dmgBonus = 0;
+        } else {
+          // Switching back to Custom should clear out whatever spell preset was there before,
+          // not leave its name/dice behind in the editable fields.
+          state.spells[idx].name = SPELL_PRESETS.custom.name;
+          state.spells[idx].dice = SPELL_PRESETS.custom.dice;
           state.spells[idx].dmgBonus = 0;
         }
         saveState();
@@ -1624,6 +1751,12 @@
         catTag.textContent = currentSpell.category;
         noteSummary.appendChild(catTag);
       }
+      if(currentSpell.damageType){
+        var dmgTypeTag = document.createElement("span");
+        dmgTypeTag.className = "damage-type-tag";
+        dmgTypeTag.textContent = currentSpell.damageType;
+        noteSummary.appendChild(dmgTypeTag);
+      }
       noteDetails.appendChild(noteSummary);
 
       if(isCustomSpell){
@@ -1653,6 +1786,7 @@
         addRow("Ritual", currentSpell.ritual ? "Yes" : "No");
         addRow("Components", currentSpell.components);
         if(currentSpell.material) addRow("Materials", currentSpell.material);
+        if(currentSpell.damageType) addRow("Damage Type", currentSpell.damageType);
         addRow("Spell List", currentSpell.spellLists);
         if(currentSpell.scaling) addRow("Scaling / Upcasting", currentSpell.scaling);
         noteDetails.appendChild(infoList);
@@ -1702,11 +1836,30 @@
       diceInput.className = "dice";
       diceInput.value = sp.dice || "";
       diceInput.placeholder = "1d6";
+      diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4.";
       diceInput.addEventListener("input", function(){
         state.spells[idx].dice = diceInput.value;
         saveState();
       });
       diceLabel.appendChild(diceInput);
+
+      var hpToggleLabel = null;
+      if(currentSpell.hpToggle){
+        hpToggleLabel = document.createElement("label");
+        hpToggleLabel.className = "prof";
+        var hpToggleCheck = document.createElement("input");
+        hpToggleCheck.type = "checkbox";
+        hpToggleCheck.checked = !!sp.notFullHp;
+        hpToggleCheck.title = "Toll the Dead deals 1d12 instead of 1d8 if the target is missing any of its hit points.";
+        hpToggleCheck.addEventListener("change", function(){
+          state.spells[idx].notFullHp = hpToggleCheck.checked;
+          state.spells[idx].dice = hpToggleCheck.checked ? (currentSpell.altDice || currentSpell.dice) : currentSpell.dice;
+          saveState();
+          renderSpells();
+        });
+        hpToggleLabel.appendChild(hpToggleCheck);
+        hpToggleLabel.appendChild(document.createTextNode("Target not at full HP"));
+      }
 
       var dmgBonusLabel = document.createElement("label");
       dmgBonusLabel.textContent = "+";
@@ -1753,19 +1906,16 @@
       }
       dmgBtn.addEventListener("click", function(){
         var s = state.spells[idx];
-        var parsed = parseDice(s.dice);
+        var parsed = parseDiceGroups(s.dice);
         if(!parsed){
-          addLog(s.name + " Damage", "invalid dice — use format like 1d6", 0, false, null);
+          addLog(s.name + " Damage", "invalid dice — use format like 1d6 or 1d8+1d4", 0, false, null);
           return;
         }
         var wasArmed = !!s.critArmed;
         var isCrit = !!state.critMode || wasArmed;
-        var diceCount = isCrit ? parsed.count * 2 : parsed.count;
-        var rolls = [];
-        for(var i=0;i<diceCount;i++) rolls.push(rollDie(parsed.sides));
-        var sum = rolls.reduce(function(x,y){return x+y;},0);
-        var total = sum + (s.dmgBonus || 0);
-        var partsStr = diceCount+"d"+parsed.sides+"(" + rolls.join(",") + ") + " + (s.dmgBonus||0);
+        var rolled = rollDiceGroups(parsed, isCrit);
+        var total = rolled.total + (s.dmgBonus || 0);
+        var partsStr = rolled.partsStr + " + " + (s.dmgBonus||0);
         addLog(s.name + " Damage" + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
         if(wasArmed){
           s.critArmed = false;
@@ -1776,6 +1926,7 @@
 
       fields.appendChild(atkLabel);
       fields.appendChild(diceLabel);
+      if(hpToggleLabel) fields.appendChild(hpToggleLabel);
       fields.appendChild(dmgBonusLabel);
       fields.appendChild(atkBtn);
       fields.appendChild(dmgBtn);
@@ -1786,7 +1937,7 @@
   }
 
   document.getElementById("add-spell").addEventListener("click", function(){
-    state.spells.push({preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false, notes:""});
+    state.spells.push({preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false, notFullHp:false, notes:""});
     saveState();
     renderSpells();
   });
