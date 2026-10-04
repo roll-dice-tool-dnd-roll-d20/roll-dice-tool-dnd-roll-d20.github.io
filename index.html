@@ -70,6 +70,18 @@
     font-size:0.85rem;
     font-family:-apple-system,"Segoe UI",sans-serif;
   }
+  .sync-status{
+    display:flex;align-items:center;gap:6px;
+    margin-top:5px;
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.78rem;color:var(--ink-soft);
+  }
+  .sync-dot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+    background:var(--berry);
+    box-shadow:0 0 0 2px var(--bg);
+  }
+  .sync-dot.online{background:var(--moss);}
   .quickroll{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
   .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
   .version-tag{
@@ -181,7 +193,7 @@
   }
   .ability-row{
     display:grid;
-    grid-template-columns:44px 60px 1fr auto auto;
+    grid-template-columns:44px 60px 1fr auto auto auto;
     align-items:center;
     gap:8px;
     padding:7px 0;
@@ -282,6 +294,16 @@
   .spell-ability-select select{
     padding:5px 7px;border:1px solid var(--border);border-radius:4px;
     background:var(--bg-card);color:var(--ink);font-size:0.85rem;
+  }
+  .spell-ability-override{
+    display:flex;align-items:center;gap:8px;
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.75rem;color:var(--ink-soft);
+    margin:2px 0 8px;
+  }
+  .spell-ability-override select{
+    padding:4px 6px;border:1px solid var(--border);border-radius:4px;
+    background:var(--bg);color:var(--ink);font-size:0.78rem;
   }
   .spell-info-table{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -419,9 +441,10 @@
   <header>
     <div>
       <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
+      <div class="sync-status" id="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Offline</span></div>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.33.1</div>
+      <div class="version-tag">Version 1.36.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -501,15 +524,15 @@
 
     // Simple Melee
     club: {label:"Club", name:"Club", dice:"1d4", note:"Melee Weapon Attack — bludgeoning (Light)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
-    dagger: {label:"Dagger", name:"Dagger", dice:"1d4", note:"Melee/Thrown Weapon Attack (Finesse, Light) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Melee"},
+    dagger: {label:"Dagger", name:"Dagger", dice:"1d4", note:"Melee/Thrown Weapon Attack (Finesse, Light) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Melee", carriesMultiple:true, carryDefault:5},
     greatclub: {label:"Greatclub", name:"Greatclub", dice:"1d8", note:"Melee Weapon Attack (Two-Handed) — bludgeoning", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
-    handaxe: {label:"Handaxe", name:"Handaxe", dice:"1d6", note:"Melee/Thrown Weapon Attack — slashing (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
-    javelin: {label:"Javelin", name:"Javelin", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 30/120)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
-    lighthammer: {label:"Light Hammer", name:"Light Hammer", dice:"1d4", note:"Melee/Thrown Weapon Attack — bludgeoning (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    handaxe: {label:"Handaxe", name:"Handaxe", dice:"1d6", note:"Melee/Thrown Weapon Attack — slashing (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee", carriesMultiple:true, carryDefault:2},
+    javelin: {label:"Javelin", name:"Javelin", dice:"1d6", note:"Melee/Thrown Weapon Attack — piercing (Thrown 30/120)", noAttackRoll:false, ability:"STR", category:"Simple Melee", carriesMultiple:true, carryDefault:5},
+    lighthammer: {label:"Light Hammer", name:"Light Hammer", dice:"1d4", note:"Melee/Thrown Weapon Attack — bludgeoning (Light, Thrown 20/60)", noAttackRoll:false, ability:"STR", category:"Simple Melee", carriesMultiple:true, carryDefault:2},
     mace: {label:"Mace", name:"Mace", dice:"1d6", note:"Melee Weapon Attack — bludgeoning", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
     quarterstaff: {label:"Quarterstaff", name:"Quarterstaff", dice:"1d6", versatileDice:"1d8", note:"Melee Weapon Attack — bludgeoning (Versatile 1d8 two-handed)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
     sickle: {label:"Sickle", name:"Sickle", dice:"1d4", note:"Melee Weapon Attack — slashing (Light)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
-    spear: {label:"Spear", name:"Spear", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Simple Melee"},
+    spear: {label:"Spear", name:"Spear", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Simple Melee", carriesMultiple:true, carryDefault:2},
 
     // Simple Ranged
     dart: {label:"Dart", name:"Dart", dice:"1d4", note:"Thrown Weapon Attack (Finesse) — piercing (Thrown 20/60)", noAttackRoll:false, ability:"finesse", category:"Simple Ranged", usesAmmo:true, ammoDefault:10},
@@ -532,7 +555,7 @@
     rapier: {label:"Rapier", name:"Rapier", dice:"1d8", note:"Melee Weapon Attack (Finesse) — piercing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
     scimitar: {label:"Scimitar", name:"Scimitar", dice:"1d6", note:"Melee Weapon Attack (Finesse, Light) — slashing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
     shortsword: {label:"Shortsword", name:"Shortsword", dice:"1d6", note:"Melee Weapon Attack (Finesse) — piercing (Light)", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
-    trident: {label:"Trident", name:"Trident", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
+    trident: {label:"Trident", name:"Trident", dice:"1d6", versatileDice:"1d8", note:"Melee/Thrown Weapon Attack — piercing (Thrown 20/60, Versatile 1d8)", noAttackRoll:false, ability:"STR", category:"Martial Melee", carriesMultiple:true, carryDefault:2},
     warpick: {label:"War Pick", name:"War Pick", dice:"1d8", note:"Melee Weapon Attack — piercing", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
     warhammer: {label:"Warhammer", name:"Warhammer", dice:"1d8", versatileDice:"1d10", note:"Melee Weapon Attack — bludgeoning (Versatile 1d10 two-handed)", noAttackRoll:false, ability:"STR", category:"Martial Melee"},
     whip: {label:"Whip", name:"Whip", dice:"1d4", note:"Melee Weapon Attack (Finesse, Reach) — slashing", noAttackRoll:false, ability:"finesse", category:"Martial Melee"},
@@ -767,6 +790,12 @@
       }
       if(typeof a.ammo === "undefined") a.ammo = 0;
       if(typeof a.lycanLevel === "undefined") a.lycanLevel = 3;
+      if(typeof a.qtyEnabled === "undefined"){
+        var backfillQtyPreset = PRESETS[a.preset];
+        a.qtyEnabled = !!(backfillQtyPreset && backfillQtyPreset.carriesMultiple);
+        a.qty = a.qtyEnabled ? backfillQtyPreset.carryDefault : 0;
+      }
+      if(typeof a.qty === "undefined") a.qty = 0;
     });
     if(typeof c.spellAbility !== "string") c.spellAbility = "WIS";
     if(!c.spells){
@@ -785,6 +814,7 @@
       if(typeof s.dmgBonus === "undefined") s.dmgBonus = 0;
       if(typeof s.critArmed === "undefined") s.critArmed = false;
       if(typeof s.notFullHp === "undefined") s.notFullHp = false;
+      if(typeof s.abilityOverride === "undefined") s.abilityOverride = null;
       if(!SPELL_PRESETS[s.preset]) s.preset = "custom";
     });
     if(!c.log) c.log = [];
@@ -895,12 +925,19 @@
     return getAbilityMod(state.spellAbility || "WIS");
   }
 
-  function computeSpellAttackBonus(){
-    return (state.profBonus || 0) + getSpellAbilityMod();
+  // A spell can override the character's default spellcasting ability (e.g. a feat or
+  // multiclass feature that ties one specific spell to a fixed ability). sp.abilityOverride
+  // is null/"" for "use the character default" and "INT"/"WIS"/"CHA" to pin it.
+  function resolveSpellAbility(sp){
+    return (sp && sp.abilityOverride) ? sp.abilityOverride : (state.spellAbility || "WIS");
   }
 
-  function computeSpellSaveDC(){
-    return 8 + (state.profBonus || 0) + getSpellAbilityMod();
+  function computeSpellAttackBonus(sp){
+    return (state.profBonus || 0) + getAbilityMod(resolveSpellAbility(sp));
+  }
+
+  function computeSpellSaveDC(sp){
+    return 8 + (state.profBonus || 0) + getAbilityMod(resolveSpellAbility(sp));
   }
 
   function addLog(label, parts, total, isD20, critOverride){
@@ -1126,8 +1163,11 @@
         addLog(ab.name + " Save", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
       });
 
+      var abilitySpacer = document.createElement("div");
+
       row.appendChild(name);
       row.appendChild(modInput);
+      row.appendChild(abilitySpacer);
       row.appendChild(profLabel);
       row.appendChild(checkBtn);
       row.appendChild(saveBtn);
@@ -1275,6 +1315,13 @@
           state.attacks[idx].ammo = preset.ammoDefault;
         } else if(key !== "custom"){
           state.attacks[idx].ammoEnabled = false;
+        }
+        // Same idea for weapons you typically carry several of (daggers, handaxes, javelins...).
+        if(preset.carriesMultiple){
+          state.attacks[idx].qtyEnabled = true;
+          state.attacks[idx].qty = preset.carryDefault;
+        } else if(key !== "custom"){
+          state.attacks[idx].qtyEnabled = false;
         }
         saveState();
         renderAttacks();
@@ -1624,6 +1671,47 @@
         ammoCountLabel.appendChild(ammoCountInput);
       }
 
+      // A plain "how many do I have on me" counter for weapons you carry several of (daggers,
+      // handaxes, javelins...). Unlike Ammo, this never auto-decrements on Attack Roll — you're not
+      // necessarily throwing it and losing it every time you swing — so it's a purely manual count.
+      var qtyToggleLabel = null;
+      if((atk.preset || "custom") === "custom"){
+        qtyToggleLabel = document.createElement("label");
+        qtyToggleLabel.className = "prof";
+        var qtyToggleCheck = document.createElement("input");
+        qtyToggleCheck.type = "checkbox";
+        qtyToggleCheck.checked = !!atk.qtyEnabled;
+        qtyToggleCheck.title = "Track a \"how many I'm carrying\" count for this custom weapon.";
+        qtyToggleCheck.addEventListener("change", function(){
+          state.attacks[idx].qtyEnabled = qtyToggleCheck.checked;
+          if(qtyToggleCheck.checked && !state.attacks[idx].qty){
+            state.attacks[idx].qty = 1;
+          }
+          saveState();
+          renderAttacks();
+        });
+        qtyToggleLabel.appendChild(qtyToggleCheck);
+        qtyToggleLabel.appendChild(document.createTextNode("Track Count"));
+      }
+
+      var qtyCountLabel = null;
+      if(atk.qtyEnabled){
+        qtyCountLabel = document.createElement("label");
+        qtyCountLabel.textContent = "Carrying";
+        var qtyCountInput = document.createElement("input");
+        qtyCountInput.type = "number";
+        qtyCountInput.className = "ammo-count" + ((atk.qty||0) <= 0 ? " ammo-empty" : "");
+        qtyCountInput.min = "0";
+        qtyCountInput.value = atk.qty || 0;
+        qtyCountInput.title = "How many of this weapon you're carrying — edit this yourself if you lose, break, or pick one up (it never changes automatically).";
+        qtyCountInput.addEventListener("input", function(){
+          state.attacks[idx].qty = Math.max(0, parseInt(qtyCountInput.value,10) || 0);
+          saveState();
+          renderAttacks();
+        });
+        qtyCountLabel.appendChild(qtyCountInput);
+      }
+
       fields.appendChild(atkLabel);
       fields.appendChild(atkProfLabel);
       if(lycanLevelLabel) fields.appendChild(lycanLevelLabel);
@@ -1635,6 +1723,8 @@
       fields.appendChild(dmgBtn);
       if(ammoToggleLabel) fields.appendChild(ammoToggleLabel);
       if(ammoCountLabel) fields.appendChild(ammoCountLabel);
+      if(qtyToggleLabel) fields.appendChild(qtyToggleLabel);
+      if(qtyCountLabel) fields.appendChild(qtyCountLabel);
 
       box.appendChild(fields);
       attacksEl.appendChild(box);
@@ -1651,9 +1741,14 @@
   var spellsEl = document.getElementById("spells");
   var spellAbilitySelectEl = document.getElementById("spell-ability");
 
+  // The usual three (INT/WIS/CHA) cover standard spellcasting classes, but niche sources — an Air
+  // Genasi's innate Levitate using CON, a feat or homebrew tying a spell to STR or DEX — need the
+  // rest available too, so every ability is offered here and in each spell's own override below.
+  var SPELL_ABILITY_OPTIONS = ["STR","DEX","CON","INT","WIS","CHA"];
+
   function renderSpellAbilitySelect(){
     spellAbilitySelectEl.innerHTML = "";
-    ["INT","WIS","CHA"].forEach(function(a){
+    SPELL_ABILITY_OPTIONS.forEach(function(a){
       var opt = document.createElement("option");
       opt.value = a;
       opt.textContent = a;
@@ -1759,6 +1854,31 @@
       }
       noteDetails.appendChild(noteSummary);
 
+      var abilityOverrideLabel = document.createElement("label");
+      abilityOverrideLabel.className = "spell-ability-override";
+      abilityOverrideLabel.appendChild(document.createTextNode("Spellcasting Ability"));
+      var abilityOverrideSelect = document.createElement("select");
+      var defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Default (" + (state.spellAbility || "WIS") + ")";
+      if(!sp.abilityOverride) defaultOpt.selected = true;
+      abilityOverrideSelect.appendChild(defaultOpt);
+      SPELL_ABILITY_OPTIONS.forEach(function(a){
+        var opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        if(sp.abilityOverride === a) opt.selected = true;
+        abilityOverrideSelect.appendChild(opt);
+      });
+      abilityOverrideSelect.title = "Pin this spell to a specific ability, overriding the character's default above — useful for a feat or multiclass feature that ties one spell to a fixed ability.";
+      abilityOverrideSelect.addEventListener("change", function(){
+        state.spells[idx].abilityOverride = abilityOverrideSelect.value || null;
+        saveState();
+        renderSpells();
+      });
+      abilityOverrideLabel.appendChild(abilityOverrideSelect);
+      noteDetails.appendChild(abilityOverrideLabel);
+
       if(isCustomSpell){
         var notesArea = document.createElement("textarea");
         notesArea.className = "spell-notes";
@@ -1804,7 +1924,8 @@
       fields.className = "attack-fields";
 
       var noAttackRollField = !!currentSpell.noAttackRoll;
-      var spellAtkBonus = computeSpellAttackBonus();
+      var resolvedAbility = resolveSpellAbility(sp);
+      var spellAtkBonus = computeSpellAttackBonus(sp);
 
       var atkLabel = document.createElement("label");
       atkLabel.textContent = "Atk bonus" + (noAttackRollField ? "" : " (auto)");
@@ -1819,13 +1940,13 @@
       } else {
         atkInput.value = signStr(spellAtkBonus);
         atkInput.readOnly = true;
-        atkInput.title = "Proficiency (" + signStr(state.profBonus||0) + ") + " + (state.spellAbility||"WIS") + " modifier, auto-calculated.";
+        atkInput.title = "Proficiency (" + signStr(state.profBonus||0) + ") + " + resolvedAbility + " modifier" + (sp.abilityOverride ? " (overridden for this spell below)" : "") + ", auto-calculated.";
       }
       atkLabel.appendChild(atkInput);
       if(noAttackRollField){
         var dcBadge = document.createElement("span");
         dcBadge.className = "save-dc-badge";
-        dcBadge.textContent = "Save DC " + computeSpellSaveDC() + (currentSpell.saveAbility ? " (" + currentSpell.saveAbility + ")" : "");
+        dcBadge.textContent = "Save DC " + computeSpellSaveDC(sp) + (currentSpell.saveAbility ? " (" + currentSpell.saveAbility + ")" : "");
         atkLabel.appendChild(dcBadge);
       }
 
@@ -1884,7 +2005,7 @@
       atkBtn.addEventListener("click", function(){
         if(noAttackRollField) return;
         var d = rollD20();
-        var freshBonus = computeSpellAttackBonus();
+        var freshBonus = computeSpellAttackBonus(state.spells[idx]);
         var total = d.value + freshBonus;
         var partsStr = "d20(" + d.rolls.join("/") + ") + " + freshBonus;
         addLog(state.spells[idx].name + " Attack", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
@@ -2070,6 +2191,16 @@
   const db = getDatabase(fbApp);
   const bridge = window.rtBridge;
 
+  // ---------- Online/offline indicator ----------
+  var syncDot = document.getElementById("sync-dot");
+  var syncText = document.getElementById("sync-text");
+  function setSyncStatus(online, label){
+    if(!syncDot) return;
+    syncDot.classList.toggle("online", !!online);
+    syncText.textContent = label;
+  }
+  setSyncStatus(false, "Offline");
+
   // ---------- Password screen ----------
   function showLogin(){
     var box = document.getElementById("rt-login");
@@ -2143,6 +2274,13 @@
       }
     }catch(e){}
 
+    // Firebase's special ".info/connected" path is the real signal for whether this device
+    // currently has a live socket to the database — it flips to false on a dropped wifi/data
+    // connection even while still "signed in", which is exactly what the dot should reflect.
+    onValue(ref(db, ".info/connected"), function(snap){
+      setSyncStatus(!!snap.val(), snap.val() ? "Synced" : "Offline");
+    });
+
     var n = bridge.count();
     for(let i = 0; i < n; i++){
       onValue(ref(db, "rollTracker/chars/" + i), function(snap){
@@ -2163,7 +2301,7 @@
 
   onAuthStateChanged(auth, function(user){
     if(user){ hideLogin(); startSync(); }
-    else { showLogin(); }
+    else { showLogin(); setSyncStatus(false, "Offline"); }
   });
 </script>
 </body>
