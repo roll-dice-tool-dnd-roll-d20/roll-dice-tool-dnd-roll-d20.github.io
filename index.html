@@ -503,7 +503,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.38.1</div>
+      <div class="version-tag">Version 1.39.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1044,7 +1044,12 @@
       if(critOverride === "crit") crit = true;
       else if(critOverride === "fumble") fumble = true;
     }
-    state.log.push({label:label, parts:parts, total:total, crit:crit, fumble:fumble, t:Date.now()});
+    // Tag every roll with whichever account is actually signed in and rolling — usually
+    // that's the same person as the tab, but it also covers a DM or another player
+    // rolling on someone else's (unlocked) tab.
+    var acctName = (currentAccount !== null && app.characters[currentAccount]) ? app.characters[currentAccount].name : null;
+    var fullLabel = acctName ? ("(" + acctName + ") " + label) : label;
+    state.log.push({label:fullLabel, parts:parts, total:total, crit:crit, fumble:fumble, t:Date.now()});
     if(state.log.length > 60) state.log.shift();
     saveState();
     renderLog();
