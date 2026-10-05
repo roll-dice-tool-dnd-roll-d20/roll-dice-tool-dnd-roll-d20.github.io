@@ -82,6 +82,29 @@
     box-shadow:0 0 0 2px var(--bg);
   }
   .sync-dot.online{background:var(--moss);}
+  .change-account-btn{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.72rem;margin-top:6px;padding:4px 9px;
+    border:1px solid var(--border);border-radius:5px;
+    background:transparent;color:var(--ink-soft);cursor:pointer;
+  }
+  .change-account-btn:hover{border-color:var(--moss);color:var(--moss-dark);}
+  .account-picker{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;}
+  .account-picker-btn{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.72rem;font-weight:700;color:#fff;
+    padding:7px 11px;border:2px solid transparent;border-radius:7px;
+    cursor:pointer;opacity:0.7;letter-spacing:0.01em;
+    text-shadow:0 1px 1px rgba(0,0,0,0.35);
+  }
+  .account-picker-btn:hover{opacity:0.9;}
+  .account-picker-btn.selected{opacity:1;border-color:var(--ink);}
+  .account-picker-label{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.78rem;font-weight:700;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:0.04em;
+    margin-bottom:8px;
+  }
   .quickroll{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
   .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
   .version-tag{
@@ -442,9 +465,10 @@
     <div>
       <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
       <div class="sync-status" id="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Offline</span></div>
+      <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.36.0</div>
+      <div class="version-tag">Version 1.37.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2144,6 +2168,12 @@
   window.rtBridge = {
     count: function(){ return app.characters.length; },
     getJson: function(i){ return JSON.stringify(app.characters[i]); },
+    getCharMeta: function(){
+      return app.characters.map(function(c){ return {name: c.name, color: c.color}; });
+    },
+    switchTab: function(i){
+      if(i >= 0 && i < app.characters.length) switchTab(i);
+    },
     setFromJson: function(i, json){
       var c;
       try{ c = JSON.parse(json); }catch(e){ return; }
@@ -2171,7 +2201,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -2191,6 +2221,11 @@
   const db = getDatabase(fbApp);
   const bridge = window.rtBridge;
 
+  // In-memory persistence means Firebase never remembers the sign-in across a page load —
+  // every time the site is opened (or refreshed), onAuthStateChanged below fires with no user
+  // and the account-picker + password screen shows again, on purpose.
+  await setPersistence(auth, inMemoryPersistence);
+
   // ---------- Online/offline indicator ----------
   var syncDot = document.getElementById("sync-dot");
   var syncText = document.getElementById("sync-text");
@@ -2201,16 +2236,24 @@
   }
   setSyncStatus(false, "Offline");
 
-  // ---------- Password screen ----------
+  // ---------- Account picker + password screen ----------
+  var selectedAccountIndex = null;
+
   function showLogin(){
-    var box = document.getElementById("rt-login");
-    if(box){ box.style.display = "flex"; return; }
-    box = document.createElement("div");
+    // Rebuilt fresh every time (rather than just re-shown) so a renamed tab or recolored
+    // character always shows correctly, and so the account selection always starts blank.
+    var existing = document.getElementById("rt-login");
+    if(existing) existing.remove();
+    selectedAccountIndex = null;
+
+    var box = document.createElement("div");
     box.id = "rt-login";
-    box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;";
+    box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;padding:16px;";
     box.innerHTML =
-      '<div style="background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:320px;width:90%;text-align:center;">' +
-      '<h2 style="margin:0 0 6px;">Roll Tracker</h2>' +
+      '<div style="background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:360px;width:100%;text-align:center;">' +
+      '<h2 style="margin:0 0 14px;">Roll Tracker</h2>' +
+      '<div class="account-picker-label">Choose Account</div>' +
+      '<div class="account-picker" id="rt-account-picker"></div>' +
       '<p style="margin:0 0 14px;color:var(--ink-soft);font-size:0.9rem;">Enter the group password to sync.</p>' +
       '<input id="rt-pw" type="password" placeholder="Password" style="width:100%;padding:9px;margin-bottom:10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font-size:1rem;box-sizing:border-box;">' +
       '<button id="rt-go" style="width:100%;padding:9px;border:none;border-radius:5px;background:var(--moss);color:#fff;font-size:1rem;cursor:pointer;">Sign in</button>' +
@@ -2218,12 +2261,35 @@
       '</div>';
     document.body.appendChild(box);
 
+    var picker = document.getElementById("rt-account-picker");
+    var meta = bridge.getCharMeta();
+    meta.forEach(function(char, i){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "account-picker-btn";
+      btn.style.background = char.color;
+      btn.textContent = char.name;
+      btn.addEventListener("click", function(){
+        selectedAccountIndex = i;
+        Array.prototype.forEach.call(picker.querySelectorAll(".account-picker-btn"), function(b){
+          b.classList.remove("selected");
+        });
+        btn.classList.add("selected");
+      });
+      picker.appendChild(btn);
+    });
+
     var pw = document.getElementById("rt-pw");
     var msg = document.getElementById("rt-msg");
     async function tryLogin(){
+      if(selectedAccountIndex === null){
+        msg.textContent = "Choose an account above first.";
+        return;
+      }
       msg.textContent = "Signing in...";
       try{
         await signInWithEmailAndPassword(auth, SHARED_EMAIL, pw.value);
+        bridge.switchTab(selectedAccountIndex);
       }catch(e){
         if(e.code === "auth/invalid-credential" || e.code === "auth/wrong-password" || e.code === "auth/invalid-login-credentials"){
           msg.textContent = "That password didn't work.";
@@ -2241,6 +2307,13 @@
   function hideLogin(){
     var box = document.getElementById("rt-login");
     if(box) box.style.display = "none";
+  }
+
+  var changeAccountBtn = document.getElementById("change-account-btn");
+  if(changeAccountBtn){
+    changeAccountBtn.addEventListener("click", function(){
+      signOut(auth);
+    });
   }
 
   // ---------- Syncing ----------
