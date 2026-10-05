@@ -511,7 +511,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.40.0</div>
+      <div class="version-tag">Version 1.40.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2354,6 +2354,10 @@
       if(!c.spells) c.spells = [];
       if(!c.skills) c.skills = blankSkillList();
       if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
+      // Synced data from a device running an older version won't have these fields yet —
+      // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
+      if(typeof c.isDM === "undefined") c.isDM = (i === 8);
+      if(typeof c.hideRolls === "undefined") c.hideRolls = false;
       app.characters[i] = c;
       if(i === app.activeIndex){
         state = c;
