@@ -238,6 +238,13 @@
     background:transparent;color:var(--berry);cursor:pointer;font-weight:600;
   }
   .crit-toggle.active{background:var(--berry);color:#fff;}
+  .hide-rolls-toggle{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.8rem;padding:6px 12px;border:1px solid var(--ink-soft);border-radius:6px;
+    background:transparent;color:var(--ink-soft);cursor:pointer;font-weight:600;
+  }
+  .hide-rolls-toggle.active{background:var(--ink-soft);color:var(--bg-card);}
+  .log-entry.hidden-roll .label{font-style:italic;opacity:0.7;}
   .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;}
   @media (max-width:760px){.grid{grid-template-columns:1fr;}}
   section.panel{
@@ -504,7 +511,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.39.1</div>
+      <div class="version-tag">Version 1.40.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -522,6 +529,7 @@
       <button data-mode="adv">Advantage</button>
     </div>
     <button type="button" class="crit-toggle" id="crit-toggle" title="Force the next Damage roll to double its dice — for auto-crit effects like Assassinate.">Crit</button>
+    <button type="button" class="hide-rolls-toggle" id="hide-rolls-toggle" title="While on, new rolls on this tab are only visible when signed in as the DM — everyone else sees a hidden entry." style="display:none;">Hide Rolls</button>
   </div>
 
   <section class="panel">
@@ -844,6 +852,10 @@
   app.characters.forEach(function(c, i){
     if(!c.name) c.name = TAB_NAMES[i] || ("Player " + (i+1));
     if(!c.color) c.color = TAB_COLORS[i % TAB_COLORS.length];
+    // Tied to the original tab slot (not the current, possibly-renamed name) so the DM's
+    // hide-rolls button stays on the DM's tab even if that tab gets renamed later.
+    if(typeof c.isDM === "undefined") c.isDM = (i === 8);
+    if(typeof c.hideRolls === "undefined") c.hideRolls = false;
     if(!c.proficiencies) c.proficiencies = [];
     if(!c.skills) c.skills = blankSkillList();
     c.skills.forEach(function(sk){ if(typeof sk.expertise === "undefined") sk.expertise = false; });
@@ -1054,10 +1066,15 @@
     // rolling on someone else's (unlocked) tab.
     var acctName = (currentAccount !== null && app.characters[currentAccount]) ? app.characters[currentAccount].name : null;
     var fullLabel = acctName ? ("(" + acctName + ") " + label) : label;
-    state.log.push({label:fullLabel, parts:parts, total:total, crit:crit, fumble:fumble, t:Date.now()});
+    var hidden = !!(state.isDM && state.hideRolls);
+    state.log.push({label:fullLabel, parts:parts, total:total, crit:crit, fumble:fumble, t:Date.now(), hidden:hidden});
     if(state.log.length > 60) state.log.shift();
     saveState();
     renderLog();
+  }
+
+  function viewerIsDM(){
+    return currentAccount !== null && app.characters[currentAccount] && !!app.characters[currentAccount].isDM;
   }
 
   function renderLog(){
@@ -1067,8 +1084,15 @@
       list.innerHTML = '<div class="log-empty">No rolls yet.</div>';
       return;
     }
+    var canSeeHidden = viewerIsDM();
     state.log.forEach(function(entry){
       var row = document.createElement("div");
+      if(entry.hidden && !canSeeHidden){
+        row.className = "log-entry hidden-roll";
+        row.innerHTML = '<span class="label">🙈 Hidden roll — DM only</span>';
+        list.appendChild(row);
+        return;
+      }
       row.className = "log-entry";
       var totalClass = "total" + (entry.crit ? " crit" : entry.fumble ? " fumble" : "");
       row.innerHTML =
@@ -1224,6 +1248,13 @@
     renderSettingsBar();
   });
 
+  var hideRollsToggle = document.getElementById("hide-rolls-toggle");
+  hideRollsToggle.addEventListener("click", function(){
+    state.hideRolls = !state.hideRolls;
+    saveState();
+    renderSettingsBar();
+  });
+
   function renderSettingsBar(){
     profInput.value = state.profBonus;
     Array.prototype.forEach.call(modeGroup.querySelectorAll("button"), function(b){
@@ -1231,6 +1262,12 @@
     });
     critToggle.classList.toggle("active", !!state.critMode);
     critToggle.textContent = state.critMode ? "Crit: ON" : "Crit";
+
+    // Only the DM's own tab gets this button — it hides that tab's rolls from everyone
+    // signed in as someone other than the DM.
+    hideRollsToggle.style.display = state.isDM ? "" : "none";
+    hideRollsToggle.classList.toggle("active", !!state.hideRolls);
+    hideRollsToggle.textContent = state.hideRolls ? "Hide Rolls: ON" : "Hide Rolls";
   }
 
   // ---------- Abilities ----------
@@ -2293,6 +2330,7 @@
       currentAccount = (typeof i === "number" && i >= 0 && i < app.characters.length) ? i : null;
       renderTabs();
       updateLockOverlay();
+      renderLog();  // hidden-roll visibility depends on who's now signed in
     },
     getLocksJson: function(){ return JSON.stringify(app.locks || {}); },
     setLocksFromJson: function(json){
