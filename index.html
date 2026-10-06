@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.40.3</title>
+<title>Roll Tracker V1.41.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -485,15 +485,20 @@
   #log h2{font-size:1.05rem;margin:0 0 10px;font-weight:600;}
   #log-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:0;}
   .log-entry{
-    display:flex;justify-content:space-between;gap:10px;
+    display:flex;align-items:center;gap:10px;
     padding:7px 0;border-bottom:1px solid var(--border-soft);
     font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.85rem;
   }
   .log-entry:first-child{border-bottom:none;}
-  .log-entry .label{color:var(--ink-soft);}
+  .log-entry .label{color:var(--ink-soft);flex:1;}
   .log-entry .total{font-weight:700;}
   .log-entry .total.crit{color:var(--moss);}
   .log-entry .total.fumble{color:var(--berry);}
+  .log-entry button.del{
+    background:none;border:none;color:var(--berry);font-size:0.9rem;cursor:pointer;
+    padding:2px 4px;line-height:1;flex-shrink:0;opacity:0.7;
+  }
+  .log-entry button.del:hover{opacity:1;}
   .log-empty{color:var(--ink-soft);font-size:0.85rem;font-family:-apple-system,"Segoe UI",sans-serif;}
   #clear-log{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -512,7 +517,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.40.3</div>
+      <div class="version-tag">Version 1.41.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1086,7 +1091,7 @@
       return;
     }
     var canSeeHidden = viewerIsDM();
-    state.log.forEach(function(entry){
+    state.log.forEach(function(entry, idx){
       var row = document.createElement("div");
       if(entry.hidden && !canSeeHidden){
         row.className = "log-entry hidden-roll";
@@ -1099,6 +1104,17 @@
       row.innerHTML =
         '<span class="label">' + escapeHtml(entry.label) + ' — ' + escapeHtml(entry.parts) + '</span>' +
         '<span class="' + totalClass + '">' + entry.total + (entry.crit ? " ★" : entry.fumble ? " ✕" : "") + '</span>';
+      var delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "del";
+      delBtn.textContent = "✕";
+      delBtn.title = "Remove this roll";
+      delBtn.addEventListener("click", function(){
+        state.log.splice(idx, 1);
+        saveState();
+        renderLog();
+      });
+      row.appendChild(delBtn);
       list.appendChild(row);
     });
   }
