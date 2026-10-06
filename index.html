@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.42.1</title>
+<title>Roll Tracker V1.43.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -544,7 +544,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.42.1</div>
+      <div class="version-tag" id="version-tag">Version 1.43.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2351,6 +2351,16 @@
       targetSelector: "#version-tag",
       title: "Version Number",
       text: "This goes up every time something changes in Roll Tracker, even a small tweak. If something looks off, or you're comparing notes with someone else, checking this number first tells you whether you're both on the same version."
+    },
+    {
+      targetSelector: "#char-tabs",
+      title: "Character Tabs",
+      text: "Each tab is a character's own sheet — abilities, weapons, spells, proficiencies, and roll log all separate. Click a tab to switch to it. Double-click a tab to rename it."
+    },
+    {
+      targetSelector: ".char-tab-lock",
+      title: "Locking a Tab",
+      text: "Click the little lock icon on a tab to lock it just for you — a safety net so you don't accidentally edit or roll on someone else's sheet. It only locks it for your own signed-in account; everyone else can still use that tab normally. Click the lock icon again, or the banner that appears at the top of a locked tab, to unlock it anytime."
     }
   ];
 
