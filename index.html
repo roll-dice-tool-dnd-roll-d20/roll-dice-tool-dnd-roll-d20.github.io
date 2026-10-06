@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.41.0</title>
+<title>Roll Tracker V1.42.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -64,6 +64,26 @@
     font-family:Georgia,serif;vertical-align:middle;margin-left:4px;
     cursor:pointer;
   }
+  .tutorial-backdrop{position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.45);}
+  .tutorial-highlight{
+    position:relative;z-index:9995;
+    box-shadow:0 0 0 4px var(--moss), 0 0 14px 4px rgba(0,0,0,0.35);
+    border-radius:4px;background:var(--bg-card);padding:2px 6px;
+  }
+  .tutorial-popup{
+    position:fixed;z-index:9996;max-width:280px;
+    background:var(--bg-card);color:var(--ink);border:1px solid var(--border);
+    border-radius:10px;padding:16px 18px;box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    font-family:-apple-system,"Segoe UI",sans-serif;
+  }
+  .tutorial-popup h3{margin:0 0 8px;font-size:0.95rem;color:var(--ink);}
+  .tutorial-popup p{margin:0 0 14px;font-size:0.85rem;line-height:1.45;color:var(--ink-soft);}
+  .tutorial-popup-actions{display:flex;justify-content:flex-end;}
+  .tutorial-popup-actions button{
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.8rem;
+    padding:6px 16px;border:none;border-radius:6px;background:var(--moss);color:#fff;cursor:pointer;
+  }
+  .tutorial-popup-actions button:hover{background:var(--moss-dark);}
   header p{
     margin:2px 0 0;
     color:var(--ink-soft);
@@ -517,7 +537,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag">Version 1.41.0</div>
+      <div class="version-tag" id="version-tag">Version 1.42.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2316,6 +2336,127 @@
     saveState();
     renderProficiencies();
   });
+
+  // ---------- Tutorial (click the "i" next to the title) ----------
+  // Add more steps here later — each one points a popup at an element on the page.
+  var TUTORIAL_STEPS = [
+    {
+      targetSelector: "#version-tag",
+      title: "Version Number",
+      text: "This goes up every time something changes in Roll Tracker, even a small tweak. If something looks off, or you're comparing notes with someone else, checking this number first tells you whether you're both on the same version."
+    }
+  ];
+
+  var tutorialScrollY = 0;
+  var tutorialHighlightEl = null;
+
+  // The usual overflow:hidden scroll lock still lets some browsers (mobile Safari
+  // especially) scroll the page behind a fixed overlay, which is exactly what made the
+  // popup's pointing inaccurate last time. Pinning the body in place with a negative
+  // top offset blocks that completely, and we restore the scroll position on close.
+  function lockPageScroll(){
+    tutorialScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.position = "fixed";
+    document.body.style.top = (-tutorialScrollY) + "px";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+  }
+
+  function unlockPageScroll(){
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, tutorialScrollY);
+  }
+
+  function tutorialKeydownHandler(e){
+    if(e.key === "Escape") closeTutorial();
+  }
+
+  function closeTutorial(){
+    var backdrop = document.getElementById("tutorial-backdrop");
+    if(backdrop) backdrop.remove();
+    var popup = document.getElementById("tutorial-popup");
+    if(popup) popup.remove();
+    if(tutorialHighlightEl){
+      tutorialHighlightEl.classList.remove("tutorial-highlight");
+      tutorialHighlightEl = null;
+    }
+    unlockPageScroll();
+    document.removeEventListener("keydown", tutorialKeydownHandler);
+  }
+
+  function showTutorialStep(idx){
+    var step = TUTORIAL_STEPS[idx];
+    if(!step) return;
+    var targetEl = document.querySelector(step.targetSelector);
+    if(!targetEl) return;
+
+    // Measure where the target sits in the viewport BEFORE locking scroll — locking
+    // freezes the page exactly where it's currently displayed, so this stays accurate.
+    var rect = targetEl.getBoundingClientRect();
+
+    lockPageScroll();
+
+    targetEl.classList.add("tutorial-highlight");
+    tutorialHighlightEl = targetEl;
+
+    var backdrop = document.createElement("div");
+    backdrop.id = "tutorial-backdrop";
+    backdrop.className = "tutorial-backdrop";
+    backdrop.addEventListener("click", closeTutorial);
+    document.body.appendChild(backdrop);
+
+    var isLast = idx === TUTORIAL_STEPS.length - 1;
+    var popup = document.createElement("div");
+    popup.id = "tutorial-popup";
+    popup.className = "tutorial-popup";
+    popup.innerHTML =
+      "<h3>" + escapeHtml(step.title) + "</h3>" +
+      "<p>" + escapeHtml(step.text) + "</p>" +
+      '<div class="tutorial-popup-actions">' +
+      '<button type="button" id="tutorial-next-btn">' + (isLast ? "Got it" : "Next") + "</button>" +
+      "</div>";
+    document.body.appendChild(popup);
+
+    // Position below the target by default, clamped to stay on-screen, flipping above
+    // if there isn't room below.
+    var margin = 10;
+    var popupWidth = popup.offsetWidth;
+    var popupHeight = popup.offsetHeight;
+    var left = rect.left;
+    if(left + popupWidth + margin > window.innerWidth) left = window.innerWidth - popupWidth - margin;
+    if(left < margin) left = margin;
+    var top = rect.bottom + 12;
+    if(top + popupHeight + margin > window.innerHeight) top = rect.top - popupHeight - 12;
+    if(top < margin) top = margin;
+    popup.style.left = left + "px";
+    popup.style.top = top + "px";
+
+    document.getElementById("tutorial-next-btn").addEventListener("click", function(){
+      if(isLast){
+        closeTutorial();
+      } else {
+        targetEl.classList.remove("tutorial-highlight");
+        tutorialHighlightEl = null;
+        backdrop.remove();
+        popup.remove();
+        showTutorialStep(idx + 1);
+      }
+    });
+
+    document.addEventListener("keydown", tutorialKeydownHandler);
+  }
+
+  var titleInfoIcon = document.getElementById("title-info-icon");
+  if(titleInfoIcon){
+    titleInfoIcon.addEventListener("click", function(){
+      showTutorialStep(0);
+    });
+  }
 
   renderTabs();
   renderSettingsBar();
