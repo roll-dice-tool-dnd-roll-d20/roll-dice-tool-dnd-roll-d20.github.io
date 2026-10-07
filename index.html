@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.44.0</title>
+<title>Roll Tracker V1.44.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -69,7 +69,12 @@
     position:relative;z-index:9995;
     box-shadow:0 0 0 4px var(--moss), 0 0 14px 4px rgba(0,0,0,0.35);
     border-radius:4px;background:var(--bg-card);padding:2px 6px;
+    transition:box-shadow 0.2s ease;
   }
+  /* An active tab's translateY transform creates its own stacking context, which traps
+     its lock icon's z-index inside it no matter how high that z-index is — so the icon
+     stays invisible behind the dark backdrop unless the tab itself is also raised. */
+  .char-tab.tutorial-highlight-parent{z-index:9994;}
   .tutorial-popup{
     position:fixed;z-index:9996;max-width:280px;
     background:var(--bg-card);color:var(--ink);border:1px solid var(--border);
@@ -553,7 +558,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.44.0</div>
+      <div class="version-tag" id="version-tag">Version 1.44.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2375,6 +2380,7 @@
 
   var tutorialScrollY = 0;
   var tutorialHighlightEls = [];
+  var tutorialHighlightParents = [];
   var tutorialBackdropEl = null;
   var tutorialPopupEl = null;
 
@@ -2382,13 +2388,14 @@
   // especially) scroll the page behind a fixed overlay, which is exactly what made the
   // popup's pointing inaccurate last time. Pinning the body in place with a negative
   // top offset blocks that completely, and we restore the scroll position on close.
+  // (Deliberately NOT setting width:100% here — pairing it with left:0/right:0 is what
+  // was clipping the page on iOS Safari; left:0 + right:0 alone already sizes it correctly.)
   function lockPageScroll(){
     tutorialScrollY = window.scrollY || window.pageYOffset || 0;
     document.body.style.position = "fixed";
     document.body.style.top = (-tutorialScrollY) + "px";
     document.body.style.left = "0";
     document.body.style.right = "0";
-    document.body.style.width = "100%";
   }
 
   function unlockPageScroll(){
@@ -2396,7 +2403,6 @@
     document.body.style.top = "";
     document.body.style.left = "";
     document.body.style.right = "";
-    document.body.style.width = "";
     window.scrollTo(0, tutorialScrollY);
   }
 
@@ -2407,6 +2413,8 @@
   function clearTutorialHighlights(){
     tutorialHighlightEls.forEach(function(el){ el.classList.remove("tutorial-highlight"); });
     tutorialHighlightEls = [];
+    tutorialHighlightParents.forEach(function(el){ el.classList.remove("tutorial-highlight-parent"); });
+    tutorialHighlightParents = [];
   }
 
   function closeTutorial(){
@@ -2456,7 +2464,17 @@
     }
 
     clearTutorialHighlights();
-    targets.forEach(function(el){ el.classList.add("tutorial-highlight"); });
+    targets.forEach(function(el){
+      el.classList.add("tutorial-highlight");
+      // A highlighted element trapped inside an ancestor that creates its own stacking
+      // context (e.g. the active tab's translateY transform) stays hidden behind the
+      // backdrop no matter its own z-index, so raise that ancestor too.
+      var tabParent = el.closest(".char-tab");
+      if(tabParent && tabParent !== el){
+        tabParent.classList.add("tutorial-highlight-parent");
+        tutorialHighlightParents.push(tabParent);
+      }
+    });
     tutorialHighlightEls = targets;
 
     var isLast = idx === TUTORIAL_STEPS.length - 1;
@@ -2465,7 +2483,7 @@
     // left/top transition below actually animates it sliding to the new spot, rather than
     // it just vanishing and reappearing — much less jarring between nearby steps.
     tutorialPopupEl.innerHTML =
-      '<div class="tutorial-step-count">Step ' + (idx + 1) + " of " + TUTORIAL_STEPS.length + "</div>" +
+      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + TUTORIAL_STEPS.length + "</div>" +
       "<h3>" + escapeHtml(step.title) + "</h3>" +
       "<p>" + escapeHtml(step.text) + "</p>" +
       '<div class="tutorial-popup-actions">' +
