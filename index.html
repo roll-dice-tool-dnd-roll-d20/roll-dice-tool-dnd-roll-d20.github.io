@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.44.3</title>
+<title>Roll Tracker V1.44.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -561,7 +561,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.44.3</div>
+      <div class="version-tag" id="version-tag">Version 1.44.4</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2388,14 +2388,15 @@
   var tutorialPopupEl = null;
   var tutorialBodyWidth = 0;
 
-  // The usual overflow:hidden scroll lock still lets some browsers (mobile Safari
-  // especially) scroll the page behind a fixed overlay, which is exactly what made the
-  // popup's pointing inaccurate last time. Pinning the body in place with a negative
-  // top offset blocks that completely, and we restore the scroll position on close.
-  // Percentage/right:0 sizing (what earlier versions used) is exactly what was clipping
-  // and narrowing the page on iOS Safari, so the width is measured and set in actual
-  // pixels instead, and <html> itself is also locked — this is the standard, iOS-tested
-  // way to pin a page in place without it drifting or shrinking.
+  // Shared scroll lock, used both by the tutorial popup and (via the rtBridge
+  // lockScroll/unlockScroll methods) by the sign-in screen. The usual overflow:hidden
+  // lock still lets some browsers (mobile Safari especially) scroll the page behind a
+  // fixed overlay, which is exactly what made the popup's pointing inaccurate before.
+  // Pinning the body in place with a negative top offset blocks that completely, and we
+  // restore the scroll position on close. Percentage/right:0 sizing (what earlier
+  // versions used) is exactly what was clipping and narrowing the page on iOS Safari,
+  // so the width is measured and set in actual pixels instead, and <html> itself is
+  // also locked — this is the standard, iOS-tested way to pin a page in place.
   function lockPageScroll(){
     tutorialScrollY = window.scrollY || window.pageYOffset || 0;
     tutorialBodyWidth = document.documentElement.clientWidth;
@@ -2559,6 +2560,8 @@
   }
 
   window.rtBridge = {
+    lockScroll: function(){ lockPageScroll(); },
+    unlockScroll: function(){ unlockPageScroll(); },
     count: function(){ return app.characters.length; },
     getJson: function(i){ return JSON.stringify(app.characters[i]); },
     getCharMeta: function(){
@@ -2660,6 +2663,11 @@
     if(existing) existing.remove();
     selectedAccountIndex = null;
 
+    // Locks the page in place (same technique the tutorial uses) so there's nothing to
+    // scroll to — without this, focusing the password field and bringing up the mobile
+    // keyboard could scroll the app's own content into view behind the login screen.
+    bridge.lockScroll();
+
     var box = document.createElement("div");
     box.id = "rt-login";
     box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;padding:16px;";
@@ -2722,6 +2730,7 @@
   function hideLogin(){
     var box = document.getElementById("rt-login");
     if(box) box.style.display = "none";
+    bridge.unlockScroll();
   }
 
   var changeAccountBtn = document.getElementById("change-account-btn");
