@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.44.1</title>
+<title>Roll Tracker V1.44.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -558,7 +558,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.44.1</div>
+      <div class="version-tag" id="version-tag">Version 1.44.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2383,26 +2383,32 @@
   var tutorialHighlightParents = [];
   var tutorialBackdropEl = null;
   var tutorialPopupEl = null;
+  var tutorialBodyWidth = 0;
 
   // The usual overflow:hidden scroll lock still lets some browsers (mobile Safari
   // especially) scroll the page behind a fixed overlay, which is exactly what made the
   // popup's pointing inaccurate last time. Pinning the body in place with a negative
   // top offset blocks that completely, and we restore the scroll position on close.
-  // (Deliberately NOT setting width:100% here — pairing it with left:0/right:0 is what
-  // was clipping the page on iOS Safari; left:0 + right:0 alone already sizes it correctly.)
+  // Percentage/right:0 sizing (what earlier versions used) is exactly what was clipping
+  // and narrowing the page on iOS Safari, so the width is measured and set in actual
+  // pixels instead, and <html> itself is also locked — this is the standard, iOS-tested
+  // way to pin a page in place without it drifting or shrinking.
   function lockPageScroll(){
     tutorialScrollY = window.scrollY || window.pageYOffset || 0;
+    tutorialBodyWidth = document.documentElement.clientWidth;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.position = "fixed";
     document.body.style.top = (-tutorialScrollY) + "px";
     document.body.style.left = "0";
-    document.body.style.right = "0";
+    document.body.style.width = tutorialBodyWidth + "px";
   }
 
   function unlockPageScroll(){
+    document.documentElement.style.overflow = "";
     document.body.style.position = "";
     document.body.style.top = "";
     document.body.style.left = "";
-    document.body.style.right = "";
+    document.body.style.width = "";
     window.scrollTo(0, tutorialScrollY);
   }
 
