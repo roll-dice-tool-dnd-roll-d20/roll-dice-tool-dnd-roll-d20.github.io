@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.44.4</title>
+<title>Roll Tracker V1.44.5</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -561,7 +561,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.44.4</div>
+      <div class="version-tag" id="version-tag">Version 1.44.5</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2397,6 +2397,15 @@
   // versions used) is exactly what was clipping and narrowing the page on iOS Safari,
   // so the width is measured and set in actual pixels instead, and <html> itself is
   // also locked — this is the standard, iOS-tested way to pin a page in place.
+  // iOS Safari's own "scroll the focused field into view" behavior, triggered the
+  // instant the keyboard opens, happens outside normal scroll events and slips past the
+  // position:fixed lock below — this snaps it straight back to 0 whenever that happens.
+  function correctScrollWhileLocked(){
+    if(document.body.style.position === "fixed" && (window.scrollX || window.scrollY)){
+      window.scrollTo(0, 0);
+    }
+  }
+
   function lockPageScroll(){
     tutorialScrollY = window.scrollY || window.pageYOffset || 0;
     tutorialBodyWidth = document.documentElement.clientWidth;
@@ -2405,6 +2414,11 @@
     document.body.style.top = (-tutorialScrollY) + "px";
     document.body.style.left = "0";
     document.body.style.width = tutorialBodyWidth + "px";
+    window.addEventListener("scroll", correctScrollWhileLocked);
+    if(window.visualViewport){
+      window.visualViewport.addEventListener("resize", correctScrollWhileLocked);
+      window.visualViewport.addEventListener("scroll", correctScrollWhileLocked);
+    }
   }
 
   function unlockPageScroll(){
@@ -2414,6 +2428,11 @@
     document.body.style.left = "";
     document.body.style.width = "";
     window.scrollTo(0, tutorialScrollY);
+    window.removeEventListener("scroll", correctScrollWhileLocked);
+    if(window.visualViewport){
+      window.visualViewport.removeEventListener("resize", correctScrollWhileLocked);
+      window.visualViewport.removeEventListener("scroll", correctScrollWhileLocked);
+    }
   }
 
   function tutorialKeydownHandler(e){
