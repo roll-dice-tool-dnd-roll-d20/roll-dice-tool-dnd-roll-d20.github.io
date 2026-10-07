@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.43.0</title>
+<title>Roll Tracker V1.44.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -75,6 +75,11 @@
     background:var(--bg-card);color:var(--ink);border:1px solid var(--border);
     border-radius:10px;padding:16px 18px;box-shadow:0 8px 24px rgba(0,0,0,0.4);
     font-family:-apple-system,"Segoe UI",sans-serif;
+    transition:left 0.28s ease, top 0.28s ease;
+  }
+  .tutorial-step-count{
+    font-size:0.68rem;font-weight:700;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;
   }
   .tutorial-popup h3{margin:0 0 8px;font-size:0.95rem;color:var(--ink);}
   .tutorial-popup p{margin:0 0 14px;font-size:0.85rem;line-height:1.45;color:var(--ink-soft);}
@@ -162,6 +167,10 @@
   }
   .char-tab-lock:hover{opacity:1;background:rgba(0,0,0,0.5);}
   .char-tab-lock.locked{background:rgba(0,0,0,0.55);}
+  /* Keep the lock icon's own small round shape — the generic .tutorial-highlight padding
+     and position:relative would otherwise distort it, since it's normally absolutely
+     positioned in the corner of its tab. */
+  .char-tab-lock.tutorial-highlight{position:absolute;top:1px;right:1px;padding:0;border-radius:50%;opacity:1;}
   .sheet-content{position:relative;}
   .lock-overlay{
     position:absolute;inset:0;z-index:50;
@@ -544,7 +553,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.43.0</div>
+      <div class="version-tag" id="version-tag">Version 1.44.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2365,7 +2374,9 @@
   ];
 
   var tutorialScrollY = 0;
-  var tutorialHighlightEl = null;
+  var tutorialHighlightEls = [];
+  var tutorialBackdropEl = null;
+  var tutorialPopupEl = null;
 
   // The usual overflow:hidden scroll lock still lets some browsers (mobile Safari
   // especially) scroll the page behind a fixed overlay, which is exactly what made the
@@ -2393,15 +2404,15 @@
     if(e.key === "Escape") closeTutorial();
   }
 
+  function clearTutorialHighlights(){
+    tutorialHighlightEls.forEach(function(el){ el.classList.remove("tutorial-highlight"); });
+    tutorialHighlightEls = [];
+  }
+
   function closeTutorial(){
-    var backdrop = document.getElementById("tutorial-backdrop");
-    if(backdrop) backdrop.remove();
-    var popup = document.getElementById("tutorial-popup");
-    if(popup) popup.remove();
-    if(tutorialHighlightEl){
-      tutorialHighlightEl.classList.remove("tutorial-highlight");
-      tutorialHighlightEl = null;
-    }
+    if(tutorialBackdropEl){ tutorialBackdropEl.remove(); tutorialBackdropEl = null; }
+    if(tutorialPopupEl){ tutorialPopupEl.remove(); tutorialPopupEl = null; }
+    clearTutorialHighlights();
     unlockPageScroll();
     document.removeEventListener("keydown", tutorialKeydownHandler);
   }
@@ -2409,30 +2420,52 @@
   function showTutorialStep(idx){
     var step = TUTORIAL_STEPS[idx];
     if(!step) return;
-    var targetEl = document.querySelector(step.targetSelector);
-    if(!targetEl) return;
+    // A step can target several matching elements at once (e.g. every tab's lock icon) —
+    // all of them get highlighted, and the popup anchors to the group as a whole.
+    var targets = Array.prototype.slice.call(document.querySelectorAll(step.targetSelector));
+    if(!targets.length) return;
 
-    // Measure where the target sits in the viewport BEFORE locking scroll — locking
+    // Measure where the target(s) sit in the viewport BEFORE locking scroll — locking
     // freezes the page exactly where it's currently displayed, so this stays accurate.
-    var rect = targetEl.getBoundingClientRect();
+    var rect = targets.reduce(function(acc, el){
+      var r = el.getBoundingClientRect();
+      if(!acc) return {left:r.left, top:r.top, right:r.right, bottom:r.bottom};
+      return {
+        left: Math.min(acc.left, r.left),
+        top: Math.min(acc.top, r.top),
+        right: Math.max(acc.right, r.right),
+        bottom: Math.max(acc.bottom, r.bottom)
+      };
+    }, null);
 
-    lockPageScroll();
+    var isFirstStepEver = !tutorialBackdropEl;
+    if(isFirstStepEver){
+      lockPageScroll();
+      tutorialBackdropEl = document.createElement("div");
+      tutorialBackdropEl.id = "tutorial-backdrop";
+      tutorialBackdropEl.className = "tutorial-backdrop";
+      tutorialBackdropEl.addEventListener("click", closeTutorial);
+      document.body.appendChild(tutorialBackdropEl);
 
-    targetEl.classList.add("tutorial-highlight");
-    tutorialHighlightEl = targetEl;
+      tutorialPopupEl = document.createElement("div");
+      tutorialPopupEl.id = "tutorial-popup";
+      tutorialPopupEl.className = "tutorial-popup";
+      document.body.appendChild(tutorialPopupEl);
 
-    var backdrop = document.createElement("div");
-    backdrop.id = "tutorial-backdrop";
-    backdrop.className = "tutorial-backdrop";
-    backdrop.addEventListener("click", closeTutorial);
-    document.body.appendChild(backdrop);
+      document.addEventListener("keydown", tutorialKeydownHandler);
+    }
+
+    clearTutorialHighlights();
+    targets.forEach(function(el){ el.classList.add("tutorial-highlight"); });
+    tutorialHighlightEls = targets;
 
     var isLast = idx === TUTORIAL_STEPS.length - 1;
     var isFirst = idx === 0;
-    var popup = document.createElement("div");
-    popup.id = "tutorial-popup";
-    popup.className = "tutorial-popup";
-    popup.innerHTML =
+    // Reusing the same popup element (instead of removing and recreating it) means the
+    // left/top transition below actually animates it sliding to the new spot, rather than
+    // it just vanishing and reappearing — much less jarring between nearby steps.
+    tutorialPopupEl.innerHTML =
+      '<div class="tutorial-step-count">Step ' + (idx + 1) + " of " + TUTORIAL_STEPS.length + "</div>" +
       "<h3>" + escapeHtml(step.title) + "</h3>" +
       "<p>" + escapeHtml(step.text) + "</p>" +
       '<div class="tutorial-popup-actions">' +
@@ -2440,43 +2473,32 @@
       '<button type="button" id="tutorial-back-btn" class="tutorial-btn-ghost"' + (isFirst ? " disabled" : "") + '>Back</button>' +
       '<button type="button" id="tutorial-next-btn"' + (isLast ? " disabled" : "") + '>Next</button>' +
       "</div>";
-    document.body.appendChild(popup);
 
-    // Position below the target by default, clamped to stay on-screen, flipping above
+    // Position below the target(s) by default, clamped to stay on-screen, flipping above
     // if there isn't room below.
     var margin = 10;
-    var popupWidth = popup.offsetWidth;
-    var popupHeight = popup.offsetHeight;
+    var popupWidth = tutorialPopupEl.offsetWidth;
+    var popupHeight = tutorialPopupEl.offsetHeight;
     var left = rect.left;
     if(left + popupWidth + margin > window.innerWidth) left = window.innerWidth - popupWidth - margin;
     if(left < margin) left = margin;
     var top = rect.bottom + 12;
     if(top + popupHeight + margin > window.innerHeight) top = rect.top - popupHeight - 12;
     if(top < margin) top = margin;
-    popup.style.left = left + "px";
-    popup.style.top = top + "px";
-
-    function goToStep(newIdx){
-      targetEl.classList.remove("tutorial-highlight");
-      tutorialHighlightEl = null;
-      backdrop.remove();
-      popup.remove();
-      showTutorialStep(newIdx);
-    }
+    tutorialPopupEl.style.left = left + "px";
+    tutorialPopupEl.style.top = top + "px";
 
     if(!isLast){
       document.getElementById("tutorial-next-btn").addEventListener("click", function(){
-        goToStep(idx + 1);
+        showTutorialStep(idx + 1);
       });
     }
     if(!isFirst){
       document.getElementById("tutorial-back-btn").addEventListener("click", function(){
-        goToStep(idx - 1);
+        showTutorialStep(idx - 1);
       });
     }
     document.getElementById("tutorial-end-btn").addEventListener("click", closeTutorial);
-
-    document.addEventListener("keydown", tutorialKeydownHandler);
   }
 
   var titleInfoIcon = document.getElementById("title-info-icon");
