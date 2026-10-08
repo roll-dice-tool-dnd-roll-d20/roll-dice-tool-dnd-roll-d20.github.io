@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.6</title>
+<title>Roll Tracker V1.45.7</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -575,7 +575,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.6</div>
+      <div class="version-tag" id="version-tag">Version 1.45.7</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2412,6 +2412,11 @@
       targetSelector: "#prof-bonus-label",
       title: "Proficiency Bonus",
       text: "Set this to your character's current proficiency bonus. It's used automatically anywhere proficiency applies — skill checks, saving throws, and attack rolls with a prof checkbox checked — so you only have to update it here as you level up instead of hunting down every roll on the sheet."
+    },
+    {
+      targetSelector: "#mode-group",
+      title: "Advantage / Disadvantage",
+      text: "Sets the mode for d20 rolls across the whole sheet — ability checks, saves, and attack rolls. Advantage rolls two d20s and keeps the higher, Disadvantage keeps the lower, and Normal rolls just one. It stays set until you change it again, so remember to switch back to Normal once the advantage or disadvantage wears off."
     }
   ];
 
