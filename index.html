@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.2</title>
+<title>Roll Tracker V1.45.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -129,6 +129,9 @@
     background:transparent;color:var(--ink-soft);cursor:pointer;
   }
   .change-account-btn:hover{border-color:var(--moss);color:var(--moss-dark);}
+  /* The ghost-button styling (soft grey text, transparent background) reads as disabled
+     even with the tutorial's green glow around it, so brighten it like the real button it is. */
+  .change-account-btn.tutorial-highlight{color:var(--ink);border-color:var(--moss);}
   .account-picker{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;}
   .account-picker-btn{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -561,7 +564,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.2</div>
+      <div class="version-tag" id="version-tag">Version 1.45.3</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
