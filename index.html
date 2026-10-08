@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.5</title>
+<title>Roll Tracker V1.45.6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -254,6 +253,10 @@
     font-size:0.88rem;
   }
   .settings-bar label{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
+  /* .settings-bar label's compound selector outranks .tutorial-highlight's specificity
+     outright (not just a source-order tie like the earlier two fixes), so it would win
+     and keep the text grey — override by ID, which beats everything else here. */
+  #prof-bonus-label.tutorial-highlight{color:var(--ink);}
   .settings-bar input[type=number]{
     width:52px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;
     background:var(--bg);color:var(--ink);font-size:0.9rem;
@@ -572,7 +575,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.5</div>
+      <div class="version-tag" id="version-tag">Version 1.45.6</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -581,7 +584,7 @@
   <div class="sheet-content" id="sheet-content">
 
   <div class="settings-bar">
-    <label>Proficiency Bonus
+    <label id="prof-bonus-label">Proficiency Bonus
       <input type="number" id="prof-bonus" value="2">
     </label>
     <div class="mode-group" id="mode-group">
@@ -2404,6 +2407,11 @@
       targetSelector: "#sync-status",
       title: "Sync Light",
       text: "A green dot and \"Syncing\" means your rolls and sheet changes are being saved and shared live with the rest of the group. A red dot and \"Offline\" means you're not connected right now — your rolls still work, but they're only saved on this device until you're back online and signed in."
+    },
+    {
+      targetSelector: "#prof-bonus-label",
+      title: "Proficiency Bonus",
+      text: "Set this to your character's current proficiency bonus. It's used automatically anywhere proficiency applies — skill checks, saving throws, and attack rolls with a prof checkbox checked — so you only have to update it here as you level up instead of hunting down every roll on the sheet."
     }
   ];
 
