@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.7</title>
+<title>Roll Tracker V1.45.8</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -296,6 +296,10 @@
     background:transparent;color:var(--berry);cursor:pointer;font-weight:600;
   }
   .crit-toggle.active{background:var(--berry);color:#fff;}
+  /* Same transparent-background issue as the ghost buttons earlier — its own
+     background:transparent ties in specificity with .tutorial-highlight's and wins by
+     source order, leaving it see-through against the dark backdrop. */
+  .crit-toggle.tutorial-highlight{background:var(--bg-card);}
   .hide-rolls-toggle{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.8rem;padding:6px 12px;border:1px solid var(--ink-soft);border-radius:6px;
@@ -575,7 +579,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.7</div>
+      <div class="version-tag" id="version-tag">Version 1.45.8</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2417,6 +2421,11 @@
       targetSelector: "#mode-group",
       title: "Advantage / Disadvantage",
       text: "Sets the mode for d20 rolls across the whole sheet — ability checks, saves, and attack rolls. Advantage rolls two d20s and keeps the higher, Disadvantage keeps the lower, and Normal rolls just one. It stays set until you change it again, so remember to switch back to Normal once the advantage or disadvantage wears off."
+    },
+    {
+      targetSelector: "#crit-toggle",
+      title: "Crit Button",
+      text: "Click this to force every Damage roll to double its dice — for auto-crit effects like Assassinate, where you don't need an attack roll to land a critical hit. Unlike a natural 20, it stays on until you click it again, so remember to toggle it back off once the effect's done."
     }
   ];
 
