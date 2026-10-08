@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.4</title>
+<title>Roll Tracker V1.45.5</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -122,6 +122,10 @@
     box-shadow:0 0 0 2px var(--bg);
   }
   .sync-dot.online{background:var(--moss);}
+  /* Same specificity-tie issue as the change-account button: .sync-status's own color
+     rule comes later in the stylesheet than .tutorial-highlight's, so without this it
+     would win and leave the label text soft-grey instead of actually lighting up. */
+  .sync-status.tutorial-highlight{color:var(--ink);}
   .change-account-btn{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.72rem;margin-top:6px;padding:4px 9px;
@@ -567,7 +571,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.4</div>
+      <div class="version-tag" id="version-tag">Version 1.45.5</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2394,6 +2398,11 @@
       targetSelector: "#change-account-btn",
       title: "Change Account",
       text: "Click this to sign out of your current account and bring up the sign-in screen again — use it to switch which character you're signed in as, or to hand the device to someone else at the table. You'll need the group password to sign back in."
+    },
+    {
+      targetSelector: "#sync-status",
+      title: "Sync Light",
+      text: "A green dot and \"Syncing\" means your rolls and sheet changes are being saved and shared live with the rest of the group. A red dot and \"Offline\" means you're not connected right now — your rolls still work, but they're only saved on this device until you're back online and signed in."
     }
   ];
 
