@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.45.8</title>
+<title>Roll Tracker V1.46.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -307,6 +307,8 @@
   }
   .hide-rolls-toggle.active{background:var(--ink-soft);color:var(--bg-card);}
   .hide-rolls-toggle:disabled{opacity:0.45;cursor:not-allowed;}
+  /* Same transparent-background issue as Crit and the ghost buttons earlier. */
+  .hide-rolls-toggle.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
   .log-entry.hidden-roll .label{font-style:italic;opacity:0.7;}
   .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;}
   @media (max-width:760px){.grid{grid-template-columns:1fr;}}
@@ -579,7 +581,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.45.8</div>
+      <div class="version-tag" id="version-tag">Version 1.46.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2426,8 +2428,24 @@
       targetSelector: "#crit-toggle",
       title: "Crit Button",
       text: "Click this to force every Damage roll to double its dice — for auto-crit effects like Assassinate, where you don't need an attack roll to land a critical hit. Unlike a natural 20, it stays on until you click it again, so remember to toggle it back off once the effect's done."
+    },
+    {
+      // DM-tab-only step — only shown when the tutorial is opened while viewing the DM's
+      // own tab, since this button doesn't exist on anyone else's sheet. See the
+      // titleInfoIcon click handler below, which filters TUTORIAL_STEPS down to
+      // activeTutorialSteps before the tutorial opens.
+      targetSelector: "#hide-rolls-toggle",
+      dmOnly: true,
+      title: "Hide Rolls",
+      text: "Only visible on the DM tab. Turn this on and every new roll you make is hidden from the rest of the group — they'll see a \"Hidden roll\" entry in the log instead of the details. Handy for secret checks, like a Perception roll a player shouldn't know they failed. Only your own signed-in DM account can toggle it."
     }
   ];
+
+  // The actual list of steps for the tutorial currently open — built from TUTORIAL_STEPS
+  // each time the tutorial starts, dropping any dmOnly step unless the active tab is the
+  // DM's own tab. Keeping this separate from TUTORIAL_STEPS means the "Part X of Y" count
+  // and Next/Back navigation always match what's actually being shown.
+  var activeTutorialSteps = TUTORIAL_STEPS;
 
   var tutorialScrollY = 0;
   var tutorialHighlightEls = [];
@@ -2484,7 +2502,7 @@
   }
 
   function showTutorialStep(idx){
-    var step = TUTORIAL_STEPS[idx];
+    var step = activeTutorialSteps[idx];
     if(!step) return;
     // A step can target several matching elements at once (e.g. every tab's lock icon) —
     // all of them get highlighted, and the popup anchors to the group as a whole.
@@ -2535,13 +2553,13 @@
     });
     tutorialHighlightEls = targets;
 
-    var isLast = idx === TUTORIAL_STEPS.length - 1;
+    var isLast = idx === activeTutorialSteps.length - 1;
     var isFirst = idx === 0;
     // Reusing the same popup element (instead of removing and recreating it) means the
     // left/top transition below actually animates it sliding to the new spot, rather than
     // it just vanishing and reappearing — much less jarring between nearby steps.
     tutorialPopupEl.innerHTML =
-      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + TUTORIAL_STEPS.length + "</div>" +
+      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + activeTutorialSteps.length + "</div>" +
       "<h3>" + escapeHtml(step.title) + "</h3>" +
       "<p>" + escapeHtml(step.text) + "</p>" +
       '<div class="tutorial-popup-actions">' +
@@ -2580,6 +2598,11 @@
   var titleInfoIcon = document.getElementById("title-info-icon");
   if(titleInfoIcon){
     titleInfoIcon.addEventListener("click", function(){
+      // Rebuilt fresh each time the tutorial opens, so it reflects whichever tab is active
+      // right now rather than whichever tab was active the last time it was opened.
+      activeTutorialSteps = TUTORIAL_STEPS.filter(function(step){
+        return !step.dmOnly || !!state.isDM;
+      });
       showTutorialStep(0);
     });
   }
