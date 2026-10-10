@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.46.1</title>
+<title>Roll Tracker V1.47.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -499,6 +499,23 @@
   .attack-fields label.disabled-field{opacity:0.55;}
   .attack-fields input[type=text].dice{width:64px;}
   .attack-fields label{display:flex;align-items:center;gap:4px;}
+  /* Sub-groupings within .attack-fields, used so the tutorial can highlight just one
+     cluster of related fields at a time instead of the whole row at once. Each one mirrors
+     .attack-fields' own flex layout so wrapping/spacing looks identical to before these
+     wrappers existed — the only change is that each group now wraps together as a unit. */
+  .attack-core-fields, .attack-roll-buttons, .attack-tracking-fields{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  }
+  /* Same grey-text issue as the ability/skill rows: highlighting the wrapper brightens
+     plain inherited text automatically, but labels with their own explicit color (the
+     "prof"-classed ones) need an explicit override to actually brighten too. The roll
+     buttons don't need one — their own transparent background just shows the wrapper's
+     lit-up card background through them, and their text colors (moss/ochre) are already
+     plenty readable against it. */
+  .attack-core-fields.tutorial-highlight,
+  .attack-tracking-fields.tutorial-highlight{color:var(--ink);}
+  .attack-core-fields.tutorial-highlight label.prof,
+  .attack-tracking-fields.tutorial-highlight label.prof{color:var(--ink);}
   #add-attack{
     font-family:-apple-system,"Segoe UI",sans-serif;
     width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;
@@ -587,7 +604,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.46.1</div>
+      <div class="version-tag" id="version-tag">Version 1.47.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1970,19 +1987,37 @@
         qtyCountLabel.appendChild(qtyCountInput);
       }
 
-      fields.appendChild(atkLabel);
-      fields.appendChild(atkProfLabel);
+      // Grouped into sub-wrapper divs (core roll-affecting fields / roll buttons / ammo &
+      // carry tracking) purely so the tutorial can highlight one cluster at a time — see
+      // the .attack-core-fields/.attack-roll-buttons/.attack-tracking-fields CSS above.
+      var coreFields = document.createElement("div");
+      coreFields.className = "attack-core-fields";
+      coreFields.appendChild(atkLabel);
+      coreFields.appendChild(atkProfLabel);
+      coreFields.appendChild(diceLabel);
+      if(versatileLabel) coreFields.appendChild(versatileLabel);
+      coreFields.appendChild(dmgBonusLabel);
+      fields.appendChild(coreFields);
+
+      // Blood Hunter-specific fields (niche) — kept outside the core group, right after it.
       if(lycanLevelLabel) fields.appendChild(lycanLevelLabel);
-      fields.appendChild(diceLabel);
-      if(versatileLabel) fields.appendChild(versatileLabel);
-      fields.appendChild(dmgBonusLabel);
       if(feralLabel) fields.appendChild(feralLabel);
-      fields.appendChild(atkBtn);
-      fields.appendChild(dmgBtn);
-      if(ammoToggleLabel) fields.appendChild(ammoToggleLabel);
-      if(ammoCountLabel) fields.appendChild(ammoCountLabel);
-      if(qtyToggleLabel) fields.appendChild(qtyToggleLabel);
-      if(qtyCountLabel) fields.appendChild(qtyCountLabel);
+
+      var rollButtons = document.createElement("div");
+      rollButtons.className = "attack-roll-buttons";
+      rollButtons.appendChild(atkBtn);
+      rollButtons.appendChild(dmgBtn);
+      fields.appendChild(rollButtons);
+
+      if(ammoToggleLabel || ammoCountLabel || qtyToggleLabel || qtyCountLabel){
+        var trackingFields = document.createElement("div");
+        trackingFields.className = "attack-tracking-fields";
+        if(ammoToggleLabel) trackingFields.appendChild(ammoToggleLabel);
+        if(ammoCountLabel) trackingFields.appendChild(ammoCountLabel);
+        if(qtyToggleLabel) trackingFields.appendChild(qtyToggleLabel);
+        if(qtyCountLabel) trackingFields.appendChild(qtyCountLabel);
+        fields.appendChild(trackingFields);
+      }
 
       box.appendChild(fields);
       attacksEl.appendChild(box);
@@ -2436,12 +2471,12 @@
       text: "Click this to force every Damage roll to double its dice — for auto-crit effects like Assassinate, where you don't need an attack roll to land a critical hit. Unlike a natural 20, it stays on until you click it again, so remember to toggle it back off once the effect's done."
     },
     {
-      // DM-tab-only step — only shown when the tutorial is opened while viewing the DM's
+      // Conditional step — only shown when the tutorial is opened while viewing the DM's
       // own tab, since this button doesn't exist on anyone else's sheet. See the
       // titleInfoIcon click handler below, which filters TUTORIAL_STEPS down to
-      // activeTutorialSteps before the tutorial opens.
+      // activeTutorialSteps (using each step's showIf, when it has one) before opening.
       targetSelector: "#hide-rolls-toggle",
-      dmOnly: true,
+      showIf: function(){ return !!state.isDM; },
       title: "Hide Rolls",
       text: "Only visible on the DM tab. Turn this on and every new roll you make is hidden from the rest of the group — they'll see a \"Hidden roll\" entry in the log instead of the details. Handy for secret checks, like a Perception roll a player shouldn't know they failed. Only your own signed-in DM account can toggle it."
     },
@@ -2454,13 +2489,44 @@
       targetSelector: ".skills-wrap",
       title: "Skills: Proficiency & Expertise",
       text: "Check \"prof\" if you're proficient in a skill, or \"exp\" for Expertise (double proficiency) — checking exp automatically checks prof too, and unchecking prof turns exp back off. Each skill's Roll button adds your modifier plus proficiency (and expertise, if checked) automatically."
+    },
+    {
+      // Scoped to #attacks specifically — the Spells section below reuses the same
+      // .attack-top class for its own rows, which would otherwise get highlighted too.
+      targetSelector: "#attacks .attack-top",
+      title: "Choosing a Weapon",
+      text: "Pick a weapon from the dropdown to auto-fill its name and damage die from the book, or leave it on Custom to build one from scratch — the name field stays editable either way. Click ✕ to remove the whole attack. If a preset has extra details — properties, special rules — a \"More Information\" line appears right below it."
+    },
+    {
+      targetSelector: ".attack-core-fields",
+      title: "Attack Bonus & Damage",
+      text: "Atk bonus is calculated automatically for most preset weapons from your ability modifier — switch to Custom to enter it by hand, or check \"prof\" if a weapon isn't auto-linking your proficiency. Damage sets the dice rolled on a hit (mixing sizes works too, e.g. 1d8+1d4); check \"2H\" to switch to a weapon's two-handed Versatile die. The number after Damage is your flat damage bonus, added to every roll."
+    },
+    {
+      targetSelector: ".attack-roll-buttons",
+      title: "Rolling Attacks & Damage",
+      text: "Attack Roll rolls a d20 plus your attack bonus — a natural 20 automatically arms a one-time crit for this weapon's next Damage roll. Damage rolls the weapon's dice plus its bonus, doubling the dice if a crit is armed (or the Crit toggle up top is on)."
+    },
+    {
+      // Only on a tab with at least one Custom-preset weapon, or a preset weapon with ammo
+      // already enabled (e.g. a bow) — a tab with only non-ammo preset weapons has none of
+      // these fields to highlight. See the showTutorialStep auto-skip fallback too, which
+      // covers the rarer case of a tab with zero attacks at all.
+      targetSelector: ".attack-tracking-fields",
+      showIf: function(){
+        return state.attacks.some(function(a){
+          return (a.preset || "custom") === "custom" || !!a.ammoEnabled || !!a.qtyEnabled;
+        });
+      },
+      title: "Ammo & Carry Count",
+      text: "Custom weapons can track an ammo count (drops by 1 on every Attack Roll — the button disables itself at 0) or a plain carrying count (purely manual, for things like daggers you're just keeping track of). Preset weapons that use ammo, like bows, track it the same way automatically."
     }
   ];
 
   // The actual list of steps for the tutorial currently open — built from TUTORIAL_STEPS
-  // each time the tutorial starts, dropping any dmOnly step unless the active tab is the
-  // DM's own tab. Keeping this separate from TUTORIAL_STEPS means the "Part X of Y" count
-  // and Next/Back navigation always match what's actually being shown.
+  // each time the tutorial starts, dropping any step whose showIf (if it has one) returns
+  // false for the active tab right now. Keeping this separate from TUTORIAL_STEPS means the
+  // "Part X of Y" count and Next/Back navigation always match what's actually being shown.
   var activeTutorialSteps = TUTORIAL_STEPS;
 
   var tutorialScrollY = 0;
@@ -2517,13 +2583,25 @@
     document.removeEventListener("keydown", tutorialKeydownHandler);
   }
 
-  function showTutorialStep(idx){
+  function showTutorialStep(idx, direction){
+    direction = direction || 1;
     var step = activeTutorialSteps[idx];
-    if(!step) return;
+    if(!step){
+      // Ran off either end while auto-skipping (see below) — close gracefully instead of
+      // leaving the popup frozen on its last real step with Next/Back doing nothing.
+      if(tutorialBackdropEl) closeTutorial();
+      return;
+    }
     // A step can target several matching elements at once (e.g. every tab's lock icon) —
     // all of them get highlighted, and the popup anchors to the group as a whole.
     var targets = Array.prototype.slice.call(document.querySelectorAll(step.targetSelector));
-    if(!targets.length) return;
+    if(!targets.length){
+      // Nothing on the page currently matches this step (e.g. a tab with zero attacks, so
+      // none of the weapon steps have anything to point at) — skip it in whichever
+      // direction we were already moving, rather than freezing on the previous step.
+      showTutorialStep(idx + direction, direction);
+      return;
+    }
 
     // Measure where the target(s) sit in the viewport BEFORE locking scroll — locking
     // freezes the page exactly where it's currently displayed, so this stays accurate.
@@ -2600,12 +2678,12 @@
 
     if(!isLast){
       document.getElementById("tutorial-next-btn").addEventListener("click", function(){
-        showTutorialStep(idx + 1);
+        showTutorialStep(idx + 1, 1);
       });
     }
     if(!isFirst){
       document.getElementById("tutorial-back-btn").addEventListener("click", function(){
-        showTutorialStep(idx - 1);
+        showTutorialStep(idx - 1, -1);
       });
     }
     document.getElementById("tutorial-end-btn").addEventListener("click", closeTutorial);
@@ -2615,9 +2693,9 @@
   if(titleInfoIcon){
     titleInfoIcon.addEventListener("click", function(){
       // Rebuilt fresh each time the tutorial opens, so it reflects whichever tab is active
-      // right now rather than whichever tab was active the last time it was opened.
+      // (and whatever's currently on it) right now, rather than whenever it was last opened.
       activeTutorialSteps = TUTORIAL_STEPS.filter(function(step){
-        return !step.dmOnly || !!state.isDM;
+        return !step.showIf || step.showIf();
       });
       showTutorialStep(0);
     });
