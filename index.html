@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.46.0</title>
+<title>Roll Tracker V1.46.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -354,6 +354,12 @@
   .ability-row label.prof{
     display:flex;align-items:center;gap:4px;font-size:0.75rem;color:var(--ink-soft);
   }
+  /* Highlighting the row/wrap itself (not these labels directly) doesn't change their own
+     explicit color, so without this the "save prof"/"prof"/"exp" text stays soft-grey and
+     reads as disabled even inside a lit-up tutorial highlight. */
+  .ability-row.tutorial-highlight label.prof,
+  .skills-wrap.tutorial-highlight label.prof{color:var(--ink);}
+  .skills-wrap.tutorial-highlight .skill-name{color:var(--ink);}
   .attack-fields label.prof{
     display:flex;align-items:center;gap:4px;font-size:0.75rem;color:var(--ink-soft);
   }
@@ -581,7 +587,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.46.0</div>
+      <div class="version-tag" id="version-tag">Version 1.46.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2438,6 +2444,16 @@
       dmOnly: true,
       title: "Hide Rolls",
       text: "Only visible on the DM tab. Turn this on and every new roll you make is hidden from the rest of the group — they'll see a \"Hidden roll\" entry in the log instead of the details. Handy for secret checks, like a Perception roll a player shouldn't know they failed. Only your own signed-in DM account can toggle it."
+    },
+    {
+      targetSelector: ".ability-row",
+      title: "Ability Scores, Checks & Saves",
+      text: "Each ability shows its modifier — not the raw score, just the +/- you add to rolls — plus Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
+    },
+    {
+      targetSelector: ".skills-wrap",
+      title: "Skills: Proficiency & Expertise",
+      text: "Check \"prof\" if you're proficient in a skill, or \"exp\" for Expertise (double proficiency) — checking exp automatically checks prof too, and unchecking prof turns exp back off. Each skill's Roll button adds your modifier plus proficiency (and expertise, if checked) automatically."
     }
   ];
 
