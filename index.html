@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.47.0</title>
+<title>Roll Tracker V1.47.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -604,7 +604,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.47.0</div>
+      <div class="version-tag" id="version-tag">Version 1.47.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2530,6 +2530,7 @@
   var activeTutorialSteps = TUTORIAL_STEPS;
 
   var tutorialScrollY = 0;
+  var tutorialMaxScrollY = 0;
   var tutorialHighlightEls = [];
   var tutorialHighlightParents = [];
   var tutorialBackdropEl = null;
@@ -2561,7 +2562,18 @@
     document.body.style.top = "";
     document.body.style.left = "";
     document.body.style.width = "";
+    document.body.style.transition = "";
     window.scrollTo(0, tutorialScrollY);
+  }
+
+  // Moves the page while it's locked — used by the tutorial to bring a step's target into
+  // view when it's further down the page than wherever the tutorial happened to open. The
+  // page stays pinned (the person can't scroll it themselves), this just slides the pin to
+  // a new spot in the background, the same way switching steps slides the popup around.
+  function repositionLockedScroll(y){
+    tutorialScrollY = Math.max(0, Math.min(y, tutorialMaxScrollY));
+    document.body.style.transition = "top 0.25s ease";
+    document.body.style.top = (-tutorialScrollY) + "px";
   }
 
   function tutorialKeydownHandler(e){
@@ -2603,21 +2615,45 @@
       return;
     }
 
-    // Measure where the target(s) sit in the viewport BEFORE locking scroll — locking
-    // freezes the page exactly where it's currently displayed, so this stays accurate.
-    var rect = targets.reduce(function(acc, el){
-      var r = el.getBoundingClientRect();
-      if(!acc) return {left:r.left, top:r.top, right:r.right, bottom:r.bottom};
-      return {
-        left: Math.min(acc.left, r.left),
-        top: Math.min(acc.top, r.top),
-        right: Math.max(acc.right, r.right),
-        bottom: Math.max(acc.bottom, r.bottom)
-      };
-    }, null);
+    function measureRect(){
+      return targets.reduce(function(acc, el){
+        var r = el.getBoundingClientRect();
+        if(!acc) return {left:r.left, top:r.top, right:r.right, bottom:r.bottom};
+        return {
+          left: Math.min(acc.left, r.left),
+          top: Math.min(acc.top, r.top),
+          right: Math.max(acc.right, r.right),
+          bottom: Math.max(acc.bottom, r.bottom)
+        };
+      }, null);
+    }
 
     var isFirstStepEver = !tutorialBackdropEl;
+    // The baseline scroll position to measure the target against: real window scroll if
+    // nothing's locked yet, or wherever the lock is currently pinned otherwise.
+    var baselineScrollY = isFirstStepEver ? (window.scrollY || window.pageYOffset || 0) : tutorialScrollY;
+    var rawRect = measureRect();
+
+    // Later steps (Abilities, Weapons, etc.) point at things further down the page than
+    // wherever the tutorial happened to be opened — without this they'd sit outside the
+    // viewport and, once the page is locked, be impossible to scroll to and see at all. So
+    // before locking (or re-pinning, on later steps) the page scrolls in the background to
+    // bring each step's target into view, the same way a page normally scrolls to whatever
+    // you click on — just driven by the tutorial instead of by hand.
+    var viewMargin = 24;
+    var naturalTop = rawRect.top + baselineScrollY;
+    var naturalBottom = rawRect.bottom + baselineScrollY;
+    var outOfView = naturalTop < baselineScrollY + viewMargin || naturalBottom > baselineScrollY + window.innerHeight - viewMargin;
+    var appliedScrollY = baselineScrollY;
+
     if(isFirstStepEver){
+      // The true scrollable height, measured now — once the body is pinned below, it's
+      // taken out of normal page flow and the page stops reporting its real height.
+      tutorialMaxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      if(outOfView){
+        appliedScrollY = Math.max(0, Math.min(naturalTop - viewMargin, tutorialMaxScrollY));
+        if(appliedScrollY !== baselineScrollY) window.scrollTo(0, appliedScrollY);
+      }
       lockPageScroll();
       tutorialBackdropEl = document.createElement("div");
       tutorialBackdropEl.id = "tutorial-backdrop";
@@ -2631,7 +2667,21 @@
       document.body.appendChild(tutorialPopupEl);
 
       document.addEventListener("keydown", tutorialKeydownHandler);
+    } else if(outOfView){
+      appliedScrollY = Math.max(0, Math.min(naturalTop - viewMargin, tutorialMaxScrollY));
+      repositionLockedScroll(appliedScrollY);
     }
+
+    // Derived from the natural (scroll-independent) position and whatever scroll we just
+    // applied, rather than re-querying the DOM — a getBoundingClientRect() read taken right
+    // after changing a still-transitioning CSS property isn't reliable, since the browser
+    // can still be mid-animation from an earlier step's reposition at the moment of the read.
+    var rect = {
+      left: rawRect.left,
+      right: rawRect.right,
+      top: naturalTop - appliedScrollY,
+      bottom: naturalBottom - appliedScrollY
+    };
 
     clearTutorialHighlights();
     targets.forEach(function(el){
