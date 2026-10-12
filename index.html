@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.47.1</title>
+<title>Roll Tracker V1.47.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -91,7 +91,7 @@
   }
   .tutorial-popup h3{margin:0 0 8px;font-size:0.95rem;color:var(--ink);}
   .tutorial-popup p{margin:0 0 14px;font-size:0.85rem;line-height:1.45;color:var(--ink-soft);}
-  .tutorial-popup-actions{display:flex;align-items:center;gap:8px;}
+  .tutorial-popup-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
   .tutorial-popup-actions button{
     font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.8rem;
     padding:6px 14px;border:none;border-radius:6px;background:var(--moss);color:#fff;cursor:pointer;
@@ -604,7 +604,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.47.1</div>
+      <div class="version-tag" id="version-tag">Version 1.47.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2628,6 +2628,25 @@
       }, null);
     }
 
+    // Applied before any measuring below: .tutorial-highlight adds its own padding, which
+    // grows the target's box by a few pixels on every side. Measuring first and highlighting
+    // after would anchor the popup to the smaller, pre-padding box, leaving it a few pixels
+    // short of the real (larger) edge once the padding kicks in — enough to graze the
+    // highlighted content on some steps even though the popup was placed to clear it.
+    clearTutorialHighlights();
+    targets.forEach(function(el){
+      el.classList.add("tutorial-highlight");
+      // A highlighted element trapped inside an ancestor that creates its own stacking
+      // context (e.g. the active tab's translateY transform) stays hidden behind the
+      // backdrop no matter its own z-index, so raise that ancestor too.
+      var tabParent = el.closest(".char-tab");
+      if(tabParent && tabParent !== el){
+        tabParent.classList.add("tutorial-highlight-parent");
+        tutorialHighlightParents.push(tabParent);
+      }
+    });
+    tutorialHighlightEls = targets;
+
     var isFirstStepEver = !tutorialBackdropEl;
     // The baseline scroll position to measure the target against: real window scroll if
     // nothing's locked yet, or wherever the lock is currently pinned otherwise.
@@ -2683,20 +2702,6 @@
       bottom: naturalBottom - appliedScrollY
     };
 
-    clearTutorialHighlights();
-    targets.forEach(function(el){
-      el.classList.add("tutorial-highlight");
-      // A highlighted element trapped inside an ancestor that creates its own stacking
-      // context (e.g. the active tab's translateY transform) stays hidden behind the
-      // backdrop no matter its own z-index, so raise that ancestor too.
-      var tabParent = el.closest(".char-tab");
-      if(tabParent && tabParent !== el){
-        tabParent.classList.add("tutorial-highlight-parent");
-        tutorialHighlightParents.push(tabParent);
-      }
-    });
-    tutorialHighlightEls = targets;
-
     var isLast = idx === activeTutorialSteps.length - 1;
     var isFirst = idx === 0;
     // Reusing the same popup element (instead of removing and recreating it) means the
@@ -2712,16 +2717,52 @@
       '<button type="button" id="tutorial-next-btn"' + (isLast ? " disabled" : "") + '>Next</button>' +
       "</div>";
 
-    // Position below the target(s) by default, clamped to stay on-screen, flipping above
-    // if there isn't room below.
+    // Prefer sitting beside the target(s) — to the right if there's room, else the left —
+    // rather than above or below. A wide or tall highlighted group (a whole row of ability
+    // scores, a weapon's whole field group) can span most or all of the viewport's height,
+    // leaving no clear space above or below to put the popup without it landing right on
+    // top of the very thing it's explaining; the sheet itself is also centered with margin
+    // to spare on a normal-width window, so there's usually room off to the side instead.
     var margin = 10;
+    var minSideWidth = 150; // narrowest the popup can shrink to and still be readable
+    tutorialPopupEl.style.maxWidth = ""; // reset to the CSS default before measuring
     var popupWidth = tutorialPopupEl.offsetWidth;
     var popupHeight = tutorialPopupEl.offsetHeight;
-    var left = rect.left;
+    var spaceRight = window.innerWidth - rect.right;
+    var spaceLeft = rect.left;
+    var left, top;
+    if(spaceRight >= popupWidth + margin * 2){
+      left = rect.right + margin;
+      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
+    } else if(spaceLeft >= popupWidth + margin * 2){
+      left = rect.left - popupWidth - margin;
+      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
+    } else if(Math.max(spaceRight, spaceLeft) - margin * 2 >= minSideWidth){
+      // Neither side has room for the popup at full width, but one side has enough for a
+      // narrowed version — shrink it to fit there instead of covering the highlighted
+      // content. This is the common case for a highlight group that spans nearly the whole
+      // row (a full line of ability scores, a weapon's whole field group).
+      var fitWidth = Math.floor(Math.max(spaceRight, spaceLeft) - margin * 2);
+      tutorialPopupEl.style.maxWidth = fitWidth + "px";
+      popupWidth = tutorialPopupEl.offsetWidth;
+      popupHeight = tutorialPopupEl.offsetHeight;
+      if(spaceRight >= spaceLeft){
+        left = rect.right + margin;
+      } else {
+        left = rect.left - popupWidth - margin;
+      }
+      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
+    } else {
+      // Not enough room on either side even narrowed (a narrow or mobile-width window) —
+      // fall back to the original above/below placement.
+      left = rect.left;
+      top = rect.bottom + 12;
+      if(top + popupHeight + margin > window.innerHeight) top = rect.top - popupHeight - 12;
+    }
+    // Final clamp either way, so the popup always stays fully on-screen.
     if(left + popupWidth + margin > window.innerWidth) left = window.innerWidth - popupWidth - margin;
     if(left < margin) left = margin;
-    var top = rect.bottom + 12;
-    if(top + popupHeight + margin > window.innerHeight) top = rect.top - popupHeight - 12;
+    if(top + popupHeight + margin > window.innerHeight) top = window.innerHeight - popupHeight - margin;
     if(top < margin) top = margin;
     tutorialPopupEl.style.left = left + "px";
     tutorialPopupEl.style.top = top + "px";
