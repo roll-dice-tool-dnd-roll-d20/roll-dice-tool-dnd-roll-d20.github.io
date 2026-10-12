@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.47.2</title>
+<title>Roll Tracker V1.47.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -604,7 +604,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.47.2</div>
+      <div class="version-tag" id="version-tag">Version 1.47.3</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2648,32 +2648,13 @@
     tutorialHighlightEls = targets;
 
     var isFirstStepEver = !tutorialBackdropEl;
-    // The baseline scroll position to measure the target against: real window scroll if
-    // nothing's locked yet, or wherever the lock is currently pinned otherwise.
-    var baselineScrollY = isFirstStepEver ? (window.scrollY || window.pageYOffset || 0) : tutorialScrollY;
-    var rawRect = measureRect();
+    var isLast = idx === activeTutorialSteps.length - 1;
+    var isFirst = idx === 0;
 
-    // Later steps (Abilities, Weapons, etc.) point at things further down the page than
-    // wherever the tutorial happened to be opened — without this they'd sit outside the
-    // viewport and, once the page is locked, be impossible to scroll to and see at all. So
-    // before locking (or re-pinning, on later steps) the page scrolls in the background to
-    // bring each step's target into view, the same way a page normally scrolls to whatever
-    // you click on — just driven by the tutorial instead of by hand.
-    var viewMargin = 24;
-    var naturalTop = rawRect.top + baselineScrollY;
-    var naturalBottom = rawRect.bottom + baselineScrollY;
-    var outOfView = naturalTop < baselineScrollY + viewMargin || naturalBottom > baselineScrollY + window.innerHeight - viewMargin;
-    var appliedScrollY = baselineScrollY;
-
+    // The popup (and its backdrop) need to exist in the DOM before we can measure how big
+    // the popup naturally wants to be, which in turn decides where it can go — so both are
+    // created up front on the very first step, ahead of any positioning math.
     if(isFirstStepEver){
-      // The true scrollable height, measured now — once the body is pinned below, it's
-      // taken out of normal page flow and the page stops reporting its real height.
-      tutorialMaxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      if(outOfView){
-        appliedScrollY = Math.max(0, Math.min(naturalTop - viewMargin, tutorialMaxScrollY));
-        if(appliedScrollY !== baselineScrollY) window.scrollTo(0, appliedScrollY);
-      }
-      lockPageScroll();
       tutorialBackdropEl = document.createElement("div");
       tutorialBackdropEl.id = "tutorial-backdrop";
       tutorialBackdropEl.className = "tutorial-backdrop";
@@ -2684,10 +2665,102 @@
       tutorialPopupEl.id = "tutorial-popup";
       tutorialPopupEl.className = "tutorial-popup";
       document.body.appendChild(tutorialPopupEl);
+    }
 
+    // Reusing the same popup element (instead of removing and recreating it) means the
+    // left/top transition set below actually animates it sliding to the new spot, rather
+    // than it just vanishing and reappearing — much less jarring between nearby steps.
+    tutorialPopupEl.style.maxWidth = ""; // reset to the CSS default before measuring
+    tutorialPopupEl.innerHTML =
+      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + activeTutorialSteps.length + "</div>" +
+      "<h3>" + escapeHtml(step.title) + "</h3>" +
+      "<p>" + escapeHtml(step.text) + "</p>" +
+      '<div class="tutorial-popup-actions">' +
+      '<button type="button" id="tutorial-end-btn" class="tutorial-btn-ghost">End Tutorial</button>' +
+      '<button type="button" id="tutorial-back-btn" class="tutorial-btn-ghost"' + (isFirst ? " disabled" : "") + '>Back</button>' +
+      '<button type="button" id="tutorial-next-btn"' + (isLast ? " disabled" : "") + '>Next</button>' +
+      "</div>";
+
+    // The baseline scroll position to measure the target against: real window scroll if
+    // nothing's locked yet, or wherever the lock is currently pinned otherwise.
+    var baselineScrollY = isFirstStepEver ? (window.scrollY || window.pageYOffset || 0) : tutorialScrollY;
+    var rawRect = measureRect();
+
+    // Decide where the popup will go purely from the target's natural, scroll-independent
+    // horizontal position (spaceLeft/spaceRight below don't change as the page scrolls
+    // vertically) — before touching scroll at all, so the scroll target chosen afterward can
+    // already account for however much room the popup itself will need.
+    var margin = 10;
+    var minSideWidth = 100; // narrowest the popup can shrink to and still be readable
+    var popupWidth = tutorialPopupEl.offsetWidth;
+    var popupHeight = tutorialPopupEl.offsetHeight;
+    var spaceRight = window.innerWidth - rawRect.right;
+    var spaceLeft = rawRect.left;
+    var strategy;
+    if(spaceRight >= popupWidth + margin) strategy = "right";
+    else if(spaceLeft >= popupWidth + margin) strategy = "left";
+    else if(Math.max(spaceRight, spaceLeft) - margin >= minSideWidth) strategy = "side-narrow";
+    else strategy = "bottom-strip";
+
+    var fitWidth;
+    if(strategy === "side-narrow"){
+      // Neither side has room for the popup at full width, but one side has enough for a
+      // narrowed version — shrink it to fit there, snug against the target's edge, instead
+      // of covering the highlighted content. Common on a browser window that isn't
+      // especially wide, where a highlight group spans nearly the whole row.
+      fitWidth = Math.floor(Math.max(spaceRight, spaceLeft) - margin);
+      tutorialPopupEl.style.maxWidth = fitWidth + "px";
+      popupWidth = tutorialPopupEl.offsetWidth;
+      popupHeight = tutorialPopupEl.offsetHeight;
+    }
+
+    // A target that's scattered across (or simply taller than) the whole page — every
+    // ability row, say, each trailing its own list of skills — leaves no usable room beside
+    // it either. For that case the popup goes in a strip reserved at the very bottom of the
+    // viewport, and the page scrolls so the target's content stops short of that strip
+    // rather than running underneath it.
+    var reservedHeight = strategy === "bottom-strip" ? (popupHeight + margin * 2) : 0;
+
+    // Later steps (Abilities, Weapons, etc.) point at things further down the page than
+    // wherever the tutorial happened to be opened — without this they'd sit outside the
+    // viewport and, once the page is locked, be impossible to scroll to and see at all. So
+    // before locking (or re-pinning, on later steps) the page scrolls in the background to
+    // bring each step's target into view, the same way a page normally scrolls to whatever
+    // you click on — just driven by the tutorial instead of by hand. When the popup needs
+    // the reserved bottom strip, the available viewport height is shrunk by that much first,
+    // so the scroll leaves the strip clear.
+    var viewMargin = 24;
+    var effectiveHeight = window.innerHeight - reservedHeight;
+    var naturalTop = rawRect.top + baselineScrollY;
+    var naturalBottom = rawRect.bottom + baselineScrollY;
+    var outOfView = naturalTop < baselineScrollY + viewMargin || naturalBottom > baselineScrollY + effectiveHeight - viewMargin;
+    var appliedScrollY = baselineScrollY;
+
+    // Normally the scroll aligns the target's TOP edge just inside the top margin. But when
+    // the target is taller than the room available above the reserved strip (a scattered
+    // group like every ability row, trailing skills, stretching well past what one screen
+    // can show), aligning the top would let the bottom spill under the strip and overlap the
+    // popup — so in that case the BOTTOM edge is aligned instead, just above the strip, and
+    // whatever doesn't fit scrolls off above the top of the screen instead, out of sight but
+    // never under the popup.
+    var targetHeight = naturalBottom - naturalTop;
+    var fitsAboveStrip = targetHeight <= effectiveHeight - viewMargin * 2;
+    var desiredScrollY = (strategy === "bottom-strip" && !fitsAboveStrip)
+      ? naturalBottom - (effectiveHeight - viewMargin)
+      : naturalTop - viewMargin;
+
+    if(isFirstStepEver){
+      // The true scrollable height, measured now — once the body is pinned below, it's
+      // taken out of normal page flow and the page stops reporting its real height.
+      tutorialMaxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      if(outOfView){
+        appliedScrollY = Math.max(0, Math.min(desiredScrollY, tutorialMaxScrollY));
+        if(appliedScrollY !== baselineScrollY) window.scrollTo(0, appliedScrollY);
+      }
+      lockPageScroll();
       document.addEventListener("keydown", tutorialKeydownHandler);
     } else if(outOfView){
-      appliedScrollY = Math.max(0, Math.min(naturalTop - viewMargin, tutorialMaxScrollY));
+      appliedScrollY = Math.max(0, Math.min(desiredScrollY, tutorialMaxScrollY));
       repositionLockedScroll(appliedScrollY);
     }
 
@@ -2702,62 +2775,31 @@
       bottom: naturalBottom - appliedScrollY
     };
 
-    var isLast = idx === activeTutorialSteps.length - 1;
-    var isFirst = idx === 0;
-    // Reusing the same popup element (instead of removing and recreating it) means the
-    // left/top transition below actually animates it sliding to the new spot, rather than
-    // it just vanishing and reappearing — much less jarring between nearby steps.
-    tutorialPopupEl.innerHTML =
-      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + activeTutorialSteps.length + "</div>" +
-      "<h3>" + escapeHtml(step.title) + "</h3>" +
-      "<p>" + escapeHtml(step.text) + "</p>" +
-      '<div class="tutorial-popup-actions">' +
-      '<button type="button" id="tutorial-end-btn" class="tutorial-btn-ghost">End Tutorial</button>' +
-      '<button type="button" id="tutorial-back-btn" class="tutorial-btn-ghost"' + (isFirst ? " disabled" : "") + '>Back</button>' +
-      '<button type="button" id="tutorial-next-btn"' + (isLast ? " disabled" : "") + '>Next</button>' +
-      "</div>";
+    // A target taller than the viewport (or than the reserved strip leaves room for) would
+    // otherwise drag the "center on the target" math outside the visible area — so the
+    // vertical center is based on whatever part of the target is actually on-screen.
+    var visTop = Math.max(rect.top, 0);
+    var visBottom = Math.min(rect.bottom, effectiveHeight);
 
-    // Prefer sitting beside the target(s) — to the right if there's room, else the left —
-    // rather than above or below. A wide or tall highlighted group (a whole row of ability
-    // scores, a weapon's whole field group) can span most or all of the viewport's height,
-    // leaving no clear space above or below to put the popup without it landing right on
-    // top of the very thing it's explaining; the sheet itself is also centered with margin
-    // to spare on a normal-width window, so there's usually room off to the side instead.
-    var margin = 10;
-    var minSideWidth = 150; // narrowest the popup can shrink to and still be readable
-    tutorialPopupEl.style.maxWidth = ""; // reset to the CSS default before measuring
-    var popupWidth = tutorialPopupEl.offsetWidth;
-    var popupHeight = tutorialPopupEl.offsetHeight;
-    var spaceRight = window.innerWidth - rect.right;
-    var spaceLeft = rect.left;
     var left, top;
-    if(spaceRight >= popupWidth + margin * 2){
+    if(strategy === "right"){
       left = rect.right + margin;
-      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
-    } else if(spaceLeft >= popupWidth + margin * 2){
+      top = (visTop + visBottom) / 2 - popupHeight / 2;
+    } else if(strategy === "left"){
       left = rect.left - popupWidth - margin;
-      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
-    } else if(Math.max(spaceRight, spaceLeft) - margin * 2 >= minSideWidth){
-      // Neither side has room for the popup at full width, but one side has enough for a
-      // narrowed version — shrink it to fit there instead of covering the highlighted
-      // content. This is the common case for a highlight group that spans nearly the whole
-      // row (a full line of ability scores, a weapon's whole field group).
-      var fitWidth = Math.floor(Math.max(spaceRight, spaceLeft) - margin * 2);
-      tutorialPopupEl.style.maxWidth = fitWidth + "px";
-      popupWidth = tutorialPopupEl.offsetWidth;
-      popupHeight = tutorialPopupEl.offsetHeight;
+      top = (visTop + visBottom) / 2 - popupHeight / 2;
+    } else if(strategy === "side-narrow"){
       if(spaceRight >= spaceLeft){
         left = rect.right + margin;
       } else {
         left = rect.left - popupWidth - margin;
       }
-      top = (rect.top + rect.bottom) / 2 - popupHeight / 2;
+      top = (visTop + visBottom) / 2 - popupHeight / 2;
     } else {
-      // Not enough room on either side even narrowed (a narrow or mobile-width window) —
-      // fall back to the original above/below placement.
-      left = rect.left;
-      top = rect.bottom + 12;
-      if(top + popupHeight + margin > window.innerHeight) top = rect.top - popupHeight - 12;
+      // Bottom strip: centered in the middle of the viewport, bumped up flush against the
+      // bottom of the screen — in the empty space the scroll above just made sure is clear.
+      left = (window.innerWidth - popupWidth) / 2;
+      top = window.innerHeight - popupHeight - margin;
     }
     // Final clamp either way, so the popup always stays fully on-screen.
     if(left + popupWidth + margin > window.innerWidth) left = window.innerWidth - popupWidth - margin;
