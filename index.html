@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.47.3</title>
+<title>Roll Tracker V1.48.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -432,6 +432,7 @@
     padding:5px 7px;border:1px solid var(--border);border-radius:4px;
     background:var(--bg-card);color:var(--ink);font-size:0.85rem;
   }
+  .spell-ability-select.tutorial-highlight{color:var(--ink);}
   .spell-ability-override{
     display:flex;align-items:center;gap:8px;
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -604,7 +605,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.47.3</div>
+      <div class="version-tag" id="version-tag">Version 1.48.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2338,12 +2339,19 @@
         }
       });
 
-      fields.appendChild(atkLabel);
-      fields.appendChild(diceLabel);
-      if(hpToggleLabel) fields.appendChild(hpToggleLabel);
-      fields.appendChild(dmgBonusLabel);
-      fields.appendChild(atkBtn);
-      fields.appendChild(dmgBtn);
+      var coreFields = document.createElement("div");
+      coreFields.className = "attack-core-fields";
+      coreFields.appendChild(atkLabel);
+      coreFields.appendChild(diceLabel);
+      if(hpToggleLabel) coreFields.appendChild(hpToggleLabel);
+      coreFields.appendChild(dmgBonusLabel);
+      fields.appendChild(coreFields);
+
+      var rollButtons = document.createElement("div");
+      rollButtons.className = "attack-roll-buttons";
+      rollButtons.appendChild(atkBtn);
+      rollButtons.appendChild(dmgBtn);
+      fields.appendChild(rollButtons);
 
       box.appendChild(fields);
       spellsEl.appendChild(box);
@@ -2498,12 +2506,14 @@
       text: "Pick a weapon from the dropdown to auto-fill its name and damage die from the book, or leave it on Custom to build one from scratch — the name field stays editable either way. Click ✕ to remove the whole attack. If a preset has extra details — properties, special rules — a \"More Information\" line appears right below it."
     },
     {
-      targetSelector: ".attack-core-fields",
+      // Scoped to #attacks — Spells now uses the same core-fields/roll-buttons wrapper
+      // classes for its own fields, which would otherwise get highlighted here too.
+      targetSelector: "#attacks .attack-core-fields",
       title: "Attack Bonus & Damage",
       text: "Atk bonus is calculated automatically for most preset weapons from your ability modifier — switch to Custom to enter it by hand, or check \"prof\" if a weapon isn't auto-linking your proficiency. Damage sets the dice rolled on a hit (mixing sizes works too, e.g. 1d8+1d4); check \"2H\" to switch to a weapon's two-handed Versatile die. The number after Damage is your flat damage bonus, added to every roll."
     },
     {
-      targetSelector: ".attack-roll-buttons",
+      targetSelector: "#attacks .attack-roll-buttons",
       title: "Rolling Attacks & Damage",
       text: "Attack Roll rolls a d20 plus your attack bonus — a natural 20 automatically arms a one-time crit for this weapon's next Damage roll. Damage rolls the weapon's dice plus its bonus, doubling the dice if a crit is armed (or the Crit toggle up top is on)."
     },
@@ -2520,6 +2530,32 @@
       },
       title: "Ammo & Carry Count",
       text: "Custom weapons can track an ammo count (drops by 1 on every Attack Roll — the button disables itself at 0) or a plain carrying count (purely manual, for things like daggers you're just keeping track of). Preset weapons that use ammo, like bows, track it the same way automatically."
+    },
+    {
+      targetSelector: ".spell-ability-select",
+      title: "Spellcasting Ability",
+      text: "Sets the default ability score (INT, WIS, or CHA) used to calculate every spell's attack bonus and save DC below — pick whichever your class uses for spellcasting."
+    },
+    {
+      // Scoped to #spells — reuses the same .attack-top class as the Weapons section above.
+      targetSelector: "#spells .attack-top",
+      title: "Choosing a Spell",
+      text: "Pick a known cantrip or spell from the dropdown to auto-fill its damage dice and details, or leave it on Custom and type your own name. Click the ✕ to remove a spell."
+    },
+    {
+      targetSelector: "#spells .attack-note-details",
+      title: "More Information",
+      text: "Expand this to see a preset spell's school, range, duration, and other details — or, for a Custom spell, jot your own notes here. This is also where you can override the spellcasting ability for just this one spell, for the rare feat or feature that ties it to something other than your default above."
+    },
+    {
+      targetSelector: "#spells .attack-core-fields",
+      title: "Attack Bonus & Damage",
+      text: "The attack bonus is calculated automatically, the same as weapon attacks. Some spells use a saving throw instead of an attack roll — those show \"N/A\" here along with a Save DC badge, since the target rolls, not you. Damage dice and the bonus next to them work just like weapons."
+    },
+    {
+      targetSelector: "#spells .attack-roll-buttons",
+      title: "Rolling Attacks & Damage",
+      text: "Works the same as weapons — a natural 20 on the attack roll arms the Damage button to double its dice next time. Save-based spells skip straight to Damage, since there's no attack roll to make for them."
     }
   ];
 
