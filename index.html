@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.49.0</title>
+<title>Roll Tracker V1.50.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -550,6 +550,10 @@
     background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:8px;
   }
   #add-prof:hover{border-color:var(--moss);color:var(--moss-dark);}
+  /* Same background/color specificity tie as the other ghost-styled buttons (Change
+     Account, Hide Rolls, Clear Log) — without this it stays looking greyed-out under the
+     highlight. */
+  #add-prof.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
   .prof-bulk-details{margin-top:10px;}
   .prof-bulk-details summary{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -608,7 +612,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.49.0</div>
+      <div class="version-tag" id="version-tag">Version 1.50.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2569,6 +2573,16 @@
       targetSelector: "#clear-log",
       title: "Clear Log",
       text: "Wipes every entry in the log at once — handy at the start of a new session. This can't be undone, so use it when you're sure."
+    },
+    {
+      targetSelector: "#proficiencies, #add-prof",
+      title: "Proficiencies",
+      text: "A free-text list for anything not already tracked elsewhere — tool proficiencies, languages, armor types, whatever your character has. Type directly into each line, click ✕ to remove one, or \"+ Add Proficiency\" to add a blank line."
+    },
+    {
+      targetSelector: ".prof-bulk-details",
+      title: "Paste a List Instead",
+      text: "Expand this to paste in a whole list at once, one per line, then click \"Add all lines\" to add them all in one go — handy if you're copying proficiencies over from somewhere else instead of typing them one at a time."
     }
   ];
 
@@ -2584,6 +2598,7 @@
   var tutorialHighlightParents = [];
   var tutorialBackdropEl = null;
   var tutorialPopupEl = null;
+  var tutorialSpacerEl = null;
   var tutorialBodyWidth = 0;
 
   // Shared scroll lock, used both by the tutorial popup and (via the rtBridge
@@ -2639,6 +2654,7 @@
   function closeTutorial(){
     if(tutorialBackdropEl){ tutorialBackdropEl.remove(); tutorialBackdropEl = null; }
     if(tutorialPopupEl){ tutorialPopupEl.remove(); tutorialPopupEl = null; }
+    if(tutorialSpacerEl){ tutorialSpacerEl.remove(); tutorialSpacerEl = null; }
     clearTutorialHighlights();
     unlockPageScroll();
     document.removeEventListener("keydown", tutorialKeydownHandler);
@@ -2799,6 +2815,16 @@
       : naturalTop - viewMargin;
 
     if(isFirstStepEver){
+      // A step near the very bottom of the page (Proficiencies, say) may need to scroll its
+      // target's bottom edge up above the reserved strip, but there's nothing further down
+      // the page to scroll INTO — the page simply ends. This spacer gives every step that
+      // much extra room to scroll into, regardless of what it turns out to need; removed
+      // again in closeTutorial so it never affects the page outside the tutorial.
+      tutorialSpacerEl = document.createElement("div");
+      tutorialSpacerEl.id = "tutorial-scroll-spacer";
+      tutorialSpacerEl.style.cssText = "height:500px;";
+      document.body.appendChild(tutorialSpacerEl);
+
       // The true scrollable height, measured now — once the body is pinned below, it's
       // taken out of normal page flow and the page stops reporting its real height.
       tutorialMaxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
