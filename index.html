@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.48.0</title>
+<title>Roll Tracker V1.49.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -593,6 +593,9 @@
     font-size:0.75rem;background:none;border:none;color:var(--ink-soft);
     cursor:pointer;text-decoration:underline;margin-top:8px;
   }
+  /* Same background/color specificity tie as the other ghost-styled buttons (Change
+     Account, Hide Rolls) — without this it stays looking greyed-out under the highlight. */
+  #clear-log.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
 </style>
 </head>
 <body>
@@ -605,7 +608,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.48.0</div>
+      <div class="version-tag" id="version-tag">Version 1.49.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2556,6 +2559,16 @@
       targetSelector: "#spells .attack-roll-buttons",
       title: "Rolling Attacks & Damage",
       text: "Works the same as weapons — a natural 20 on the attack roll arms the Damage button to double its dice next time. Save-based spells skip straight to Damage, since there's no attack roll to make for them."
+    },
+    {
+      targetSelector: "#log-list",
+      title: "Roll Log",
+      text: "Every roll you make — checks, saves, attacks, damage, bulk rolls — lands here automatically, newest on top, showing the full breakdown and the total. A natural 20 gets a ★, a natural 1 gets a ✕. Click the ✕ on any entry to remove just that one roll."
+    },
+    {
+      targetSelector: "#clear-log",
+      title: "Clear Log",
+      text: "Wipes every entry in the log at once — handy at the start of a new session. This can't be undone, so use it when you're sure."
     }
   ];
 
