@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.50.0</title>
+<title>Roll Tracker V1.50.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -612,7 +612,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.50.0</div>
+      <div class="version-tag" id="version-tag">Version 1.50.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2756,7 +2756,14 @@
     // vertically) — before touching scroll at all, so the scroll target chosen afterward can
     // already account for however much room the popup itself will need.
     var margin = 10;
-    var minSideWidth = 100; // narrowest the popup can shrink to and still be readable
+    // The narrowest a shrunk popup is allowed to go. Shrinking it any further makes the step
+    // text wrap onto so many lines that the popup grows taller than the screen — exactly the
+    // bug this guards against (seen on an iOS-width window, where the only available side
+    // margin was barely over 100px: the popup honored that width and ended up over 1000px
+    // tall, pushing its own Next button off the bottom of the screen entirely). Below this
+    // width, the bottom-strip layout is used instead — it keeps the popup at its normal,
+    // comfortably-wrapping width no matter how little side room there is.
+    var minSideWidth = 200;
     var popupWidth = tutorialPopupEl.offsetWidth;
     var popupHeight = tutorialPopupEl.offsetHeight;
     var spaceRight = window.innerWidth - rawRect.right;
@@ -2777,6 +2784,16 @@
       tutorialPopupEl.style.maxWidth = fitWidth + "px";
       popupWidth = tutorialPopupEl.offsetWidth;
       popupHeight = tutorialPopupEl.offsetHeight;
+      // Even above the minimum width, a long enough step could still wrap into something
+      // taller than the screen. Rather than trust width alone, check the actual rendered
+      // height and bail to the bottom-strip layout (full normal width, so normal height) if
+      // it's ever too tall to fit.
+      if(popupHeight > window.innerHeight - margin * 2){
+        strategy = "bottom-strip";
+        tutorialPopupEl.style.maxWidth = "";
+        popupWidth = tutorialPopupEl.offsetWidth;
+        popupHeight = tutorialPopupEl.offsetHeight;
+      }
     }
 
     // A target that's scattered across (or simply taller than) the whole page — every
