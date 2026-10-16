@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.51.1</title>
+<title>Roll Tracker V1.51.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -316,6 +316,7 @@
      border visible (worst on iOS). Draw the ring inside the row instead, where it can't clip. */
   .log-entry.hidden-roll.tutorial-highlight{
     box-shadow:inset 0 0 0 3px var(--moss);
+    outline:3px solid var(--moss);outline-offset:-3px;
     padding:7px 10px;
     border-bottom-color:transparent;
   }
@@ -621,7 +622,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.51.1</div>
+      <div class="version-tag" id="version-tag">Version 1.51.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -672,8 +673,10 @@
 
   <section class="panel prof-panel">
     <h2>Proficiencies</h2>
-    <div id="proficiencies" class="prof-list"></div>
-    <button id="add-prof">+ Add Proficiency</button>
+    <div id="prof-group">
+      <div id="proficiencies" class="prof-list"></div>
+      <button id="add-prof">+ Add Proficiency</button>
+    </div>
     <details class="prof-bulk-details">
       <summary>Paste a list instead</summary>
       <textarea id="prof-bulk-input" class="prof-bulk-area" placeholder="One per line, e.g.&#10;Clubs (Druid)&#10;Daggers (Druid)&#10;Scimitars (Druid)"></textarea>
@@ -2611,7 +2614,7 @@
       text: "Wipes every entry in the log at once — handy at the start of a new session. This can't be undone, so use it when you're sure."
     },
     {
-      targetSelector: "#proficiencies, #add-prof",
+      targetSelector: "#prof-group",
       title: "Proficiencies",
       text: "A free-text list for anything not already tracked elsewhere — tool proficiencies, languages, armor types, whatever your character has. Type directly into each line, click ✕ to remove one, or \"+ Add Proficiency\" to add a blank line."
     },
