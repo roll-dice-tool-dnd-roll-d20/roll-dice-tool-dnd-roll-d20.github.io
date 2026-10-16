@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.50.1</title>
+<title>Roll Tracker V1.51.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -310,6 +310,7 @@
   /* Same transparent-background issue as Crit and the ghost buttons earlier. */
   .hide-rolls-toggle.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
   .log-entry.hidden-roll .label{font-style:italic;opacity:0.7;}
+  .log-entry.hidden-roll.tutorial-highlight .label{opacity:1;}
   .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;}
   @media (max-width:760px){.grid{grid-template-columns:1fr;}}
   section.panel{
@@ -612,7 +613,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.50.1</div>
+      <div class="version-tag" id="version-tag">Version 1.51.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2570,6 +2571,33 @@
       text: "Every roll you make — checks, saves, attacks, damage, bulk rolls — lands here automatically, newest on top, showing the full breakdown and the total. A natural 20 gets a ★, a natural 1 gets a ✕. Click the ✕ on any entry to remove just that one roll."
     },
     {
+      targetSelector: "#log-list .log-entry.hidden-roll",
+      title: "Hidden Roll",
+      text: "This is a hidden roll. The DM had Hide Rolls turned on when it was made, so only the DM can see what was rolled and the total — everyone else just sees this placeholder. If you're ever curious what happened, ask your DM!",
+      showIf: function(){
+        return !viewerIsDM() && state.log.some(function(e){ return e && e.hidden; });
+      },
+      // The log can be long, so a hidden roll may be buried out of view — scroll the log's own
+      // viewport (never the locked page) so the newest hidden roll sits in the middle.
+      getTargets: function(){
+        var list = document.getElementById("log-list");
+        if(!list) return [];
+        var rows = Array.prototype.slice.call(list.querySelectorAll(".log-entry.hidden-roll"));
+        if(!rows.length) return [];
+        var lr = list.getBoundingClientRect();
+        var pick = null;
+        // DOM order is oldest-first (list is column-reverse), so walk from the end for newest.
+        for(var i = rows.length - 1; i >= 0; i--){
+          var r = rows[i].getBoundingClientRect();
+          if(r.top >= lr.top && r.bottom <= lr.bottom){ pick = rows[i]; break; }
+        }
+        if(!pick) pick = rows[rows.length - 1];
+        var pr = pick.getBoundingClientRect();
+        list.scrollTop += (pr.top - lr.top) - (lr.height / 2 - pr.height / 2);
+        return [pick];
+      }
+    },
+    {
       targetSelector: "#clear-log",
       title: "Clear Log",
       text: "Wipes every entry in the log at once — handy at the start of a new session. This can't be undone, so use it when you're sure."
@@ -2671,7 +2699,9 @@
     }
     // A step can target several matching elements at once (e.g. every tab's lock icon) —
     // all of them get highlighted, and the popup anchors to the group as a whole.
-    var targets = Array.prototype.slice.call(document.querySelectorAll(step.targetSelector));
+    var targets = step.getTargets
+      ? step.getTargets()
+      : Array.prototype.slice.call(document.querySelectorAll(step.targetSelector));
     if(!targets.length){
       // Nothing on the page currently matches this step (e.g. a tab with zero attacks, so
       // none of the weapon steps have anything to point at) — skip it in whichever
