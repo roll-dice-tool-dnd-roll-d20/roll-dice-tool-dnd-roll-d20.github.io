@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.52.0</title>
+<title>Roll Tracker V1.53.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -668,10 +668,21 @@
     box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
   }
   #turn-outline.on{display:block;}
+  /* "Combat Has Started" announcement — top of every player's screen, then fades out. */
+  #combat-banner{
+    position:fixed;left:50%;top:max(12px, env(safe-area-inset-top));transform:translateX(-50%);
+    z-index:9985;pointer-events:none;max-width:calc(100vw - 32px);
+    padding:12px 22px;border-radius:10px;border:2px solid #ff2a2a;
+    background:#2a0d0d;color:#fff;font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:1.15rem;font-weight:700;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.45);
+    opacity:0;transition:opacity 1s ease;
+  }
+  #combat-banner.on{opacity:1;transition:opacity 0.25s ease;}
 </style>
 </head>
 <body>
 <div id="turn-outline"></div>
+<div id="combat-banner" role="status" aria-live="polite"></div>
 <div class="wrap" id="app-wrap">
 
   <header>
@@ -681,7 +692,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.52.0</div>
+      <div class="version-tag" id="version-tag">Version 1.53.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1413,6 +1424,7 @@
     renderLog();
     renderProficiencies();
     updateLockOverlay();
+    renderCombat();  // Join Combat is only clickable while you're on your own tab
   }
 
   // ---------- Settings ----------
@@ -2562,13 +2574,13 @@
       targetSelector: "#combat-bar",
       title: "Initiative Tracker",
       showIf: function(){ return currentAccount !== null && !viewerIsDM(); },
-      text: "This is the combat tracker. Click Join Combat to roll your initiative — a d20 plus your Initiative Bonus, added to your roll log automatically — and wait for the DM to start the fight. Once combat is running it shows whose turn it is and how many people are in front of you. When it's your turn, a bright red outline lights up around the edge of your screen — take your turn, then click End Turn to pass it on. If you join while a combat is already running, you slot into the order by your roll. Leave removes you from the combat."
+      text: "This is the combat tracker. Click Join Combat to roll your initiative — a d20 plus your Initiative Bonus, added to your roll log automatically — and wait for the DM to start the fight. You can only join from your own tab, so Join Combat is greyed out while you're looking at someone else's. When the DM starts combat, a \"Combat Has Started\" message shows across the top of your screen for a few seconds. Once combat is running it shows whose turn it is and how many people are in front of you. When it's your turn, a bright red outline lights up around the edge of your screen — take your turn, then click End Turn to pass it on. If you join while a combat is already running, you slot into the order by your roll. Leave removes you from the combat."
     },
     {
       targetSelector: "#combat-bar",
       title: "Running Combat",
       showIf: function(){ return currentAccount !== null && viewerIsDM(); },
-      text: "Players who click Join Combat roll their own initiative and appear here with their totals. Tick the ones you want and click Start Combat to begin (or just click it to start everyone). Once running, the button becomes End Combat for that fight. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round. Skip passes the current turn along, and ✕ removes someone from combat. Players who join mid-fight slot into the order automatically."
+      text: "Players who click Join Combat roll their own initiative and appear here with their totals. Tick the ones you want and click Start Combat to begin (or just click it to start everyone) — a \"Combat Has Started\" message flashes across every player's screen. You can also start combat before anyone has joined; players who join afterward slot into the order. Once running, the button becomes End Combat for that fight. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round. Skip passes the current turn along, and ✕ removes someone from combat. Players who join mid-fight slot into the order automatically."
     },
     {
       targetSelector: "#prof-bonus-label",
@@ -3109,9 +3121,11 @@
       if(!g || typeof g !== "object") return;
       var m = plainObj(g.members), mm = {};
       Object.keys(m).forEach(function(k){ var x = normalizeMember(m[k]); if(x) mm[k] = x; });
-      if(!Object.keys(mm).length) return;
       d.groups[gid] = {round: parseInt(g.round, 10) || 1, cur: g.cur || "", t: Number(g.t) || 0, members: mm};
     });
+    if(raw.announce && typeof raw.announce === "object"){
+      d.announce = {t: Number(raw.announce.t) || 0, text: String(raw.announce.text || "")};
+    }
     return d;
   }
   function cloneCombat(){ return JSON.parse(JSON.stringify(combatData)); }
@@ -3156,7 +3170,11 @@
   function opJoin(d, key, init, t){
     if(d.join[key] || groupOfKey(d, key)) return;
     var ids = Object.keys(d.groups);
-    if(ids.length === 1) d.groups[ids[0]].members[key] = {i:init, t:t};  // slot into the running combat
+    if(ids.length === 1){                                                 // slot into the running combat
+      var g1 = d.groups[ids[0]];
+      g1.members[key] = {i:init, t:t};
+      if(!g1.members[g1.cur]) g1.cur = combatOrder(g1)[0].k;               // first person into a just-started combat
+    }
     else d.join[key] = {i:init, t:t};                                     // wait for the DM
   }
   function opLeave(d, key){ delete d.join[key]; removeKeysFromGroups(d, [key]); }
@@ -3164,6 +3182,7 @@
     var g = d.groups[gid];
     if(!g) return;
     var order = combatOrder(g), ci = -1;
+    if(!order.length) return;
     order.forEach(function(o, n){ if(o.k === g.cur) ci = n; });
     if(ci < 0){ g.cur = order[0].k; return; }
     if(ci + 1 >= order.length) g.round++;
@@ -3191,7 +3210,20 @@
       g.cur = combatOrder(g)[0].k;
     } else {
       moving.forEach(function(k){ g.members[k] = info[k]; });
+      if(!g.members[g.cur]) g.cur = combatOrder(g)[0].k;
     }
+  }
+  // Start Combat: moves the picked players into a new combat (or starts an empty one when nobody
+  // has joined yet) and records the announcement every player's screen shows.
+  function opStart(d, keys){
+    var before = Object.keys(d.groups);
+    if(keys.length) opMove(d, keys, "new");
+    var created = Object.keys(d.groups).filter(function(id){ return before.indexOf(id) < 0; })[0];
+    if(!created){
+      created = "g" + Date.now() + Math.floor(Math.random() * 1000);
+      d.groups[created] = {round:1, cur:"", t:Date.now(), members:{}};
+    }
+    d.announce = {t:Date.now(), text: Object.keys(d.groups[created].members).length ? "Combat Has Started" : "Combat Started"};
   }
 
   // Turns the difference between two combat snapshots into a flat multi-path update.
@@ -3222,6 +3254,7 @@
   // --- player actions ---
   function joinCombat(){
     if(currentAccount === null || viewerIsDM() || !window.rtCombatIO) return;  // needs the live connection
+    if(app.activeIndex !== currentAccount) return;  // only from the tab you're signed in as
     var me = currentAccount, key = acctKey(me);
     if(combatData.join[key] || groupOfKey(combatData, key)) return;
     var bonus = parseInt(app.characters[me].initBonus, 10) || 0;
@@ -3270,6 +3303,17 @@
       wrap.appendChild(chip);
     });
     return wrap;
+  }
+
+  var lastAnnounceT = null;
+  var combatBannerEl = document.getElementById("combat-banner");
+  var bannerHideTimer = null;
+  function showCombatBanner(text){
+    if(!combatBannerEl) return;
+    combatBannerEl.textContent = text;
+    combatBannerEl.classList.add("on");
+    clearTimeout(bannerHideTimer);
+    bannerHideTimer = setTimeout(function(){ combatBannerEl.classList.remove("on"); }, 8000);  // then the CSS fades it out
   }
 
   function renderCombat(){
@@ -3321,8 +3365,16 @@
         var n = Object.keys(d.groups).length;
         row.appendChild(cbEl("span", "cb-sub", n === 1 ? "Combat is running — you'll slot into the order." : "No combat yet."));
         row.appendChild(cbEl("span", "cb-spacer"));
-        row.appendChild(cbBtn("Join Combat", "", joinCombat));
+        var joinBtn = cbBtn("Join Combat", "", joinCombat);
+        var onOwnTab = app.activeIndex === me;
+        joinBtn.disabled = !onOwnTab;
+        if(!onOwnTab) joinBtn.title = "Switch to your own tab to join combat.";
+        row.appendChild(joinBtn);
         combatBarEl.appendChild(row);
+        if(!onOwnTab){
+          var hint = cbEl("div", "cb-row"); hint.appendChild(cbEl("span", "cb-sub", "Switch to your own tab (" + app.characters[me].name + ") to join combat."));
+          combatBarEl.appendChild(hint);
+        }
       }
       return;
     }
@@ -3333,13 +3385,13 @@
     var gids = sortedGroupIds(d), poolKeys = Object.keys(d.join).sort(function(x, y){ return (d.join[y].i - d.join[x].i) || (d.join[x].t - d.join[y].t); });
     var head = cbEl("div", "cb-row");
     head.appendChild(cbEl("span", "cb-title", "⚔ Combat"));
-    if(!gids.length && !poolKeys.length) head.appendChild(cbEl("span", "cb-sub", "Waiting for players to join."));
+    if(!gids.length && !poolKeys.length) head.appendChild(cbEl("span", "cb-sub", "No one has joined yet."));
     combatBarEl.appendChild(head);
 
     function startFromPool(){
       var picked = poolKeys.filter(function(k){ return dmSelected[k]; });
       var use = picked.length ? picked : poolKeys;
-      combatCommit(function(dd){ opMove(dd, use, "new"); });
+      combatCommit(function(dd){ opStart(dd, use); });
       use.forEach(function(k){ delete dmSelected[k]; });
     }
 
@@ -3352,6 +3404,10 @@
       gh.appendChild(cbEl("span", "cb-spacer"));
       gh.appendChild(cbBtn("End Combat", "danger small", function(){ combatCommit(function(dd){ opEndGroup(dd, gid); }); }));
       card.appendChild(gh);
+      if(!Object.keys(g.members).length){
+        var emptyRow = cbEl("div", "cb-row"); emptyRow.appendChild(cbEl("span", "cb-sub", "Combat Started — no one in the order yet. Players who join will slot in."));
+        card.appendChild(emptyRow);
+      }
       combatOrder(g).forEach(function(o){
         var m = cbEl("div", "cb-member");
         m.appendChild(cbCheck(o.k));
@@ -3386,7 +3442,7 @@
       combatBarEl.appendChild(pc);
     } else if(!gids.length){
       var sr = cbEl("div", "cb-row");
-      sr.appendChild(cbBtn("Start Combat", "", startFromPool)).disabled = true;
+      sr.appendChild(cbBtn("Start Combat", "", startFromPool));
       combatBarEl.appendChild(sr);
     }
 
@@ -3447,6 +3503,16 @@
     },
     setCombatData: function(raw){
       combatData = normalizeCombat(raw);
+      // A new announcement (from the DM clicking Start Combat) pops a banner on player screens.
+      // The first snapshot after loading only records the baseline so an old announcement
+      // doesn't replay every time someone opens the page.
+      var ann = combatData.announce;
+      var annT = ann ? ann.t : 0;
+      if(lastAnnounceT === null) lastAnnounceT = annT;
+      else if(annT !== lastAnnounceT){
+        lastAnnounceT = annT;
+        if(ann && !viewerIsDM() && currentAccount !== null) showCombatBanner(ann.text || "Combat Has Started");
+      }
       renderCombat();
     },
     getLocksJson: function(){ return JSON.stringify(app.locks || {}); },
