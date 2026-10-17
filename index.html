@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.51.5</title>
+<title>Roll Tracker V1.52.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -619,9 +619,59 @@
   /* Same background/color specificity tie as the other ghost-styled buttons (Change
      Account, Hide Rolls) — without this it stays looking greyed-out under the highlight. */
   #clear-log.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
+
+  /* ---------- Initiative / combat tracker ---------- */
+  #init-bonus-label.tutorial-highlight{color:var(--ink);}
+  .combat-bar{
+    background:var(--bg-card);border:1px solid var(--border-soft);border-radius:8px;
+    padding:12px 16px;margin-bottom:14px;
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;color:var(--ink);
+  }
+  .combat-bar.my-turn{border-color:#ff2a2a;}
+  .cb-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+  .cb-row + .cb-row{margin-top:8px;}
+  .cb-spacer{flex:1;}
+  .cb-title{font-weight:700;}
+  .cb-sub{color:var(--ink-soft);}
+  .cb-big{font-size:1.05rem;font-weight:700;color:#d11414;}
+  .cb-btn{
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.85rem;font-weight:600;
+    padding:7px 14px;border:1px solid var(--moss);border-radius:6px;
+    background:var(--moss);color:#fff;cursor:pointer;
+  }
+  .cb-btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .cb-btn.ghost{background:transparent;color:var(--ink-soft);border-color:var(--border);font-weight:500;}
+  .cb-btn.danger{background:var(--berry);border-color:var(--berry);color:#fff;}
+  .cb-btn.small{padding:3px 9px;font-size:0.78rem;}
+  .cb-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .cb-chip{
+    display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+    border:1px solid var(--border);background:var(--bg);font-size:0.8rem;color:var(--ink-soft);
+  }
+  .cb-chip.cur{border-color:#ff2a2a;color:var(--ink);font-weight:700;}
+  .cb-chip.me{box-shadow:inset 0 0 0 1px var(--moss);}
+  .cb-chip .init{font-weight:700;color:var(--ink);}
+  .cb-group{border:1px solid var(--border-soft);border-radius:6px;padding:8px 10px;margin-top:8px;background:var(--bg);}
+  .cb-member{display:flex;align-items:center;gap:8px;padding:3px 0;}
+  .cb-member .nm{flex:1;min-width:0;overflow-wrap:anywhere;}
+  .cb-member .nm.cur{font-weight:700;}
+  .cb-member .iv{font-weight:700;}
+  .cb-member input[type=checkbox]{margin:0;}
+  .cb-move select{
+    font-family:inherit;font-size:0.82rem;padding:5px 6px;border:1px solid var(--border);border-radius:4px;
+    background:var(--bg);color:var(--ink);max-width:100%;
+  }
+  /* Bright red frame around the screen edge on the device whose turn it currently is.
+     pointer-events:none so it never blocks a tap; sits under the tutorial backdrop. */
+  #turn-outline{
+    position:fixed;inset:0;pointer-events:none;z-index:9980;display:none;
+    box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
+  }
+  #turn-outline.on{display:block;}
 </style>
 </head>
 <body>
+<div id="turn-outline"></div>
 <div class="wrap" id="app-wrap">
 
   <header>
@@ -631,17 +681,22 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.51.5</div>
+      <div class="version-tag" id="version-tag">Version 1.52.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
   </header>
+
+  <div class="combat-bar" id="combat-bar" style="display:none;"></div>
 
   <div class="sheet-content" id="sheet-content">
 
   <div class="settings-bar">
     <label id="prof-bonus-label">Proficiency Bonus
       <input type="number" id="prof-bonus" value="2">
+    </label>
+    <label id="init-bonus-label" title="Added to your d20 when you click Join Combat.">Initiative Bonus
+      <input type="number" id="init-bonus" value="0">
     </label>
     <div class="mode-group" id="mode-group">
       <button data-mode="dis">Disadvantage</button>
@@ -868,6 +923,7 @@
 
   var fullTemplate = {
     profBonus: 2,
+    initBonus: 0,
     mode: "normal",
     critMode: false,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
@@ -905,6 +961,7 @@
 
   var blankTemplate = {
     profBonus: 2,
+    initBonus: 0,
     mode: "normal",
     critMode: false,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
@@ -1025,6 +1082,7 @@
     });
     if(!c.log) c.log = [];
     if(typeof c.profBonus === "undefined") c.profBonus = 2;
+    if(typeof c.initBonus === "undefined") c.initBonus = 0;
     if(!c.mode) c.mode = "normal";
     if(typeof c.critMode !== "boolean") c.critMode = false;
   });
@@ -1365,6 +1423,12 @@
     renderAttacks();
   });
 
+  var initInput = document.getElementById("init-bonus");
+  initInput.addEventListener("input", function(){
+    state.initBonus = parseInt(initInput.value,10) || 0;
+    saveState();
+  });
+
   var modeGroup = document.getElementById("mode-group");
   Array.prototype.forEach.call(modeGroup.querySelectorAll("button"), function(btn){
     btn.addEventListener("click", function(){
@@ -1391,6 +1455,7 @@
 
   function renderSettingsBar(){
     profInput.value = state.profBonus;
+    initInput.value = state.initBonus || 0;
     Array.prototype.forEach.call(modeGroup.querySelectorAll("button"), function(b){
       b.classList.toggle("active", b.getAttribute("data-mode") === state.mode);
     });
@@ -2492,9 +2557,29 @@
       text: "A green dot and \"Syncing\" means your rolls and sheet changes are being saved and shared live with the rest of the group. A red dot and \"Offline\" means you're not connected right now — your rolls still work, but they're only saved on this device until you're back online and signed in."
     },
     {
+      // Role-specific: players and the DM see different versions of the initiative bar, so
+      // each gets its own step (the other is skipped via showIf).
+      targetSelector: "#combat-bar",
+      title: "Initiative Tracker",
+      showIf: function(){ return currentAccount !== null && !viewerIsDM(); },
+      text: "This is the combat tracker. Click Join Combat to roll your initiative — a d20 plus your Initiative Bonus, added to your roll log automatically — and wait for the DM to start the fight. Once combat is running it shows whose turn it is and how many people are in front of you. When it's your turn, a bright red outline lights up around the edge of your screen — take your turn, then click End Turn to pass it on. If you join while a combat is already running, you slot into the order by your roll. Leave removes you from the combat."
+    },
+    {
+      targetSelector: "#combat-bar",
+      title: "Running Combat",
+      showIf: function(){ return currentAccount !== null && viewerIsDM(); },
+      text: "Players who click Join Combat roll their own initiative and appear here with their totals. Tick the ones you want and click Start Combat to begin (or just click it to start everyone). Once running, the button becomes End Combat for that fight. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round. Skip passes the current turn along, and ✕ removes someone from combat. Players who join mid-fight slot into the order automatically."
+    },
+    {
       targetSelector: "#prof-bonus-label",
       title: "Proficiency Bonus",
       text: "Set this to your character's current proficiency bonus. It's used automatically anywhere proficiency applies — skill checks, saving throws, and attack rolls with a prof checkbox checked — so you only have to update it here as you level up instead of hunting down every roll on the sheet."
+    },
+    {
+      targetSelector: "#init-bonus-label",
+      title: "Initiative Bonus",
+      showIf: function(){ return !viewerIsDM(); },
+      text: "Type your character's initiative bonus here — usually your Dexterity modifier plus anything extra like the Alert feat. It's entered by hand and isn't calculated for you. It gets added to the d20 that's rolled automatically when you click Join Combat."
     },
     {
       targetSelector: "#mode-group",
@@ -2986,8 +3071,350 @@
   renderProficiencies();
   updateLockOverlay();
 
+  // ---------- Initiative / combat tracker ----------
+  // Shared state lives in the database at rollTracker/combat (see the Firebase script):
+  //   join:   { aN: {i: initiative, t: joinedAt} }          — joined, waiting for the DM
+  //   groups: { gid: {round, cur: "aN", t, members: { aN: {i, t} }} }
+  // Account keys are "a"+index so the database never mistakes them for an array. Every change
+  // is written as small per-key updates (diffCombat) so several players tapping Join at the
+  // same moment can't overwrite each other.
+  var combatData = {join:{}, groups:{}};
+  var combatBarEl = document.getElementById("combat-bar");
+  var turnOutlineEl = document.getElementById("turn-outline");
+  var dmSelected = {};  // account keys the DM has ticked
+
+  function acctKey(i){ return "a" + i; }
+  function keyIdx(k){ return parseInt(String(k).slice(1), 10); }
+  function acctNameOf(k){ var c = app.characters[keyIdx(k)]; return c ? c.name : k; }
+  function plainObj(x){
+    if(!x || typeof x !== "object") return {};
+    if(Array.isArray(x)){
+      var o = {};
+      x.forEach(function(v, i){ if(v !== null && v !== undefined) o[i] = v; });
+      return o;
+    }
+    return x;
+  }
+  function normalizeMember(m){
+    return (m && typeof m === "object") ? {i: parseInt(m.i, 10) || 0, t: Number(m.t) || 0} : null;
+  }
+  function normalizeCombat(raw){
+    var d = {join:{}, groups:{}};
+    if(!raw || typeof raw !== "object") return d;
+    var j = plainObj(raw.join);
+    Object.keys(j).forEach(function(k){ var m = normalizeMember(j[k]); if(m) d.join[k] = m; });
+    var gs = plainObj(raw.groups);
+    Object.keys(gs).forEach(function(gid){
+      var g = gs[gid];
+      if(!g || typeof g !== "object") return;
+      var m = plainObj(g.members), mm = {};
+      Object.keys(m).forEach(function(k){ var x = normalizeMember(m[k]); if(x) mm[k] = x; });
+      if(!Object.keys(mm).length) return;
+      d.groups[gid] = {round: parseInt(g.round, 10) || 1, cur: g.cur || "", t: Number(g.t) || 0, members: mm};
+    });
+    return d;
+  }
+  function cloneCombat(){ return JSON.parse(JSON.stringify(combatData)); }
+
+  // Highest initiative first; ties go to whoever joined first.
+  function combatOrder(g){
+    return Object.keys(g.members).map(function(k){ return {k:k, i:g.members[k].i, t:g.members[k].t}; })
+      .sort(function(x, y){ return (y.i - x.i) || (x.t - y.t) || (keyIdx(x.k) - keyIdx(y.k)); });
+  }
+  function groupOfKey(d, k){
+    var ids = Object.keys(d.groups);
+    for(var n = 0; n < ids.length; n++) if(d.groups[ids[n]].members[k]) return ids[n];
+    return null;
+  }
+  function sortedGroupIds(d){
+    return Object.keys(d.groups).sort(function(a, b){ return (d.groups[a].t - d.groups[b].t) || (a < b ? -1 : 1); });
+  }
+
+  // --- pure reducers: each mutates a copy `d` of the combat data ---
+  function removeKeysFromGroups(d, keys){
+    Object.keys(d.groups).forEach(function(gid){
+      var g = d.groups[gid];
+      var hit = keys.filter(function(k){ return g.members[k]; });
+      if(!hit.length) return;
+      var order = combatOrder(g);
+      var curIdx = -1;
+      order.forEach(function(o, n){ if(o.k === g.cur) curIdx = n; });
+      var curRemoved = hit.indexOf(g.cur) >= 0 || curIdx < 0;
+      hit.forEach(function(k){ delete g.members[k]; });
+      if(!Object.keys(g.members).length){ delete d.groups[gid]; return; }
+      if(curRemoved){
+        if(curIdx < 0){ g.cur = combatOrder(g)[0].k; return; }
+        // Hand the turn to the next surviving person after the removed one, wrapping the round.
+        var len = order.length;
+        for(var s = 1; s <= len; s++){
+          var raw = curIdx + s, cand = order[raw % len].k;
+          if(g.members[cand]){ g.cur = cand; if(raw >= len) g.round++; break; }
+        }
+      }
+    });
+  }
+  function opJoin(d, key, init, t){
+    if(d.join[key] || groupOfKey(d, key)) return;
+    var ids = Object.keys(d.groups);
+    if(ids.length === 1) d.groups[ids[0]].members[key] = {i:init, t:t};  // slot into the running combat
+    else d.join[key] = {i:init, t:t};                                     // wait for the DM
+  }
+  function opLeave(d, key){ delete d.join[key]; removeKeysFromGroups(d, [key]); }
+  function opAdvance(d, gid){
+    var g = d.groups[gid];
+    if(!g) return;
+    var order = combatOrder(g), ci = -1;
+    order.forEach(function(o, n){ if(o.k === g.cur) ci = n; });
+    if(ci < 0){ g.cur = order[0].k; return; }
+    if(ci + 1 >= order.length) g.round++;
+    g.cur = order[(ci + 1) % order.length].k;
+  }
+  function opEndGroup(d, gid){ delete d.groups[gid]; }
+  // Moves accounts (from the waiting pool or any combat) into an existing combat, or into a
+  // brand-new one when target === "new". Used for Start Combat, splitting, and assigning.
+  function opMove(d, keys, target){
+    var info = {};
+    keys.forEach(function(k){
+      var m = d.join[k];
+      if(!m){ var gid = groupOfKey(d, k); if(gid) m = d.groups[gid].members[k]; }
+      if(m) info[k] = {i:m.i, t:m.t};
+    });
+    var moving = Object.keys(info).filter(function(k){ return !(d.groups[target] && d.groups[target].members[k]); });
+    if(!moving.length) return;
+    moving.forEach(function(k){ delete d.join[k]; });
+    removeKeysFromGroups(d, moving);
+    var g = d.groups[target];
+    if(target === "new" || !g){
+      var gid2 = "g" + Date.now() + Math.floor(Math.random() * 1000);
+      g = d.groups[gid2] = {round:1, cur:"", t:Date.now(), members:{}};
+      moving.forEach(function(k){ g.members[k] = info[k]; });
+      g.cur = combatOrder(g)[0].k;
+    } else {
+      moving.forEach(function(k){ g.members[k] = info[k]; });
+    }
+  }
+
+  // Turns the difference between two combat snapshots into a flat multi-path update.
+  function diffCombat(a, b, prefix, out){
+    var keys = {};
+    Object.keys(a || {}).concat(Object.keys(b || {})).forEach(function(k){ keys[k] = 1; });
+    Object.keys(keys).forEach(function(k){
+      var av = a ? a[k] : undefined, bv = b ? b[k] : undefined, p = prefix + k;
+      var ao = av && typeof av === "object", bo = bv && typeof bv === "object";
+      if(ao && bo) diffCombat(av, bv, p + "/", out);
+      else if(bv === undefined) out[p] = null;
+      else if(av !== bv) out[p] = bv;
+    });
+  }
+  function combatCommit(fn){
+    var io = window.rtCombatIO;
+    if(!io) return;
+    var before = cloneCombat(), after = cloneCombat();
+    fn(after);
+    var out = {};
+    diffCombat(before, after, "", out);
+    if(!Object.keys(out).length) return;
+    combatData = after;  // show the result immediately; the database echo confirms it
+    renderCombat();
+    io.update(out);
+  }
+
+  // --- player actions ---
+  function joinCombat(){
+    if(currentAccount === null || viewerIsDM() || !window.rtCombatIO) return;  // needs the live connection
+    var me = currentAccount, key = acctKey(me);
+    if(combatData.join[key] || groupOfKey(combatData, key)) return;
+    var bonus = parseInt(app.characters[me].initBonus, 10) || 0;
+    var r = rollDie(20), total = r + bonus;
+    addLog("Initiative", "d20(" + r + ") + " + bonus, total, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
+    combatCommit(function(d){ opJoin(d, key, total, Date.now()); });
+  }
+  function leaveCombat(key){ combatCommit(function(d){ opLeave(d, key); }); }
+  function endTurn(gid){
+    var g = combatData.groups[gid];
+    if(!g) return;
+    if(g.cur !== acctKey(currentAccount) && !viewerIsDM()) return;
+    combatCommit(function(d){ opAdvance(d, gid); });
+  }
+
+  // --- rendering ---
+  function cbEl(tag, cls, text){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function cbBtn(label, cls, handler){
+    var b = cbEl("button", "cb-btn" + (cls ? " " + cls : ""), label);
+    b.type = "button";
+    b.addEventListener("click", handler);
+    return b;
+  }
+  function cbCheck(key){
+    var c = document.createElement("input");
+    c.type = "checkbox";
+    c.checked = !!dmSelected[key];
+    c.setAttribute("aria-label", "Select " + acctNameOf(key));
+    c.addEventListener("change", function(){
+      if(c.checked) dmSelected[key] = true; else delete dmSelected[key];
+      renderCombat();
+    });
+    return c;
+  }
+  function chipsFor(g, meKey){
+    var wrap = cbEl("div", "cb-chips");
+    combatOrder(g).forEach(function(o){
+      var chip = cbEl("span", "cb-chip" + (o.k === g.cur ? " cur" : "") + (o.k === meKey ? " me" : ""));
+      chip.appendChild(document.createTextNode((o.k === g.cur ? "▶ " : "") + acctNameOf(o.k) + " "));
+      chip.appendChild(cbEl("span", "init", String(o.i)));
+      wrap.appendChild(chip);
+    });
+    return wrap;
+  }
+
+  function renderCombat(){
+    if(!combatBarEl || !combatData) return;
+    var me = currentAccount;
+    if(me === null || !app.characters[me]){
+      combatBarEl.style.display = "none";
+      if(turnOutlineEl) turnOutlineEl.classList.remove("on");
+      return;
+    }
+    combatBarEl.style.display = "";
+    var d = combatData, isDM = viewerIsDM(), meKey = acctKey(me);
+    var myGid = groupOfKey(d, meKey), myGroup = myGid ? d.groups[myGid] : null;
+    var myTurn = !!(myGroup && myGroup.cur === meKey && !isDM);
+    if(turnOutlineEl) turnOutlineEl.classList.toggle("on", myTurn);
+    combatBarEl.classList.toggle("my-turn", myTurn);
+    combatBarEl.innerHTML = "";
+
+    if(!isDM){
+      var row = cbEl("div", "cb-row");
+      if(myGroup){
+        var order = combatOrder(myGroup), ci = 0, mi = 0;
+        order.forEach(function(o, n){ if(o.k === myGroup.cur) ci = n; if(o.k === meKey) mi = n; });
+        var ahead = (mi - ci + order.length) % order.length;
+        row.appendChild(cbEl("span", "cb-title", "⚔ Round " + myGroup.round));
+        if(myTurn){
+          row.appendChild(cbEl("span", "cb-big", "Your turn!"));
+          row.appendChild(cbEl("span", "cb-spacer"));
+          row.appendChild(cbBtn("End Turn", "", function(){ endTurn(myGid); }));
+        } else {
+          row.appendChild(cbEl("span", "", "Now: " + acctNameOf(myGroup.cur)));
+          row.appendChild(cbEl("span", "cb-sub", ahead + (ahead === 1 ? " person" : " people") + " in front of you"));
+          row.appendChild(cbEl("span", "cb-spacer"));
+        }
+        combatBarEl.appendChild(row);
+        var r2 = cbEl("div", "cb-row");
+        var chipsEl = chipsFor(myGroup, meKey); chipsEl.style.flex = "1";
+        r2.appendChild(chipsEl);
+        r2.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
+        combatBarEl.appendChild(r2);
+      } else if(d.join[meKey]){
+        row.appendChild(cbEl("span", "cb-title", "⚔ Joined"));
+        row.appendChild(cbEl("span", "cb-sub", "Initiative " + d.join[meKey].i + " — waiting for the DM"));
+        row.appendChild(cbEl("span", "cb-spacer"));
+        row.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
+        combatBarEl.appendChild(row);
+      } else {
+        row.appendChild(cbEl("span", "cb-title", "⚔ Initiative"));
+        var n = Object.keys(d.groups).length;
+        row.appendChild(cbEl("span", "cb-sub", n === 1 ? "Combat is running — you'll slot into the order." : "No combat yet."));
+        row.appendChild(cbEl("span", "cb-spacer"));
+        row.appendChild(cbBtn("Join Combat", "", joinCombat));
+        combatBarEl.appendChild(row);
+      }
+      return;
+    }
+
+    // ----- DM view -----
+    // Drop ticks for anyone who's no longer in the pool or a combat.
+    Object.keys(dmSelected).forEach(function(k){ if(!d.join[k] && !groupOfKey(d, k)) delete dmSelected[k]; });
+    var gids = sortedGroupIds(d), poolKeys = Object.keys(d.join).sort(function(x, y){ return (d.join[y].i - d.join[x].i) || (d.join[x].t - d.join[y].t); });
+    var head = cbEl("div", "cb-row");
+    head.appendChild(cbEl("span", "cb-title", "⚔ Combat"));
+    if(!gids.length && !poolKeys.length) head.appendChild(cbEl("span", "cb-sub", "Waiting for players to join."));
+    combatBarEl.appendChild(head);
+
+    function startFromPool(){
+      var picked = poolKeys.filter(function(k){ return dmSelected[k]; });
+      var use = picked.length ? picked : poolKeys;
+      combatCommit(function(dd){ opMove(dd, use, "new"); });
+      use.forEach(function(k){ delete dmSelected[k]; });
+    }
+
+    gids.forEach(function(gid, gi){
+      var g = d.groups[gid];
+      var card = cbEl("div", "cb-group");
+      var gh = cbEl("div", "cb-row");
+      gh.appendChild(cbEl("span", "cb-title", "Combat " + (gi + 1)));
+      gh.appendChild(cbEl("span", "cb-sub", "Round " + g.round));
+      gh.appendChild(cbEl("span", "cb-spacer"));
+      gh.appendChild(cbBtn("End Combat", "danger small", function(){ combatCommit(function(dd){ opEndGroup(dd, gid); }); }));
+      card.appendChild(gh);
+      combatOrder(g).forEach(function(o){
+        var m = cbEl("div", "cb-member");
+        m.appendChild(cbCheck(o.k));
+        m.appendChild(cbEl("span", "nm" + (o.k === g.cur ? " cur" : ""), (o.k === g.cur ? "▶ " : "") + acctNameOf(o.k)));
+        m.appendChild(cbEl("span", "iv", String(o.i)));
+        if(o.k === g.cur) m.appendChild(cbBtn("Skip", "ghost small", function(){ combatCommit(function(dd){ opAdvance(dd, gid); }); }));
+        var rm = cbBtn("✕", "ghost small", function(){ leaveCombat(o.k); });
+        rm.title = "Remove from combat"; rm.setAttribute("aria-label", "Remove " + acctNameOf(o.k) + " from combat");
+        m.appendChild(rm);
+        card.appendChild(m);
+      });
+      combatBarEl.appendChild(card);
+    });
+
+    if(poolKeys.length){
+      var pc = cbEl("div", "cb-group");
+      var ph = cbEl("div", "cb-row");
+      ph.appendChild(cbEl("span", "cb-title", gids.length ? "Waiting to join" : "Joined"));
+      ph.appendChild(cbEl("span", "cb-spacer"));
+      ph.appendChild(cbBtn("Start Combat", "small", startFromPool));
+      pc.appendChild(ph);
+      poolKeys.forEach(function(k){
+        var m = cbEl("div", "cb-member");
+        m.appendChild(cbCheck(k));
+        m.appendChild(cbEl("span", "nm", acctNameOf(k)));
+        m.appendChild(cbEl("span", "iv", String(d.join[k].i)));
+        var rm = cbBtn("✕", "ghost small", function(){ leaveCombat(k); });
+        rm.title = "Remove from the list"; rm.setAttribute("aria-label", "Remove " + acctNameOf(k));
+        m.appendChild(rm);
+        pc.appendChild(m);
+      });
+      combatBarEl.appendChild(pc);
+    } else if(!gids.length){
+      var sr = cbEl("div", "cb-row");
+      sr.appendChild(cbBtn("Start Combat", "", startFromPool)).disabled = true;
+      combatBarEl.appendChild(sr);
+    }
+
+    // Move/split: tick accounts above, pick a destination, move them.
+    if(gids.length || poolKeys.length){
+      var anyTicked = Object.keys(dmSelected).length > 0;
+      var mv = cbEl("div", "cb-row cb-move");
+      mv.appendChild(cbEl("span", "cb-sub", "Move selected to"));
+      var sel = document.createElement("select");
+      var optNew = document.createElement("option"); optNew.value = "new"; optNew.textContent = "New combat"; sel.appendChild(optNew);
+      gids.forEach(function(gid, gi){ var o = document.createElement("option"); o.value = gid; o.textContent = "Combat " + (gi + 1); sel.appendChild(o); });
+      mv.appendChild(sel);
+      var go = cbBtn("Move", "small", function(){
+        var keys = Object.keys(dmSelected);
+        combatCommit(function(dd){ opMove(dd, keys, sel.value); });
+        dmSelected = {};
+        renderCombat();
+      });
+      go.disabled = !anyTicked;
+      mv.appendChild(go);
+      combatBarEl.appendChild(mv);
+    }
+  }
+  renderCombat();
+
   // ---------- Sync bridge (used by the Firebase script below) ----------
   function renderAll(){
+    renderCombat();
     renderTabs();
     renderSettingsBar();
     renderAbilities();
@@ -3015,7 +3442,12 @@
       renderTabs();
       updateLockOverlay();
       renderLog();  // hidden-roll visibility depends on who's now signed in
+      renderCombat();  // the initiative bar looks different per account (and hides when signed out)
       renderSettingsBar();  // Hide Rolls button's clickability depends on who's now signed in
+    },
+    setCombatData: function(raw){
+      combatData = normalizeCombat(raw);
+      renderCombat();
     },
     getLocksJson: function(){ return JSON.stringify(app.locks || {}); },
     setLocksFromJson: function(json){
@@ -3043,6 +3475,7 @@
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
       if(typeof c.hideRolls === "undefined") c.hideRolls = false;
+      if(typeof c.initBonus === "undefined") c.initBonus = 0;
       app.characters[i] = c;
       if(i === app.activeIndex){
         state = c;
@@ -3059,7 +3492,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCoKItW-sZBT8VciZGHmW33O9qvn-BOnQA",
@@ -3266,6 +3699,19 @@
         ready[i] = true;
       });
     }
+
+    // Initiative / combat tracker: shared live state, written as small per-key updates so
+    // simultaneous joins from different devices never overwrite one another.
+    window.rtCombatIO = {
+      update: function(map){
+        update(ref(db, "rollTracker/combat"), map).catch(function(e){
+          console.error("Combat sync failed", e);
+        });
+      }
+    };
+    onValue(ref(db, "rollTracker/combat"), function(snap){
+      bridge.setCombatData(snap.val());
+    });
 
     // Locks are per-signed-in-account, but still shared across devices so a lock set on
     // one device is respected if that same account signs in on another device.
