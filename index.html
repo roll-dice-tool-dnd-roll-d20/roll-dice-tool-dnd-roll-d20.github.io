@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.51.4</title>
+<title>Roll Tracker V1.51.5</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -631,7 +631,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.51.4</div>
+      <div class="version-tag" id="version-tag">Version 1.51.5</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3120,7 +3120,12 @@
       '<div class="account-picker-label">Choose Account</div>' +
       '<div class="account-picker" id="rt-account-picker"></div>' +
       '<p style="margin:0 0 14px;color:var(--ink-soft);font-size:0.9rem;">Enter the group password to sync.</p>' +
-      '<input id="rt-pw" type="password" placeholder="Password" style="width:100%;padding:9px;margin-bottom:10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font-size:1rem;box-sizing:border-box;">' +
+      '<div style="position:relative;margin-bottom:10px;">' +
+      '<input id="rt-pw" type="password" placeholder="Password" style="width:100%;padding:9px 40px 9px 9px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font-size:1rem;box-sizing:border-box;">' +
+      '<button id="rt-pw-toggle" type="button" aria-label="Show password" title="Show password" style="position:absolute;top:0;right:0;height:100%;width:38px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--ink-soft);cursor:pointer;padding:0;">' +
+      '<svg id="rt-eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      '<svg id="rt-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>' +
+      '</button></div>' +
       '<button id="rt-go" style="width:100%;padding:9px;border:none;border-radius:5px;background:var(--moss);color:#fff;font-size:1rem;cursor:pointer;">Sign in</button>' +
       '<div id="rt-msg" style="margin-top:10px;color:var(--berry);font-size:0.85rem;min-height:1em;"></div>' +
       '</div>';
@@ -3146,6 +3151,18 @@
 
     var pw = document.getElementById("rt-pw");
     var msg = document.getElementById("rt-msg");
+    // Eye toggle: open eye = password hidden (click to reveal); slashed eye = currently shown.
+    var pwToggle = document.getElementById("rt-pw-toggle");
+    pwToggle.addEventListener("click", function(){
+      var show = pw.type === "password";
+      pw.type = show ? "text" : "password";
+      document.getElementById("rt-eye-open").style.display = show ? "none" : "";
+      document.getElementById("rt-eye-off").style.display = show ? "" : "none";
+      var label = show ? "Hide password" : "Show password";
+      pwToggle.setAttribute("aria-label", label);
+      pwToggle.title = label;
+      pw.focus();
+    });
     async function tryLogin(){
       if(selectedAccountIndex === null){
         msg.textContent = "Choose an account above first.";
