@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.58.0</title>
+<title>Roll Tracker V1.58.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -694,7 +694,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.58.0</div>
+      <div class="version-tag" id="version-tag">Version 1.58.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3260,17 +3260,19 @@
       else if(av !== bv) out[p] = bv;
     });
   }
-  function combatCommit(fn){
+  var lastRawCombat = null;  // the untouched database value, so a leave can also clear entries normalizeCombat would ignore
+  function combatCommit(fn, extra){
     var io = window.rtCombatIO;
     if(!io) return;
     var before = cloneCombat(), after = cloneCombat();
     fn(after);
     var out = {};
     diffCombat(before, after, "", out);
+    if(extra) extra(out);
     if(!Object.keys(out).length) return;
     combatData = after;  // show the result immediately; the database echo confirms it
     renderCombat();
-    io.update(out);
+    io.update(out, function(){ combatData = normalizeCombat(lastRawCombat); renderCombat(); });  // a rejected write snaps back to the real state
   }
 
   // --- player actions ---
@@ -3285,7 +3287,23 @@
     addLog("Initiative", "d20(" + r + ") + " + bonus, total, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
     combatCommit(function(d){ opJoin(d, key, total, Date.now()); });
   }
-  function leaveCombat(key){ combatCommit(function(d){ opLeave(d, key); }); }
+  function leaveCombat(key){
+    combatCommit(function(d){ opLeave(d, key); }, function(out){
+      // Belt and braces: also clear every place the raw database copy still lists this player,
+      // (skipping anything already covered by a deletion higher up the same path).
+      var raw = lastRawCombat; if(!raw || typeof raw !== "object") return;
+      var paths = [];
+      if(plainObj(raw.join)[key] !== undefined) paths.push("join/" + key);
+      var gs = plainObj(raw.groups);
+      Object.keys(gs).forEach(function(gid){
+        if(gs[gid] && plainObj(gs[gid].members)[key] !== undefined) paths.push("groups/" + gid + "/members/" + key);
+      });
+      paths.forEach(function(pth){
+        var covered = Object.keys(out).some(function(o){ return pth === o || pth.indexOf(o + "/") === 0 || o.indexOf(pth + "/") === 0; });
+        if(!covered) out[pth] = null;
+      });
+    });
+  }
   function endTurn(gid){
     var g = combatData.groups[gid];
     if(!g) return;
@@ -3542,6 +3560,7 @@
       renderSettingsBar();  // Hide Rolls button's clickability depends on who's now signed in
     },
     setCombatData: function(raw){
+      lastRawCombat = raw;
       combatData = normalizeCombat(raw);
       // A new announcement (from the DM clicking Start Combat) pops a banner on player screens.
       // The first snapshot after loading only records the baseline so an old announcement
@@ -3809,9 +3828,10 @@
     // Initiative / combat tracker: shared live state, written as small per-key updates so
     // simultaneous joins from different devices never overwrite one another.
     window.rtCombatIO = {
-      update: function(map){
+      update: function(map, onFail){
         update(ref(db, "rollTracker/combat"), map).catch(function(e){
           console.error("Combat sync failed", e);
+          if(onFail) onFail(e);
         });
       }
     };
