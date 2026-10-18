@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.57.0</title>
+<title>Roll Tracker V1.58.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -662,20 +662,14 @@
   }
   /* Bright red frame around the screen edge on the device whose turn it currently is.
      pointer-events:none so it never blocks a tap; sits under the tutorial backdrop. */
+  /* The outline wraps the page itself (not the screen): an absolutely positioned frame over the whole
+     document that scrolls with the content, so it also shows under iOS Safari's toolbars. */
   #turn-outline{
-    position:fixed;inset:0;pointer-events:none;z-index:9980;display:none;
+    position:absolute;inset:0;pointer-events:none;z-index:9980;display:none;
     box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
   }
   #turn-outline.on{display:block;}
-  /* iOS Safari clips fixed elements to the area between its toolbars, so a fixed frame stops short of the
-     real screen edges. On iOS the outline is instead part of the page (which does show under the bars):
-     red edges down both sides for the full page height. */
-  body.ios-ring{position:relative;}
-  #turn-outline.ios{
-    position:absolute;
-    box-shadow:inset 4px 0 0 #ff1f1f, inset -4px 0 0 #ff1f1f,
-               inset 16px 0 18px -10px rgba(255,31,31,0.55), inset -16px 0 18px -10px rgba(255,31,31,0.55);
-  }
+  body{position:relative;box-sizing:border-box;min-height:100vh;}
   /* "Combat Has Started" announcement — top of every player's screen, then fades out. */
   #combat-banner{
     position:fixed;left:50%;top:max(12px, env(safe-area-inset-top));transform:translateX(-50%);
@@ -700,7 +694,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.57.0</div>
+      <div class="version-tag" id="version-tag">Version 1.58.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3121,11 +3115,6 @@
   var combatData = {join:{}, groups:{}};
   var combatBarEl = document.getElementById("combat-bar");
   var turnOutlineEl = document.getElementById("turn-outline");
-  (function(){
-    var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if(ios && turnOutlineEl){ turnOutlineEl.classList.add("ios"); document.body.classList.add("ios-ring"); }
-  })();
-
   var dmSelected = {};  // account keys the DM has ticked
 
   function acctKey(i){ return "a" + i; }
