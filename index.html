@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.54.0</title>
+<title>Roll Tracker V1.55.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -700,7 +700,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.54.0</div>
+      <div class="version-tag" id="version-tag">Version 1.55.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3339,53 +3339,68 @@
     }
     combatBarEl.style.display = "";
     var d = combatData, isDM = viewerIsDM(), meKey = acctKey(me);
+    // The red screen outline is about the signed-in account (this device's player) only...
     var myGid = groupOfKey(d, meKey), myGroup = myGid ? d.groups[myGid] : null;
     var myTurn = !!(myGroup && myGroup.cur === meKey && !isDM);
     if(turnOutlineEl) turnOutlineEl.classList.toggle("on", myTurn);
-    combatBarEl.classList.toggle("my-turn", myTurn);
+    // ...but the bar itself shows whichever character's tab is open, so you can check on anyone.
+    var vIdx = app.activeIndex, vKey = acctKey(vIdx), vChar = app.characters[vIdx];
+    var own = vIdx === me, vName = vChar ? vChar.name : "";
+    var vGid = groupOfKey(d, vKey), vGroup = vGid ? d.groups[vGid] : null;
+    var vTurn = !!(vGroup && vGroup.cur === vKey && !(vChar && vChar.isDM));
+    combatBarEl.classList.toggle("my-turn", vTurn);
     combatBarEl.innerHTML = "";
 
     if(!isDM){
       var row = cbEl("div", "cb-row");
-      if(myGroup){
-        var order = combatOrder(myGroup), ci = 0, mi = 0;
-        order.forEach(function(o, n){ if(o.k === myGroup.cur) ci = n; if(o.k === meKey) mi = n; });
+      if(vChar && vChar.isDM){
+        row.appendChild(cbEl("span", "cb-title", "⚔ " + vName));
+        row.appendChild(cbEl("span", "cb-sub", "The DM runs combat and isn't in the turn order."));
+        combatBarEl.appendChild(row);
+      } else if(vGroup){
+        var order = combatOrder(vGroup), ci = 0, mi = 0;
+        order.forEach(function(o, n){ if(o.k === vGroup.cur) ci = n; if(o.k === vKey) mi = n; });
         var ahead = (mi - ci + order.length) % order.length;
-        row.appendChild(cbEl("span", "cb-title", "⚔ Round " + myGroup.round));
-        if(myTurn){
-          row.appendChild(cbEl("span", "cb-big", "Your turn!"));
+        row.appendChild(cbEl("span", "cb-title", "⚔ Round " + vGroup.round));
+        if(vTurn){
+          row.appendChild(cbEl("span", "cb-big", own ? "Your turn!" : vName + "'s turn!"));
           row.appendChild(cbEl("span", "cb-spacer"));
-          row.appendChild(cbBtn("End Turn", "", function(){ endTurn(myGid); }));
+          var endBtn = cbBtn("End Turn", "", function(){ endTurn(vGid); });
+          if(!own){ endBtn.disabled = true; endBtn.title = "Only " + vName + " (or the DM) can end this turn."; }
+          row.appendChild(endBtn);
         } else {
-          row.appendChild(cbEl("span", "", "Now: " + acctNameOf(myGroup.cur)));
-          row.appendChild(cbEl("span", "cb-sub", ahead + (ahead === 1 ? " person" : " people") + " in front of you"));
+          row.appendChild(cbEl("span", "", "Now: " + acctNameOf(vGroup.cur)));
+          row.appendChild(cbEl("span", "cb-sub", ahead + (ahead === 1 ? " person" : " people") + " in front of " + (own ? "you" : vName)));
           row.appendChild(cbEl("span", "cb-spacer"));
         }
         combatBarEl.appendChild(row);
         var r2 = cbEl("div", "cb-row");
-        var chipsEl = chipsFor(myGroup, meKey); chipsEl.style.flex = "1";
+        var chipsEl = chipsFor(vGroup, vKey); chipsEl.style.flex = "1";
         r2.appendChild(chipsEl);
-        r2.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
+        if(own) r2.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
         combatBarEl.appendChild(r2);
-      } else if(d.join[meKey]){
-        row.appendChild(cbEl("span", "cb-title", "⚔ Joined"));
-        row.appendChild(cbEl("span", "cb-sub", "Initiative " + d.join[meKey].i + " — waiting for the DM"));
+      } else if(d.join[vKey]){
+        row.appendChild(cbEl("span", "cb-title", "⚔ " + (own ? "Joined" : vName + " joined")));
+        row.appendChild(cbEl("span", "cb-sub", "Initiative " + d.join[vKey].i + " — waiting for the DM"));
         row.appendChild(cbEl("span", "cb-spacer"));
-        row.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
+        if(own) row.appendChild(cbBtn("Leave", "ghost small", function(){ leaveCombat(meKey); }));
         combatBarEl.appendChild(row);
       } else {
         row.appendChild(cbEl("span", "cb-title", "⚔ Initiative"));
         var n = Object.keys(d.groups).length;
-        row.appendChild(cbEl("span", "cb-sub", n === 1 ? "Combat is running — you'll slot into the order." : n > 1 ? "Combat is running — the DM will place you." : "Waiting for the DM to start combat."));
+        var statusText = !own ? (vName + " isn't in combat.")
+          : n === 1 ? "Combat is running — you'll slot into the order."
+          : n > 1 ? "Combat is running — the DM will place you."
+          : "Waiting for the DM to start combat.";
+        row.appendChild(cbEl("span", "cb-sub", statusText));
         row.appendChild(cbEl("span", "cb-spacer"));
         var joinBtn = cbBtn("Join Combat", "", joinCombat);
-        var onOwnTab = app.activeIndex === me;
-        joinBtn.disabled = !onOwnTab || n === 0;
-        if(!onOwnTab) joinBtn.title = "Switch to your own tab to join combat.";
+        joinBtn.disabled = !own || n === 0;
+        if(!own) joinBtn.title = "Switch to your own tab to join combat.";
         else if(n === 0) joinBtn.title = "Available once the DM starts combat.";
         row.appendChild(joinBtn);
         combatBarEl.appendChild(row);
-        if(!onOwnTab){
+        if(!own){
           var hint = cbEl("div", "cb-row"); hint.appendChild(cbEl("span", "cb-sub", "Switch to your own tab (" + app.characters[me].name + ") to join combat."));
           combatBarEl.appendChild(hint);
         }
