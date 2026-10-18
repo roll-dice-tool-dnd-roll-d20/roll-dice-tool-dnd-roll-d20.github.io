@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.55.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roll Tracker V1.56.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -39,7 +39,7 @@
     background:var(--bg);
     color:var(--ink);
     font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
-    padding:28px 16px 60px;
+    padding:calc(28px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     overflow-x:hidden;
     max-width:100%;
   }
@@ -667,15 +667,6 @@
     box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
   }
   #turn-outline.on{display:block;}
-  /* iPhone Safari keeps fixed elements inside the area between its top and bottom bars while the
-     page still shows through underneath them, so a full frame looks like it stops short of the
-     screen edges. There, only the left and right edges are drawn, running well past both ends so
-     they reach the real top and bottom of the screen. */
-  #turn-outline.sides{
-    top:-300px;bottom:-300px;
-    box-shadow:inset 4px 0 0 #ff1f1f, inset -4px 0 0 #ff1f1f,
-               inset 18px 0 20px -10px rgba(255,31,31,0.55), inset -18px 0 20px -10px rgba(255,31,31,0.55);
-  }
   /* "Combat Has Started" announcement — top of every player's screen, then fades out. */
   #combat-banner{
     position:fixed;left:50%;top:max(12px, env(safe-area-inset-top));transform:translateX(-50%);
@@ -700,7 +691,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.55.0</div>
+      <div class="version-tag" id="version-tag">Version 1.56.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2763,6 +2754,24 @@
   // versions used) is exactly what was clipping and narrowing the page on iOS Safari,
   // so the width is measured and set in actual pixels instead, and <html> itself is
   // also locked — this is the standard, iOS-tested way to pin a page in place.
+  // How far the top/bottom of the screen are covered by the phone's status bar and browser bar
+  // (0 on desktop and wherever the page isn't running full-screen). The page now fills the whole
+  // screen (viewport-fit=cover) so overlays like the red outline can reach the real edges —
+  // which also means the tutorial has to keep its popup and highlighted content clear of those bars.
+  var safeProbe = null;
+  function safeInset(side){
+    if(window.__testInsets) return window.__testInsets[side] || 0;
+    try{
+      if(!safeProbe){
+        safeProbe = document.createElement("div");
+        safeProbe.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);";
+        document.body.appendChild(safeProbe);
+      }
+      var cs = getComputedStyle(safeProbe);
+      return parseFloat(side === "top" ? cs.paddingTop : cs.paddingBottom) || 0;
+    }catch(e){ return 0; }
+  }
+
   function lockPageScroll(){
     tutorialScrollY = window.scrollY || window.pageYOffset || 0;
     tutorialBodyWidth = document.documentElement.clientWidth;
@@ -2911,6 +2920,8 @@
     // vertically) — before touching scroll at all, so the scroll target chosen afterward can
     // already account for however much room the popup itself will need.
     var margin = 10;
+    var insTop = safeInset("top"), insBottom = safeInset("bottom");
+    var viewH = window.innerHeight - insBottom;   // bottom edge of the usable area (above any bottom bar)
     // The narrowest a shrunk popup is allowed to go. Shrinking it any further makes the step
     // text wrap onto so many lines that the popup grows taller than the screen — exactly the
     // bug this guards against (seen on an iOS-width window, where the only available side
@@ -2943,7 +2954,7 @@
       // taller than the screen. Rather than trust width alone, check the actual rendered
       // height and bail to the bottom-strip layout (full normal width, so normal height) if
       // it's ever too tall to fit.
-      if(popupHeight > window.innerHeight - margin * 2){
+      if(popupHeight > viewH - insTop - margin * 2){
         strategy = "bottom-strip";
         tutorialPopupEl.style.maxWidth = "";
         popupWidth = tutorialPopupEl.offsetWidth;
@@ -2967,10 +2978,10 @@
     // the reserved bottom strip, the available viewport height is shrunk by that much first,
     // so the scroll leaves the strip clear.
     var viewMargin = 24;
-    var effectiveHeight = window.innerHeight - reservedHeight;
+    var effectiveHeight = viewH - insTop - reservedHeight;
     var naturalTop = rawRect.top + baselineScrollY;
     var naturalBottom = rawRect.bottom + baselineScrollY;
-    var outOfView = naturalTop < baselineScrollY + viewMargin || naturalBottom > baselineScrollY + effectiveHeight - viewMargin;
+    var outOfView = naturalTop < baselineScrollY + insTop + viewMargin || naturalBottom > baselineScrollY + insTop + effectiveHeight - viewMargin;
     var appliedScrollY = baselineScrollY;
 
     // Normally the scroll aligns the target's TOP edge just inside the top margin. But when
@@ -2983,8 +2994,8 @@
     var targetHeight = naturalBottom - naturalTop;
     var fitsAboveStrip = targetHeight <= effectiveHeight - viewMargin * 2;
     var desiredScrollY = (strategy === "bottom-strip" && !fitsAboveStrip)
-      ? naturalBottom - (effectiveHeight - viewMargin)
-      : naturalTop - viewMargin;
+      ? naturalBottom - (insTop + effectiveHeight - viewMargin)
+      : naturalTop - insTop - viewMargin;
 
     if(isFirstStepEver){
       // A step near the very bottom of the page (Proficiencies, say) may need to scroll its
@@ -3025,8 +3036,8 @@
     // A target taller than the viewport (or than the reserved strip leaves room for) would
     // otherwise drag the "center on the target" math outside the visible area — so the
     // vertical center is based on whatever part of the target is actually on-screen.
-    var visTop = Math.max(rect.top, 0);
-    var visBottom = Math.min(rect.bottom, effectiveHeight);
+    var visTop = Math.max(rect.top, insTop);
+    var visBottom = Math.min(rect.bottom, insTop + effectiveHeight);
 
     var left, top;
     if(strategy === "right"){
@@ -3046,13 +3057,13 @@
       // Bottom strip: centered in the middle of the viewport, bumped up flush against the
       // bottom of the screen — in the empty space the scroll above just made sure is clear.
       left = (window.innerWidth - popupWidth) / 2;
-      top = window.innerHeight - popupHeight - margin;
+      top = viewH - popupHeight - margin;
     }
     // Final clamp either way, so the popup always stays fully on-screen.
     if(left + popupWidth + margin > window.innerWidth) left = window.innerWidth - popupWidth - margin;
     if(left < margin) left = margin;
-    if(top + popupHeight + margin > window.innerHeight) top = window.innerHeight - popupHeight - margin;
-    if(top < margin) top = margin;
+    if(top + popupHeight + margin > viewH) top = viewH - popupHeight - margin;
+    if(top < margin + insTop) top = margin + insTop;
     tutorialPopupEl.style.left = left + "px";
     tutorialPopupEl.style.top = top + "px";
 
@@ -3101,10 +3112,7 @@
   var combatData = {join:{}, groups:{}};
   var combatBarEl = document.getElementById("combat-bar");
   var turnOutlineEl = document.getElementById("turn-outline");
-  try{
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if(turnOutlineEl && isIOS) turnOutlineEl.classList.add("sides");
-  }catch(e){}
+
   var dmSelected = {};  // account keys the DM has ticked
 
   function acctKey(i){ return "a" + i; }
@@ -3641,7 +3649,7 @@
 
     var box = document.createElement("div");
     box.id = "rt-login";
-    box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;padding:16px;";
+    box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));";
     box.innerHTML =
       '<div style="background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:360px;width:100%;text-align:center;">' +
       '<h2 style="margin:0 0 14px;">Roll Tracker</h2>' +
