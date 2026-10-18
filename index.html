@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.56.0</title>
+<title>Roll Tracker V1.57.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -667,6 +667,15 @@
     box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
   }
   #turn-outline.on{display:block;}
+  /* iOS Safari clips fixed elements to the area between its toolbars, so a fixed frame stops short of the
+     real screen edges. On iOS the outline is instead part of the page (which does show under the bars):
+     red edges down both sides for the full page height. */
+  body.ios-ring{position:relative;}
+  #turn-outline.ios{
+    position:absolute;
+    box-shadow:inset 4px 0 0 #ff1f1f, inset -4px 0 0 #ff1f1f,
+               inset 16px 0 18px -10px rgba(255,31,31,0.55), inset -16px 0 18px -10px rgba(255,31,31,0.55);
+  }
   /* "Combat Has Started" announcement — top of every player's screen, then fades out. */
   #combat-banner{
     position:fixed;left:50%;top:max(12px, env(safe-area-inset-top));transform:translateX(-50%);
@@ -691,7 +700,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.56.0</div>
+      <div class="version-tag" id="version-tag">Version 1.57.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3112,6 +3121,10 @@
   var combatData = {join:{}, groups:{}};
   var combatBarEl = document.getElementById("combat-bar");
   var turnOutlineEl = document.getElementById("turn-outline");
+  (function(){
+    var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if(ios && turnOutlineEl){ turnOutlineEl.classList.add("ios"); document.body.classList.add("ios-ring"); }
+  })();
 
   var dmSelected = {};  // account keys the DM has ticked
 
@@ -3359,7 +3372,7 @@
     combatBarEl.classList.toggle("my-turn", vTurn);
     combatBarEl.innerHTML = "";
 
-    if(!isDM){
+    if(!isDM || !(vChar && vChar.isDM)){
       var row = cbEl("div", "cb-row");
       if(vChar && vChar.isDM){
         row.appendChild(cbEl("span", "cb-title", "⚔ " + vName));
@@ -3374,7 +3387,7 @@
           row.appendChild(cbEl("span", "cb-big", own ? "Your turn!" : vName + "'s turn!"));
           row.appendChild(cbEl("span", "cb-spacer"));
           var endBtn = cbBtn("End Turn", "", function(){ endTurn(vGid); });
-          if(!own){ endBtn.disabled = true; endBtn.title = "Only " + vName + " (or the DM) can end this turn."; }
+          if(!own && !isDM){ endBtn.disabled = true; endBtn.title = "Only " + vName + " (or the DM) can end this turn."; }
           row.appendChild(endBtn);
         } else {
           row.appendChild(cbEl("span", "", "Now: " + acctNameOf(vGroup.cur)));
@@ -3404,11 +3417,12 @@
         row.appendChild(cbEl("span", "cb-spacer"));
         var joinBtn = cbBtn("Join Combat", "", joinCombat);
         joinBtn.disabled = !own || n === 0;
+        if(isDM) joinBtn.style.display = "none";
         if(!own) joinBtn.title = "Switch to your own tab to join combat.";
         else if(n === 0) joinBtn.title = "Available once the DM starts combat.";
         row.appendChild(joinBtn);
         combatBarEl.appendChild(row);
-        if(!own){
+        if(!own && !isDM){
           var hint = cbEl("div", "cb-row"); hint.appendChild(cbEl("span", "cb-sub", "Switch to your own tab (" + app.characters[me].name + ") to join combat."));
           combatBarEl.appendChild(hint);
         }
