@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.58.1</title>
+<title>Roll Tracker V1.58.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -694,7 +694,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.58.1</div>
+      <div class="version-tag" id="version-tag">Version 1.58.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3526,6 +3526,35 @@
   }
   renderCombat();
 
+  // ---------- Combat diagnostics (tap the version label 5 times to show/hide) ----------
+  (function(){
+    var panel = document.createElement("pre");
+    panel.id = "combat-debug";
+    panel.style.cssText = "display:none;position:fixed;left:8px;right:8px;bottom:8px;max-height:45vh;overflow:auto;margin:0;padding:10px;z-index:10050;background:#000d;color:#9f9;font:11px/1.35 monospace;white-space:pre-wrap;word-break:break-all;border:1px solid #9f9;border-radius:6px;";
+    document.body.appendChild(panel);
+    function fmt(t){ return t ? new Date(t).toLocaleTimeString() : "never"; }
+    window.rtRenderCombatDebug = function(){
+      if(panel.style.display === "none") return;
+      var d = window.rtCombatDebug;
+      if(!d){ panel.textContent = "Combat diagnostics\nDatabase module not loaded (offline?)."; return; }
+      var lines = ["Combat diagnostics (tap version x5 to close)",
+        "account: " + (currentAccount === null ? "none" : app.characters[currentAccount].name) + "  viewing: " + app.characters[app.activeIndex].name,
+        "listener: " + (d.listenerError ? "CANCELLED " + d.listenerError : "ok") + "  snapshots: " + d.snaps + "  last: " + fmt(d.lastSnapAt),
+        "database value: " + (d.lastSnap || "(none yet)"),
+        "local view: " + JSON.stringify(combatData),
+        "recent writes:"];
+      d.writes.forEach(function(w){ lines.push("  " + fmt(w.at) + " " + w.result + " " + JSON.stringify(w.map)); });
+      panel.textContent = lines.join("\n");
+    };
+    var taps = 0, tapTimer = null;
+    var vt = document.getElementById("version-tag");
+    if(vt) vt.addEventListener("click", function(){
+      taps++; clearTimeout(tapTimer); tapTimer = setTimeout(function(){ taps = 0; }, 1500);
+      if(taps >= 5){ taps = 0; panel.style.display = panel.style.display === "none" ? "block" : "none"; window.rtRenderCombatDebug(); }
+    });
+    window.rtCombatToast = function(msg){ try{ showCombatBanner(msg); }catch(e){} };
+  })();
+
   // ---------- Sync bridge (used by the Firebase script below) ----------
   function renderAll(){
     renderCombat();
@@ -3827,16 +3856,35 @@
 
     // Initiative / combat tracker: shared live state, written as small per-key updates so
     // simultaneous joins from different devices never overwrite one another.
+    var dbg = window.rtCombatDebug = {snaps:0, lastSnapAt:null, lastSnap:null, writes:[], listenerError:null};
+    function dbgNote(){ if(window.rtRenderCombatDebug) window.rtRenderCombatDebug(); }
     window.rtCombatIO = {
       update: function(map, onFail){
-        update(ref(db, "rollTracker/combat"), map).catch(function(e){
+        var w = {at:Date.now(), map:map, result:"pending"};
+        dbg.writes.unshift(w); if(dbg.writes.length > 6) dbg.writes.pop();
+        update(ref(db, "rollTracker/combat"), map).then(function(){
+          w.result = "ok"; dbgNote();
+        }).catch(function(e){
+          w.result = "FAILED: " + ((e && (e.code || e.message)) || e);
           console.error("Combat sync failed", e);
+          dbgNote();
+          if(window.rtCombatToast) window.rtCombatToast("Combat sync failed (" + ((e && (e.code || e.message)) || "unknown") + ")");
           if(onFail) onFail(e);
         });
+        dbgNote();
       }
     };
     onValue(ref(db, "rollTracker/combat"), function(snap){
-      bridge.setCombatData(snap.val());
+      dbg.snaps++; dbg.lastSnapAt = Date.now();
+      var v = snap.val();
+      try{ dbg.lastSnap = JSON.stringify(v); }catch(e){ dbg.lastSnap = "?"; }
+      dbgNote();
+      bridge.setCombatData(v);
+    }, function(err){
+      dbg.listenerError = (err && (err.code || err.message)) || String(err);
+      console.error("Combat listener cancelled", err);
+      dbgNote();
+      if(window.rtCombatToast) window.rtCombatToast("Combat updates blocked (" + dbg.listenerError + ")");
     });
 
     // Locks are per-signed-in-account, but still shared across devices so a lock set on
