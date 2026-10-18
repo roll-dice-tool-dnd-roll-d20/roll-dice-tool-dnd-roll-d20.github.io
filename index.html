@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Tracker V1.53.0</title>
+<title>Roll Tracker V1.54.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -649,7 +649,6 @@
     border:1px solid var(--border);background:var(--bg);font-size:0.8rem;color:var(--ink-soft);
   }
   .cb-chip.cur{border-color:#ff2a2a;color:var(--ink);font-weight:700;}
-  .cb-chip.me{box-shadow:inset 0 0 0 1px var(--moss);}
   .cb-chip .init{font-weight:700;color:var(--ink);}
   .cb-group{border:1px solid var(--border-soft);border-radius:6px;padding:8px 10px;margin-top:8px;background:var(--bg);}
   .cb-member{display:flex;align-items:center;gap:8px;padding:3px 0;}
@@ -668,6 +667,15 @@
     box-shadow:inset 0 0 0 4px #ff1f1f, inset 0 0 22px 4px rgba(255,31,31,0.55);
   }
   #turn-outline.on{display:block;}
+  /* iPhone Safari keeps fixed elements inside the area between its top and bottom bars while the
+     page still shows through underneath them, so a full frame looks like it stops short of the
+     screen edges. There, only the left and right edges are drawn, running well past both ends so
+     they reach the real top and bottom of the screen. */
+  #turn-outline.sides{
+    top:-300px;bottom:-300px;
+    box-shadow:inset 4px 0 0 #ff1f1f, inset -4px 0 0 #ff1f1f,
+               inset 18px 0 20px -10px rgba(255,31,31,0.55), inset -18px 0 20px -10px rgba(255,31,31,0.55);
+  }
   /* "Combat Has Started" announcement — top of every player's screen, then fades out. */
   #combat-banner{
     position:fixed;left:50%;top:max(12px, env(safe-area-inset-top));transform:translateX(-50%);
@@ -692,7 +700,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.53.0</div>
+      <div class="version-tag" id="version-tag">Version 1.54.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2574,13 +2582,13 @@
       targetSelector: "#combat-bar",
       title: "Initiative Tracker",
       showIf: function(){ return currentAccount !== null && !viewerIsDM(); },
-      text: "This is the combat tracker. Click Join Combat to roll your initiative — a d20 plus your Initiative Bonus, added to your roll log automatically — and wait for the DM to start the fight. You can only join from your own tab, so Join Combat is greyed out while you're looking at someone else's. When the DM starts combat, a \"Combat Has Started\" message shows across the top of your screen for a few seconds. Once combat is running it shows whose turn it is and how many people are in front of you. When it's your turn, a bright red outline lights up around the edge of your screen — take your turn, then click End Turn to pass it on. If you join while a combat is already running, you slot into the order by your roll. Leave removes you from the combat."
+      text: "This is the combat tracker. When the DM starts combat, a \"Combat Has Started\" message shows across the top of your screen for a few seconds, and Join Combat becomes available — until then it's greyed out. Click it to roll your initiative (a d20 plus your Initiative Bonus, added to your roll log automatically) and you're placed in the turn order right away. You can only join from your own tab, so it's also greyed out while you're looking at someone else's. The tracker then shows whose turn it is and how many people are in front of you. When it's your turn, a bright red outline lights up at the edge of your screen — take your turn, then click End Turn to pass it on. Leave removes you from the combat."
     },
     {
       targetSelector: "#combat-bar",
       title: "Running Combat",
       showIf: function(){ return currentAccount !== null && viewerIsDM(); },
-      text: "Players who click Join Combat roll their own initiative and appear here with their totals. Tick the ones you want and click Start Combat to begin (or just click it to start everyone) — a \"Combat Has Started\" message flashes across every player's screen. You can also start combat before anyone has joined; players who join afterward slot into the order. Once running, the button becomes End Combat for that fight. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round. Skip passes the current turn along, and ✕ removes someone from combat. Players who join mid-fight slot into the order automatically."
+      text: "Click Start Combat to begin — a \"Combat Has Started\" message flashes across every player's screen and Join Combat unlocks for them. You can start it before anyone has joined; each player who then clicks Join Combat rolls their own initiative and slots into the order automatically. The button becomes End Combat while a fight is running. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round (with more than one combat running, new joiners wait in a list for you to place them). Skip passes the current turn along, and ✕ removes someone from combat."
     },
     {
       targetSelector: "#prof-bonus-label",
@@ -3093,6 +3101,10 @@
   var combatData = {join:{}, groups:{}};
   var combatBarEl = document.getElementById("combat-bar");
   var turnOutlineEl = document.getElementById("turn-outline");
+  try{
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if(turnOutlineEl && isIOS) turnOutlineEl.classList.add("sides");
+  }catch(e){}
   var dmSelected = {};  // account keys the DM has ticked
 
   function acctKey(i){ return "a" + i; }
@@ -3255,6 +3267,7 @@
   function joinCombat(){
     if(currentAccount === null || viewerIsDM() || !window.rtCombatIO) return;  // needs the live connection
     if(app.activeIndex !== currentAccount) return;  // only from the tab you're signed in as
+    if(!Object.keys(combatData.groups).length) return;  // greyed out until the DM starts combat
     var me = currentAccount, key = acctKey(me);
     if(combatData.join[key] || groupOfKey(combatData, key)) return;
     var bonus = parseInt(app.characters[me].initBonus, 10) || 0;
@@ -3363,12 +3376,13 @@
       } else {
         row.appendChild(cbEl("span", "cb-title", "⚔ Initiative"));
         var n = Object.keys(d.groups).length;
-        row.appendChild(cbEl("span", "cb-sub", n === 1 ? "Combat is running — you'll slot into the order." : "No combat yet."));
+        row.appendChild(cbEl("span", "cb-sub", n === 1 ? "Combat is running — you'll slot into the order." : n > 1 ? "Combat is running — the DM will place you." : "Waiting for the DM to start combat."));
         row.appendChild(cbEl("span", "cb-spacer"));
         var joinBtn = cbBtn("Join Combat", "", joinCombat);
         var onOwnTab = app.activeIndex === me;
-        joinBtn.disabled = !onOwnTab;
+        joinBtn.disabled = !onOwnTab || n === 0;
         if(!onOwnTab) joinBtn.title = "Switch to your own tab to join combat.";
+        else if(n === 0) joinBtn.title = "Available once the DM starts combat.";
         row.appendChild(joinBtn);
         combatBarEl.appendChild(row);
         if(!onOwnTab){
