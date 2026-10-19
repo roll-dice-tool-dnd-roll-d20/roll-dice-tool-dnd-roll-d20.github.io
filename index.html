@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.58.4</title>
+<title>Roll Tracker V1.59.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -91,6 +91,14 @@
     font-size:0.68rem;font-weight:700;color:var(--ink-soft);
     text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;
   }
+  .tutorial-step-input{
+    width:3.2em;box-sizing:border-box;margin:0 2px;padding:1px 4px;text-align:center;
+    font:inherit;font-size:16px;font-weight:700;color:var(--ink);background:var(--bg);
+    border:1px solid var(--border);border-radius:5px;
+    -moz-appearance:textfield;appearance:textfield;
+  }
+  .tutorial-step-input::-webkit-outer-spin-button,.tutorial-step-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .tutorial-step-input:focus{outline:2px solid var(--moss);outline-offset:1px;}
   .tutorial-popup h3{margin:0 0 8px;font-size:0.95rem;color:var(--ink);}
   .tutorial-popup p{margin:0 0 14px;font-size:0.85rem;line-height:1.45;color:var(--ink-soft);}
   .tutorial-popup-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
@@ -694,7 +702,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.58.4</div>
+      <div class="version-tag" id="version-tag">Version 1.59.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2904,7 +2912,7 @@
     // than it just vanishing and reappearing — much less jarring between nearby steps.
     tutorialPopupEl.style.maxWidth = ""; // reset to the CSS default before measuring
     tutorialPopupEl.innerHTML =
-      '<div class="tutorial-step-count">Part ' + (idx + 1) + " of " + activeTutorialSteps.length + "</div>" +
+      '<div class="tutorial-step-count">Part <input type="number" inputmode="numeric" id="tutorial-step-input" class="tutorial-step-input" min="1" max="' + activeTutorialSteps.length + '" value="' + (idx + 1) + '" aria-label="Go to part number"> of ' + activeTutorialSteps.length + "</div>" +
       "<h3>" + escapeHtml(step.title) + "</h3>" +
       "<p>" + escapeHtml(step.text) + "</p>" +
       '<div class="tutorial-popup-actions">' +
@@ -3081,6 +3089,21 @@
       });
     }
     document.getElementById("tutorial-end-btn").addEventListener("click", closeTutorial);
+
+    // Type a part number to jump straight to it.
+    var stepInput = document.getElementById("tutorial-step-input");
+    function jumpToTyped(){
+      var n = parseInt(stepInput.value, 10), total = activeTutorialSteps.length;
+      if(isNaN(n)){ stepInput.value = idx + 1; return; }
+      n = Math.max(1, Math.min(total, n));
+      if(n - 1 === idx){ stepInput.value = idx + 1; return; }
+      showTutorialStep(n - 1, n - 1 > idx ? 1 : -1);
+    }
+    stepInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); stepInput.blur(); }  // blur fires the change below
+    });
+    stepInput.addEventListener("change", jumpToTyped);
+    stepInput.addEventListener("focus", function(){ stepInput.select(); });
   }
 
   var titleInfoIcon = document.getElementById("title-info-icon");
