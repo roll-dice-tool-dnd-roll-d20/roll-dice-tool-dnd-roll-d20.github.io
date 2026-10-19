@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.58.3</title>
+<title>Roll Tracker V1.58.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -694,7 +694,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.58.3</div>
+      <div class="version-tag" id="version-tag">Version 1.58.4</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -3680,6 +3680,20 @@
   }
   setSyncStatus(false, "Offline");
 
+  // The dot follows two facts: is anyone signed in, and does this device have a live socket to the
+  // database. The socket listener lives for the whole page (not just one login) and is attached at
+  // load, so the connection is already warming up while the person is still typing a password, and
+  // signing out and back in can't leave the dot stuck on a stale answer.
+  var dbConnected = false, signedInNow = false;
+  function refreshSyncStatus(){
+    if(!signedInNow){ setSyncStatus(false, "Offline"); return; }
+    setSyncStatus(dbConnected, dbConnected ? "Syncing" : "Offline");
+  }
+  onValue(ref(db, ".info/connected"), function(snap){
+    dbConnected = !!snap.val();
+    refreshSyncStatus();
+  });
+
   // ---------- Account picker + password screen ----------
   var selectedAccountIndex = null;
 
@@ -3831,13 +3845,6 @@
       }
     }catch(e){}
 
-    // Firebase's special ".info/connected" path is the real signal for whether this device
-    // currently has a live socket to the database — it flips to false on a dropped wifi/data
-    // connection even while still "signed in", which is exactly what the dot should reflect.
-    onValue(ref(db, ".info/connected"), function(snap){
-      setSyncStatus(!!snap.val(), snap.val() ? "Syncing" : "Offline");
-    });
-
     var n = bridge.count();
     for(let i = 0; i < n; i++){
       onValue(ref(db, "rollTracker/chars/" + i), function(snap){
@@ -3851,6 +3858,7 @@
           lastSynced[i] = null;  // database is empty for this tab, so this device will upload it
         }
         ready[i] = true;
+        if(!dbConnected){ dbConnected = true; refreshSyncStatus(); }  // data from the server means the socket is up
       });
     }
 
@@ -3911,14 +3919,16 @@
         lastSyncedLocks = null;  // database has no locks yet, so this device will upload its own
       }
       locksReady = true;
+      if(!dbConnected){ dbConnected = true; refreshSyncStatus(); }
     });
 
     setInterval(pushChanges, 1000);
   }
 
   onAuthStateChanged(auth, function(user){
-    if(user){ hideLogin(); startSync(); }
-    else { bridge.setCurrentAccount(null); showLogin(); setSyncStatus(false, "Offline"); }
+    signedInNow = !!user;
+    if(user){ hideLogin(); startSync(); refreshSyncStatus(); }
+    else { bridge.setCurrentAccount(null); showLogin(); refreshSyncStatus(); }
   });
 </script>
 </body>
