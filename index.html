@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.60.0</title>
+<title>Roll Tracker V1.60.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -709,7 +709,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.60.0</div>
+      <div class="version-tag" id="version-tag">Version 1.60.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1474,7 +1474,6 @@
   var critToggle = document.getElementById("crit-toggle");
   critToggle.addEventListener("click", function(){
     state.critMode = !state.critMode;
-    if(state.critMode) state.halfMode = false;  // a hit can't be both a crit and a halved save
     saveState();
     renderSettingsBar();
   });
@@ -1482,7 +1481,6 @@
   var halfToggle = document.getElementById("half-toggle");
   halfToggle.addEventListener("click", function(){
     state.halfMode = !state.halfMode;
-    if(state.halfMode) state.critMode = false;
     saveState();
     renderSettingsBar();
   });
@@ -2030,8 +2028,8 @@
           return;
         }
         var isHalf = !!state.halfMode;
-        var wasArmed = !!a.critArmed && !isHalf;   // Half Damage wins; an armed nat-20 crit is kept for later
-        var isCrit = !isHalf && (!!state.critMode || wasArmed);
+        var wasArmed = !!a.critArmed;
+        var isCrit = !!state.critMode || wasArmed;
         var rolled = rollDiceGroups(parsed, isCrit);
         var freshDmgBonus = a.dmgBonus || 0;
         var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
@@ -2466,8 +2464,8 @@
           return;
         }
         var isHalf = !!state.halfMode;
-        var wasArmed = !!s.critArmed && !isHalf;
-        var isCrit = !isHalf && (!!state.critMode || wasArmed);
+        var wasArmed = !!s.critArmed;
+        var isCrit = !!state.critMode || wasArmed;
         var rolled = rollDiceGroups(parsed, isCrit);
         var total = rolled.total + (s.dmgBonus || 0);
         var partsStr = rolled.partsStr + " + " + (s.dmgBonus||0);
@@ -2642,7 +2640,7 @@
     {
       targetSelector: "#half-toggle",
       title: "Half Damage Button",
-      text: "Click this when a creature succeeds on a save that halves damage, like a Dexterity save against Fireball. Every Damage roll then rolls normally, adds its bonuses, and cuts the total in half, rounded down. Like Crit, it stays on until you click it again, and turning one on turns the other off."
+      text: "Click this when a creature succeeds on a save that halves damage, like a Dexterity save against Fireball. Every Damage roll then rolls normally, adds its bonuses, and cuts the total in half, rounded down. Like Crit, it stays on until you click it again. If both are on, the dice are doubled first and then the total is halved."
     },
     {
       // Conditional step — only shown when the tutorial is opened while viewing the DM's
