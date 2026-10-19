@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.59.0</title>
+<title>Roll Tracker V1.60.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -306,6 +306,13 @@
     background:transparent;color:var(--berry);cursor:pointer;font-weight:600;
   }
   .crit-toggle.active{background:var(--berry);color:#fff;}
+  .half-toggle{
+    font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:0.8rem;padding:6px 12px;border:1px solid #4f86b5;border-radius:6px;
+    background:transparent;color:#4f86b5;cursor:pointer;font-weight:600;
+  }
+  .half-toggle.active{background:#4f86b5;color:#fff;}
+  .half-toggle.tutorial-highlight{background:var(--bg-card);}
   /* Same transparent-background issue as the ghost buttons earlier — its own
      background:transparent ties in specificity with .tutorial-highlight's and wins by
      source order, leaving it see-through against the dark backdrop. */
@@ -702,7 +709,7 @@
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.59.0</div>
+      <div class="version-tag" id="version-tag">Version 1.60.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -725,6 +732,7 @@
       <button data-mode="adv">Advantage</button>
     </div>
     <button type="button" class="crit-toggle" id="crit-toggle" title="Force the next Damage roll to double its dice — for auto-crit effects like Assassinate.">Crit</button>
+    <button type="button" class="half-toggle" id="half-toggle" title="Halve every Damage roll (rounded down) — for when a creature succeeds on a save that halves damage, like a Dexterity save.">Half Damage</button>
     <button type="button" class="hide-rolls-toggle" id="hide-rolls-toggle" title="While on, new rolls on this tab are only visible when signed in as the DM — everyone else sees a hidden entry." style="display:none;">Hide Rolls</button>
   </div>
 
@@ -947,6 +955,7 @@
     initBonus: 0,
     mode: "normal",
     critMode: false,
+    halfMode: false,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: (function(){
       var s = blankSkillList();
@@ -985,6 +994,7 @@
     initBonus: 0,
     mode: "normal",
     critMode: false,
+    halfMode: false,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: blankSkillList(),
     attacks: [
@@ -1106,6 +1116,7 @@
     if(typeof c.initBonus === "undefined") c.initBonus = 0;
     if(!c.mode) c.mode = "normal";
     if(typeof c.critMode !== "boolean") c.critMode = false;
+    if(typeof c.halfMode !== "boolean") c.halfMode = false;
   });
   if(typeof app.activeIndex !== "number" || app.activeIndex < 0 || app.activeIndex >= app.characters.length){
     app.activeIndex = 0;
@@ -1463,6 +1474,15 @@
   var critToggle = document.getElementById("crit-toggle");
   critToggle.addEventListener("click", function(){
     state.critMode = !state.critMode;
+    if(state.critMode) state.halfMode = false;  // a hit can't be both a crit and a halved save
+    saveState();
+    renderSettingsBar();
+  });
+
+  var halfToggle = document.getElementById("half-toggle");
+  halfToggle.addEventListener("click", function(){
+    state.halfMode = !state.halfMode;
+    if(state.halfMode) state.critMode = false;
     saveState();
     renderSettingsBar();
   });
@@ -1483,6 +1503,8 @@
     });
     critToggle.classList.toggle("active", !!state.critMode);
     critToggle.textContent = state.critMode ? "Crit: ON" : "Crit";
+    halfToggle.classList.toggle("active", !!state.halfMode);
+    halfToggle.textContent = state.halfMode ? "Half Damage: ON" : "Half Damage";
 
     // Only the DM's own tab shows this button, and only the DM's own signed-in account
     // can actually toggle it — everyone else sees its current state but can't click it.
@@ -2007,14 +2029,16 @@
           addLog(a.name + " Damage", "invalid dice — use format like 1d6 or 1d8+1d4", 0, false, null);
           return;
         }
-        var wasArmed = !!a.critArmed;
-        var isCrit = !!state.critMode || wasArmed;
+        var isHalf = !!state.halfMode;
+        var wasArmed = !!a.critArmed && !isHalf;   // Half Damage wins; an armed nat-20 crit is kept for later
+        var isCrit = !isHalf && (!!state.critMode || wasArmed);
         var rolled = rollDiceGroups(parsed, isCrit);
         var freshDmgBonus = a.dmgBonus || 0;
         var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
         var total = rolled.total + freshDmgBonus + freshFeralBonus;
         var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "");
-        addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
+        if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
+        addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
 
         // The nat-20 crit is one-time: spend it now. (The manual Crit toggle is separate and stays on.)
         if(wasArmed){
@@ -2441,12 +2465,14 @@
           addLog(s.name + " Damage", "invalid dice — use format like 1d6 or 1d8+1d4", 0, false, null);
           return;
         }
-        var wasArmed = !!s.critArmed;
-        var isCrit = !!state.critMode || wasArmed;
+        var isHalf = !!state.halfMode;
+        var wasArmed = !!s.critArmed && !isHalf;
+        var isCrit = !isHalf && (!!state.critMode || wasArmed);
         var rolled = rollDiceGroups(parsed, isCrit);
         var total = rolled.total + (s.dmgBonus || 0);
         var partsStr = rolled.partsStr + " + " + (s.dmgBonus||0);
-        addLog(s.name + " Damage" + (isCrit ? " (Crit)" : ""), partsStr, total, false, null);
+        if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
+        addLog(s.name + " Damage" + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
         if(wasArmed){
           s.critArmed = false;
           saveState();
@@ -2612,6 +2638,11 @@
       targetSelector: "#crit-toggle",
       title: "Crit Button",
       text: "Click this to force every Damage roll to double its dice — for auto-crit effects like Assassinate, where you don't need an attack roll to land a critical hit. Unlike a natural 20, it stays on until you click it again, so remember to toggle it back off once the effect's done."
+    },
+    {
+      targetSelector: "#half-toggle",
+      title: "Half Damage Button",
+      text: "Click this when a creature succeeds on a save that halves damage, like a Dexterity save against Fireball. Every Damage roll then rolls normally, adds its bonuses, and cuts the total in half, rounded down. Like Crit, it stays on until you click it again, and turning one on turns the other off."
     },
     {
       // Conditional step — only shown when the tutorial is opened while viewing the DM's
