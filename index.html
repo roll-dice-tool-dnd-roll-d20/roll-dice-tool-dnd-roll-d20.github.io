@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.60.1</title>
+<title>Roll Tracker V1.61.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -149,6 +149,17 @@
      so it was winning and leaving the button see-through against the dark backdrop —
      set the background explicitly here (higher specificity) so it actually shows solid. */
   .change-account-btn.tutorial-highlight{background:var(--bg-card);color:var(--ink);border-color:var(--moss);}
+  /* Quick-switch chips for several players sharing one device. */
+  .account-switcher{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:8px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .acct-chip{display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;border:2px solid transparent;opacity:0.72;}
+  .acct-chip.active{opacity:1;border-color:var(--ink);box-shadow:0 0 0 1px var(--bg-card);}
+  .acct-chip button{font:inherit;font-size:0.78rem;font-weight:700;color:#fff;border:none;cursor:pointer;background:rgba(0,0,0,0.18);}
+  .acct-chip .acct-name{padding:5px 9px;background:transparent;}
+  .acct-chip .acct-x{padding:0 7px;font-size:0.8rem;opacity:0.85;}
+  .acct-chip .acct-x:hover{background:rgba(0,0,0,0.35);opacity:1;}
+  .acct-add{font:inherit;font-size:0.76rem;padding:5px 10px;border:1px dashed var(--ink-soft);border-radius:6px;background:transparent;color:var(--ink-soft);cursor:pointer;}
+  .acct-add:hover{border-color:var(--moss);color:var(--moss-dark);}
+  .account-switcher.tutorial-highlight{background:var(--bg-card);border-radius:8px;padding:6px;}
   .account-picker{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;}
   .account-picker-btn{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -707,9 +718,10 @@
       <h1>Roll Tracker <span class="title-info-icon" id="title-info-icon">i</span></h1>
       <div class="sync-status" id="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Offline</span></div>
       <button type="button" id="change-account-btn" class="change-account-btn">Change Account</button>
+      <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.60.1</div>
+      <div class="version-tag" id="version-tag">Version 1.61.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1370,6 +1382,7 @@
   var tabsEl = document.getElementById("char-tabs");
 
   function renderTabs(){
+    if(window.rtRenderSwitcher) window.rtRenderSwitcher();  // names/colors may have just changed
     tabsEl.innerHTML = "";
     app.characters.forEach(function(char, i){
       var btn = document.createElement("button");
@@ -2595,7 +2608,13 @@
     {
       targetSelector: "#change-account-btn",
       title: "Change Account",
-      text: "Click this to sign out of your current account and bring up the sign-in screen again — use it to switch which character you're signed in as, or to hand the device to someone else at the table. You'll need the group password to sign back in."
+      text: "Click this to sign out of every account on this device and bring up the sign-in screen again — use it to hand the device to someone at the table who isn't already signed in. You'll need the group password to sign back in."
+    },
+    {
+      targetSelector: "#account-switcher",
+      title: "Sharing a Device",
+      showIf: function(){ return currentAccount !== null && !viewerIsDM(); },
+      text: "If a few players share one device, click Add Account to sign in a second (or third) character without signing anyone out. Each signed-in character gets a colored chip — tap a chip to switch to that player instantly, and tap its ✕ to sign just that player out. The DM account can't be added this way. The chips are remembered, so after a refresh, signing in as any one of them brings the rest back."
     },
     {
       targetSelector: "#sync-status",
@@ -3627,11 +3646,12 @@
     count: function(){ return app.characters.length; },
     getJson: function(i){ return JSON.stringify(app.characters[i]); },
     getCharMeta: function(){
-      return app.characters.map(function(c){ return {name: c.name, color: c.color}; });
+      return app.characters.map(function(c){ return {name: c.name, color: c.color, isDM: !!c.isDM}; });
     },
     switchTab: function(i){
       if(i >= 0 && i < app.characters.length) switchTab(i);
     },
+    getCurrentAccount: function(){ return currentAccount; },
     setCurrentAccount: function(i){
       currentAccount = (typeof i === "number" && i >= 0 && i < app.characters.length) ? i : null;
       renderTabs();
@@ -3749,7 +3769,102 @@
   // ---------- Account picker + password screen ----------
   var selectedAccountIndex = null;
 
-  function showLogin(){
+  // ---------- Several accounts on one device ----------
+  // Players who share a laptop can sign in up to three characters and flip between them with chips,
+  // without the sign-out / sign-in dance. All accounts share one database login (and one password),
+  // so switching is just changing which character is "current" — nothing new is trusted. The DM
+  // account is deliberately left out: it always signs in on its own and clears this list.
+  var DEVICE_KEY = "roll-tracker-device-accounts";
+  var MAX_DEVICE_ACCOUNTS = 3;
+  var deviceAccounts = [];
+  var switcherEl = document.getElementById("account-switcher");
+
+  function charMeta(){ return bridge.getCharMeta(); }
+  function usableIdx(i, meta){ return typeof i === "number" && meta[i] && !meta[i].isDM; }
+  function readRemembered(){
+    try{
+      var j = JSON.parse(localStorage.getItem(DEVICE_KEY) || "null");
+      var meta = charMeta();
+      return (j && Array.isArray(j.list) ? j.list : []).filter(function(i, n, a){ return usableIdx(i, meta) && a.indexOf(i) === n; }).slice(0, MAX_DEVICE_ACCOUNTS);
+    }catch(e){ return []; }
+  }
+  function writeRemembered(){
+    try{ localStorage.setItem(DEVICE_KEY, JSON.stringify({list: deviceAccounts})); }catch(e){}
+  }
+  function activateAccount(i){
+    bridge.setCurrentAccount(i);
+    bridge.switchTab(i);
+    renderSwitcher();
+  }
+  function addDeviceAccount(i){
+    var meta = charMeta();
+    if(!usableIdx(i, meta)) return;
+    if(deviceAccounts.indexOf(i) === -1){
+      if(deviceAccounts.length >= MAX_DEVICE_ACCOUNTS) deviceAccounts.shift();
+      deviceAccounts.push(i);
+    }
+    writeRemembered();
+  }
+  // A fresh sign-in from the login screen: restore whoever was remembered on this device, make sure the
+  // account just used is in the list, and land on it.
+  function startDeviceSession(i){
+    var meta = charMeta();
+    if(!usableIdx(i, meta)){          // the DM signs in alone
+      deviceAccounts = [];
+      writeRemembered();
+      activateAccount(i);
+      return;
+    }
+    deviceAccounts = readRemembered().filter(function(x){ return x !== i; }).slice(0, MAX_DEVICE_ACCOUNTS - 1);
+    deviceAccounts.push(i);
+    writeRemembered();
+    activateAccount(i);
+  }
+  function removeDeviceAccount(i){
+    deviceAccounts = deviceAccounts.filter(function(x){ return x !== i; });
+    writeRemembered();
+    if(!deviceAccounts.length){ signOut(auth); return; }
+    if(bridge.getCurrentAccount() === i) activateAccount(deviceAccounts[0]);
+    else renderSwitcher();
+  }
+  function renderSwitcher(){
+    if(!switcherEl) return;
+    var cur = bridge.getCurrentAccount(), meta = charMeta();
+    if(cur === null || !usableIdx(cur, meta)){ switcherEl.style.display = "none"; switcherEl.innerHTML = ""; return; }
+    // Keep the list honest if anything got out of step (e.g. someone signed in some other way).
+    if(deviceAccounts.indexOf(cur) === -1){ deviceAccounts.push(cur); deviceAccounts = deviceAccounts.slice(-MAX_DEVICE_ACCOUNTS); }
+    switcherEl.innerHTML = "";
+    switcherEl.style.display = "";
+    if(deviceAccounts.length >= 2){
+      deviceAccounts.forEach(function(i){
+        if(!usableIdx(i, meta)) return;
+        var chip = document.createElement("span");
+        chip.className = "acct-chip" + (i === cur ? " active" : "");
+        chip.style.background = meta[i].color;
+        var nameBtn = document.createElement("button");
+        nameBtn.type = "button"; nameBtn.className = "acct-name"; nameBtn.textContent = meta[i].name;
+        nameBtn.title = i === cur ? "You're playing as " + meta[i].name : "Switch to " + meta[i].name;
+        nameBtn.addEventListener("click", function(){ if(i !== cur) activateAccount(i); });
+        var xBtn = document.createElement("button");
+        xBtn.type = "button"; xBtn.className = "acct-x"; xBtn.textContent = "✕";
+        xBtn.title = "Sign " + meta[i].name + " out of this device";
+        xBtn.setAttribute("aria-label", "Sign " + meta[i].name + " out of this device");
+        xBtn.addEventListener("click", function(){ removeDeviceAccount(i); });
+        chip.appendChild(nameBtn); chip.appendChild(xBtn);
+        switcherEl.appendChild(chip);
+      });
+    }
+    if(deviceAccounts.length < MAX_DEVICE_ACCOUNTS){
+      var add = document.createElement("button");
+      add.type = "button"; add.className = "acct-add"; add.textContent = "+ Add Account";
+      add.title = "Sign a second player in on this device without signing anyone out";
+      add.addEventListener("click", function(){ showLogin(true); });
+      switcherEl.appendChild(add);
+    }
+  }
+  window.rtRenderSwitcher = renderSwitcher;
+
+  function showLogin(addMode){
     // Rebuilt fresh every time (rather than just re-shown) so a renamed tab or recolored
     // character always shows correctly, and so the account selection always starts blank.
     var existing = document.getElementById("rt-login");
@@ -3769,7 +3884,7 @@
     box.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Georgia,serif;padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));";
     box.innerHTML =
       '<div style="background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:360px;width:100%;text-align:center;">' +
-      '<h2 style="margin:0 0 14px;">Roll Tracker</h2>' +
+      '<h2 style="margin:0 0 14px;">' + (addMode ? "Add Account" : "Roll Tracker") + '</h2>' +
       '<div class="account-picker-label">Choose Account</div>' +
       '<div class="account-picker" id="rt-account-picker"></div>' +
       '<p style="margin:0 0 14px;color:var(--ink-soft);font-size:0.9rem;">Enter the group password to sync.</p>' +
@@ -3779,7 +3894,8 @@
       '<svg id="rt-eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
       '<svg id="rt-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>' +
       '</button></div>' +
-      '<button id="rt-go" style="width:100%;padding:9px;border:none;border-radius:5px;background:var(--moss);color:#fff;font-size:1rem;cursor:pointer;">Sign in</button>' +
+      '<button id="rt-go" style="width:100%;padding:9px;border:none;border-radius:5px;background:var(--moss);color:#fff;font-size:1rem;cursor:pointer;">' + (addMode ? "Add" : "Sign in") + '</button>' +
+      (addMode ? '<button id="rt-cancel" type="button" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--ink-soft);font-size:0.95rem;cursor:pointer;">Cancel</button>' : '') +
       '<div id="rt-msg" style="margin-top:10px;color:var(--berry);font-size:0.85rem;min-height:1em;"></div>' +
       '</div>';
     document.body.appendChild(box);
@@ -3787,6 +3903,8 @@
     var picker = document.getElementById("rt-account-picker");
     var meta = bridge.getCharMeta();
     meta.forEach(function(char, i){
+      // Adding a second player: only characters that aren't the DM and aren't already signed in here.
+      if(addMode && (char.isDM || deviceAccounts.indexOf(i) !== -1)) return;
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "account-picker-btn";
@@ -3804,6 +3922,18 @@
 
     var pw = document.getElementById("rt-pw");
     var msg = document.getElementById("rt-msg");
+    if(addMode){
+      document.getElementById("rt-cancel").addEventListener("click", hideLogin);
+    } else {
+      // Tell the person who's remembered on this device, so they know one sign-in brings everyone back.
+      var remembered = readRemembered();
+      if(remembered.length > 1){
+        var note = document.createElement("p");
+        note.style.cssText = "margin:0 0 12px;color:var(--ink-soft);font-size:0.82rem;";
+        note.textContent = "On this device: " + remembered.map(function(i){ return meta[i].name; }).join(", ") + ". Sign in as any of them to bring everyone back.";
+        picker.parentNode.insertBefore(note, picker.nextSibling);
+      }
+    }
     // Eye toggle: open eye = password hidden (click to reveal); slashed eye = currently shown.
     var pwToggle = document.getElementById("rt-pw-toggle");
     pwToggle.addEventListener("click", function(){
@@ -3824,8 +3954,13 @@
       msg.textContent = "Signing in...";
       try{
         await signInWithEmailAndPassword(auth, SHARED_EMAIL, pw.value);
-        bridge.setCurrentAccount(selectedAccountIndex);
-        bridge.switchTab(selectedAccountIndex);
+        if(addMode){
+          addDeviceAccount(selectedAccountIndex);
+          hideLogin();
+          activateAccount(selectedAccountIndex);
+        } else {
+          startDeviceSession(selectedAccountIndex);
+        }
       }catch(e){
         if(e.code === "auth/invalid-credential" || e.code === "auth/wrong-password" || e.code === "auth/invalid-login-credentials"){
           msg.textContent = "That password didn't work.";
@@ -3851,6 +3986,8 @@
   var changeAccountBtn = document.getElementById("change-account-btn");
   if(changeAccountBtn){
     changeAccountBtn.addEventListener("click", function(){
+      deviceAccounts = [];          // Change Account signs everyone out of this device
+      writeRemembered();
       signOut(auth);
     });
   }
