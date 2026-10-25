@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.61.0</title>
+<title>Roll Tracker V1.62.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -357,6 +357,51 @@
   .attack-top input[type=text]{min-width:0;}
   .attack-preset{max-width:45%;}
   .log-entry .label{min-width:0;overflow-wrap:anywhere;}
+  /* ---- Hit points, death saves, concentration ---- */
+  .hp-panel{margin-bottom:22px;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;}
+  .hp-panel h2{font-family:Georgia,serif;}
+  .hp-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:10px;}
+  .hp-row label{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
+  .hp-row input[type=number]{width:64px;padding:5px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
+  .hp-row input[type=text]{flex:1 1 140px;min-width:0;padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
+  .hp-slash{color:var(--ink-soft);}
+  .hp-status{font-weight:700;font-size:0.8rem;padding:2px 9px;border-radius:99px;background:var(--border-soft);color:var(--ink-soft);}
+  .hp-status.bloodied{background:var(--ochre);color:#fff;}
+  .hp-status.down,.hp-status.dead{background:var(--berry);color:#fff;}
+  .hp-status.stable{background:var(--moss);color:#fff;}
+  .hp-bar{position:relative;height:12px;border-radius:99px;background:var(--border-soft);overflow:hidden;margin:2px 0 12px;}
+  .hp-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--moss);transition:width 0.25s ease;}
+  .hp-bar-fill.mid{background:var(--ochre);}
+  .hp-bar-fill.low{background:var(--berry);}
+  .hp-bar-temp{position:absolute;top:0;bottom:0;width:0;background:#4f86b5;opacity:0.85;transition:width 0.25s ease,left 0.25s ease;}
+  .hp-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;}
+  .hp-actions input[type=number]{width:104px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
+  .hp-btn{font:inherit;font-size:0.82rem;padding:6px 13px;border-radius:6px;cursor:pointer;background:transparent;border:1px solid var(--ink-soft);color:var(--ink);}
+  .hp-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .hp-btn.dmg{border-color:var(--berry);color:var(--berry);} .hp-btn.dmg:hover:not(:disabled){background:var(--berry);color:#fff;}
+  .hp-btn.heal{border-color:var(--moss);color:var(--moss-dark);} .hp-btn.heal:hover:not(:disabled){background:var(--moss);color:#fff;}
+  .hp-btn.tmp{border-color:#4f86b5;color:#4f86b5;} .hp-btn.tmp:hover:not(:disabled){background:#4f86b5;color:#fff;}
+  .death-saves{border:1px solid var(--berry);border-radius:8px;padding:10px 12px;margin-bottom:12px;background:rgba(160,50,50,0.06);}
+  .death-pips{display:flex;align-items:center;gap:6px;}
+  .death-pips .lbl{width:74px;color:var(--ink-soft);font-size:0.8rem;}
+  .pip{width:20px;height:20px;border-radius:50%;border:2px solid var(--ink-soft);background:transparent;padding:0;cursor:pointer;}
+  .pip.succ.on{background:var(--moss);border-color:var(--moss);}
+  .pip.fail.on{background:var(--berry);border-color:var(--berry);}
+  .conc-row{border-top:1px solid var(--border-soft);padding-top:12px;margin-bottom:0;}
+  .conc-mode{font-size:0.72rem;}
+  .conc-mode button{padding:3px 8px !important;font-size:0.72rem !important;}
+  .conc-mode-label{color:var(--ink-soft);font-size:0.76rem;}
+  .hp-panel .tutorial-highlight, .party-panel.tutorial-highlight{background:var(--bg-card);}
+  .party-panel{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.84rem;}
+  .party-panel h3{margin:0 0 8px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);}
+  .party-row{display:grid;grid-template-columns:minmax(0,92px) minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:6px 4px;border-radius:7px;cursor:pointer;}
+  .party-row:hover{background:var(--border-soft);}
+  .party-name{font-weight:700;color:#fff;padding:3px 8px;border-radius:6px;font-size:0.78rem;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .party-hp{min-width:0;}
+  .party-hp .hp-bar{margin:0 0 2px;height:8px;}
+  .party-nums{font-size:0.78rem;color:var(--ink-soft);}
+  .party-badges{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+  .party-conc{grid-column:2 / 4;font-size:0.76rem;color:#4f86b5;}
   section.panel{
     background:var(--bg-card);
     border:1px solid var(--border-soft);
@@ -721,13 +766,14 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.61.0</div>
+      <div class="version-tag" id="version-tag">Version 1.62.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
   </header>
 
   <div class="combat-bar" id="combat-bar" style="display:none;"></div>
+  <div class="party-panel" id="party-panel" style="display:none;"></div>
 
   <div class="sheet-content" id="sheet-content">
 
@@ -747,6 +793,35 @@
     <button type="button" class="half-toggle" id="half-toggle" title="Halve every Damage roll (rounded down) — for when a creature succeeds on a save that halves damage, like a Dexterity save.">Half Damage</button>
     <button type="button" class="hide-rolls-toggle" id="hide-rolls-toggle" title="While on, new rolls on this tab are only visible when signed in as the DM — everyone else sees a hidden entry." style="display:none;">Hide Rolls</button>
   </div>
+
+  <section class="panel hp-panel" id="hp-panel">
+    <h2>Hit Points</h2>
+    <div id="hp-main">
+      <div class="hp-row">
+        <label>HP <input type="number" id="hp-cur" min="0" inputmode="numeric"><span class="hp-slash">/</span><input type="number" id="hp-max" min="0" inputmode="numeric" title="Max HP — enter it by hand."></label>
+        <label>Temp <input type="number" id="hp-temp" min="0" inputmode="numeric"></label>
+        <span class="hp-status" id="hp-status"></span>
+      </div>
+      <div class="hp-bar"><div class="hp-bar-fill" id="hp-bar-fill"></div><div class="hp-bar-temp" id="hp-bar-temp"></div></div>
+      <div class="hp-actions">
+        <input type="number" id="hp-amount" min="0" inputmode="numeric" placeholder="Amount">
+        <button type="button" class="hp-btn dmg" id="hp-damage" title="Take damage: temp HP first, then HP. Auto-rolls a concentration save if you're concentrating.">Damage</button>
+        <button type="button" class="hp-btn heal" id="hp-heal">Heal</button>
+        <button type="button" class="hp-btn tmp" id="hp-addtemp" title="Gain temporary HP — doesn't stack, so you keep the higher of the old and new amount.">Temp HP</button>
+      </div>
+      <div class="death-saves" id="death-saves" style="display:none;"></div>
+    </div>
+    <div class="hp-row conc-row" id="conc-row">
+      <label><input type="checkbox" id="conc-on"> Concentrating</label>
+      <input type="text" id="conc-spell" placeholder="Spell (optional)" maxlength="40">
+      <span class="conc-mode-label">Conc. save:</span>
+      <div class="mode-group conc-mode" id="conc-mode" title="Advantage or disadvantage for concentration saves only — separate from the main Advantage / Disadvantage setting.">
+        <button type="button" data-mode="dis">Dis</button>
+        <button type="button" data-mode="normal" class="active">Normal</button>
+        <button type="button" data-mode="adv">Adv</button>
+      </div>
+    </div>
+  </section>
 
   <section class="panel">
     <h2>Ability Checks &amp; Saves</h2>
@@ -968,6 +1043,14 @@
     mode: "normal",
     critMode: false,
     halfMode: false,
+    hpCur: 0,
+    hpMax: 0,
+    hpTemp: 0,
+    deathSucc: 0,
+    deathFail: 0,
+    concOn: false,
+    concSpell: "",
+    concMode: "normal",
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: (function(){
       var s = blankSkillList();
@@ -1007,6 +1090,14 @@
     mode: "normal",
     critMode: false,
     halfMode: false,
+    hpCur: 0,
+    hpMax: 0,
+    hpTemp: 0,
+    deathSucc: 0,
+    deathFail: 0,
+    concOn: false,
+    concSpell: "",
+    concMode: "normal",
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: blankSkillList(),
     attacks: [
@@ -1129,6 +1220,10 @@
     if(!c.mode) c.mode = "normal";
     if(typeof c.critMode !== "boolean") c.critMode = false;
     if(typeof c.halfMode !== "boolean") c.halfMode = false;
+    ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
+    if(typeof c.concOn !== "boolean") c.concOn = false;
+    if(typeof c.concSpell !== "string") c.concSpell = "";
+    if(c.concMode !== "adv" && c.concMode !== "dis") c.concMode = "normal";
   });
   if(typeof app.activeIndex !== "number" || app.activeIndex < 0 || app.activeIndex >= app.characters.length){
     app.activeIndex = 0;
@@ -1382,6 +1477,7 @@
   var tabsEl = document.getElementById("char-tabs");
 
   function renderTabs(){
+    renderParty();  // the DM's party list follows every character's synced HP
     if(window.rtRenderSwitcher) window.rtRenderSwitcher();  // names/colors may have just changed
     tabsEl.innerHTML = "";
     app.characters.forEach(function(char, i){
@@ -1451,6 +1547,7 @@
     saveState();
     renderTabs();
     renderSettingsBar();
+    renderHp();
     renderAbilities();
     renderAttacks();
     renderSpellAbilitySelect();
@@ -1459,6 +1556,279 @@
     renderProficiencies();
     updateLockOverlay();
     renderCombat();  // Join Combat is only clickable while you're on your own tab
+  }
+
+  // ---------- Hit points, death saves, concentration ----------
+  var hpCurEl = document.getElementById("hp-cur"), hpMaxEl = document.getElementById("hp-max"), hpTempEl = document.getElementById("hp-temp");
+  var hpAmountEl = document.getElementById("hp-amount"), hpStatusEl = document.getElementById("hp-status");
+  var hpBarFill = document.getElementById("hp-bar-fill"), hpBarTemp = document.getElementById("hp-bar-temp");
+  var hpDamageBtn = document.getElementById("hp-damage"), hpHealBtn = document.getElementById("hp-heal"), hpTempBtn = document.getElementById("hp-addtemp");
+  var deathSavesEl = document.getElementById("death-saves");
+  var concOnEl = document.getElementById("conc-on"), concSpellEl = document.getElementById("conc-spell"), concModeEl = document.getElementById("conc-mode");
+
+  function charHpReady(c){ return (c.hpMax || 0) > 0; }
+  function charDead(c){ return (c.deathFail || 0) >= 3; }
+  function charStable(c){ return !charDead(c) && (c.deathSucc || 0) >= 3; }
+  // "down", "dead", "stable", "bloodied" (at half HP or less) or "" — shared by the sheet and the DM's party list.
+  function charHpStatus(c){
+    if(!charHpReady(c)) return "";
+    if(charDead(c)) return "dead";
+    if((c.hpCur || 0) <= 0) return charStable(c) ? "stable" : "down";
+    if((c.hpCur || 0) * 2 <= c.hpMax) return "bloodied";
+    return "";
+  }
+  var HP_STATUS_TEXT = {dead:"Dead", stable:"Stable (0 HP)", down:"Down — death saves", bloodied:"Bloodied"};
+  function fillBar(fillEl, tempEl, c){
+    var max = c.hpMax || 0, cur = Math.max(0, c.hpCur || 0), temp = c.hpTemp || 0;
+    var pct = max > 0 ? Math.min(100, cur / max * 100) : 0;
+    fillEl.style.width = pct + "%";
+    fillEl.classList.toggle("mid", pct <= 50 && pct > 25);
+    fillEl.classList.toggle("low", pct <= 25);
+    if(tempEl){
+      var tp = max > 0 ? Math.min(100 - pct, temp / max * 100) : 0;
+      tempEl.style.left = pct + "%"; tempEl.style.width = tp + "%";
+    }
+  }
+
+  function renderHp(){
+    var ready = charHpReady(state);
+    hpCurEl.value = state.hpCur || 0;
+    hpMaxEl.value = state.hpMax || 0;
+    hpTempEl.value = state.hpTemp || 0;
+    var st = charHpStatus(state);
+    hpStatusEl.textContent = ready ? (HP_STATUS_TEXT[st] || "") : "Set Max HP";
+    hpStatusEl.style.display = (ready && !st) ? "none" : "";
+    hpStatusEl.className = "hp-status" + (st ? " " + st : "");
+    fillBar(hpBarFill, hpBarTemp, state);
+    var dead = charDead(state);
+    hpDamageBtn.disabled = hpTempBtn.disabled = !ready;
+    hpHealBtn.disabled = !ready || dead;
+    hpHealBtn.title = dead ? "Dead — healing doesn't help without a revival effect. Clear the failure pips to override." : "Restore HP, up to your max.";
+    // death saves
+    var showDeath = ready && (state.hpCur || 0) <= 0;
+    deathSavesEl.style.display = showDeath ? "" : "none";
+    if(showDeath){
+      deathSavesEl.innerHTML = "";
+      [["succ","Successes",state.deathSucc||0],["fail","Failures",state.deathFail||0]].forEach(function(row){
+        var wrap = document.createElement("div"); wrap.className = "death-pips"; wrap.style.marginBottom = "6px";
+        var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = row[1]; wrap.appendChild(lbl);
+        for(var n = 0; n < 3; n++){
+          (function(n){
+            var pip = document.createElement("button");
+            pip.type = "button"; pip.className = "pip " + row[0] + (n < row[2] ? " on" : "");
+            pip.title = "Click to adjust";
+            pip.setAttribute("aria-label", row[1] + " " + (n + 1));
+            pip.addEventListener("click", function(){
+              var key = row[0] === "succ" ? "deathSucc" : "deathFail", cur = state[key] || 0;
+              state[key] = (cur === n + 1) ? n : n + 1;
+              saveState(); renderHp(); renderParty();
+            });
+            wrap.appendChild(pip);
+          })(n);
+        }
+        deathSavesEl.appendChild(wrap);
+      });
+      var act = document.createElement("div"); act.className = "hp-actions"; act.style.margin = "6px 0 0";
+      var dsBtn = document.createElement("button"); dsBtn.type = "button"; dsBtn.className = "hp-btn dmg"; dsBtn.textContent = "Death Save";
+      dsBtn.id = "death-save-btn";
+      dsBtn.disabled = dead || charStable(state);
+      dsBtn.title = "Roll a d20: 10+ is a success, below 10 a failure, a 1 is two failures, a 20 brings you back at 1 HP.";
+      dsBtn.addEventListener("click", rollDeathSave);
+      act.appendChild(dsBtn);
+      var rst = document.createElement("button"); rst.type = "button"; rst.className = "hp-btn"; rst.textContent = "Clear pips";
+      rst.addEventListener("click", function(){ state.deathSucc = 0; state.deathFail = 0; saveState(); renderHp(); renderParty(); });
+      act.appendChild(rst);
+      var note = document.createElement("span"); note.className = "conc-mode-label";
+      note.textContent = dead ? "Dead." : charStable(state) ? "Stable — unconscious but no longer dying." : "Taking damage at 0 HP adds a failure.";
+      act.appendChild(note);
+      deathSavesEl.appendChild(act);
+    }
+    // concentration
+    concOnEl.checked = !!state.concOn;
+    if(document.activeElement !== concSpellEl) concSpellEl.value = state.concSpell || "";
+    Array.prototype.forEach.call(concModeEl.querySelectorAll("button"), function(b){
+      b.classList.toggle("active", b.getAttribute("data-mode") === (state.concMode || "normal"));
+    });
+  }
+
+  function hpLogState(){ return state.hpCur + "/" + state.hpMax + (state.hpTemp ? " (+" + state.hpTemp + " temp)" : ""); }
+  function afterHpChange(){ saveState(); renderHp(); renderParty(); }
+
+  function rollConcentrationSave(damage){
+    var dc = Math.max(10, Math.floor(damage / 2));
+    var con = null;
+    (state.abilities || []).forEach(function(a){ if(a.name === "CON") con = a; });
+    var bonus = con ? (con.mod || 0) + (con.save ? (state.profBonus || 0) : 0) : 0;
+    var mode = state.concMode || "normal", a1 = rollDie(20), a2 = rollDie(20), v, rolls;
+    if(mode === "adv"){ v = Math.max(a1, a2); rolls = [a1, a2]; }
+    else if(mode === "dis"){ v = Math.min(a1, a2); rolls = [a1, a2]; }
+    else { v = a1; rolls = [a1]; }
+    var total = v + bonus, ok = total >= dc, spell = (state.concSpell || "").trim();
+    addLog("Concentration Save vs DC " + dc + (spell ? " (" + spell + ")" : "") + (ok ? " — Success" : " — Failed"),
+      "d20(" + rolls.join("/") + ") + " + bonus, total, true, v === 20 ? "crit" : v === 1 ? "fumble" : null);
+    if(!ok){
+      state.concOn = false;
+      showCombatBanner(state.name + " lost concentration" + (spell ? " on " + spell : "") + "!");
+    }
+  }
+
+  function applyDamage(amount){
+    if(!charHpReady(state)) return;
+    amount = Math.floor(amount);
+    if(!(amount > 0)) return;
+    var before = state.hpCur || 0, wasUp = before > 0;
+    var absorbed = Math.min(state.hpTemp || 0, amount);
+    state.hpTemp = (state.hpTemp || 0) - absorbed;
+    var rem = amount - absorbed, notes = [];
+    if(wasUp){
+      if(rem >= before){
+        state.hpCur = 0;
+        if(rem - before >= state.hpMax){ state.deathFail = 3; state.deathSucc = 0; notes.push("massive damage — instant death"); }
+        else { state.deathFail = 0; state.deathSucc = 0; notes.push("drops to 0 HP"); }
+      } else state.hpCur = before - rem;
+    } else if(!charDead(state) && rem > 0){
+      if(rem >= state.hpMax){ state.deathFail = 3; notes.push("massive damage — dead"); }
+      else { state.deathFail = Math.min(3, (state.deathFail || 0) + 1); notes.push("hit while down — death save failure" + (state.deathFail >= 3 ? ", dead" : "")); }
+    }
+    var parts = amount + " damage" + (absorbed ? " (" + absorbed + " to temp HP)" : "") + " → " + hpLogState() + (notes.length ? " — " + notes.join(", ") : "");
+    addLog("Damage Taken", parts, amount, false, null);
+    if(state.concOn){
+      if(state.hpCur <= 0){ state.concOn = false; showCombatBanner(state.name + " lost concentration" + ((state.concSpell || "").trim() ? " on " + state.concSpell.trim() : "") + "!"); }
+      else rollConcentrationSave(amount);
+    }
+    afterHpChange();
+  }
+
+  function applyHeal(amount){
+    if(!charHpReady(state) || charDead(state)) return;
+    amount = Math.floor(amount);
+    if(!(amount > 0)) return;
+    var before = state.hpCur || 0;
+    state.hpCur = Math.min(state.hpMax, before + amount);
+    var woke = before <= 0 && state.hpCur > 0;
+    if(woke){ state.deathSucc = 0; state.deathFail = 0; }
+    addLog("Healed", amount + " healed → " + hpLogState() + (woke ? " — back on their feet" : ""), amount, false, null);
+    afterHpChange();
+  }
+
+  function applyTemp(amount){
+    if(!charHpReady(state)) return;
+    amount = Math.floor(amount);
+    if(!(amount > 0)) return;
+    var old = state.hpTemp || 0;
+    state.hpTemp = Math.max(old, amount);
+    addLog("Temp HP", amount + " temp HP" + (old > amount ? " (kept the higher " + old + ")" : "") + " → " + hpLogState(), state.hpTemp, false, null);
+    afterHpChange();
+  }
+
+  function rollDeathSave(){
+    if(!charHpReady(state) || (state.hpCur || 0) > 0 || charDead(state) || charStable(state)) return;
+    var r = rollDie(20), label;
+    if(r === 20){
+      state.hpCur = 1; state.deathSucc = 0; state.deathFail = 0;
+      label = "Death Save — Natural 20, back up with 1 HP";
+    } else if(r === 1){
+      state.deathFail = Math.min(3, (state.deathFail || 0) + 2); label = "Death Save — Natural 1, two failures";
+    } else if(r >= 10){
+      state.deathSucc = Math.min(3, (state.deathSucc || 0) + 1); label = "Death Save — Success";
+    } else {
+      state.deathFail = Math.min(3, (state.deathFail || 0) + 1); label = "Death Save — Failure";
+    }
+    if(charDead(state)) label += " — Dead";
+    else if(charStable(state)) label += " — Stable";
+    addLog(label, "d20(" + r + ")", r, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
+    afterHpChange();
+  }
+
+  function amountValue(){
+    var n = parseInt(hpAmountEl.value, 10);
+    return isNaN(n) ? 0 : n;
+  }
+  function amountAction(fn){
+    var n = amountValue();
+    if(n <= 0){ hpAmountEl.focus(); return; }
+    fn(n);
+    hpAmountEl.value = "";
+  }
+  hpDamageBtn.addEventListener("click", function(){ amountAction(applyDamage); });
+  hpHealBtn.addEventListener("click", function(){ amountAction(applyHeal); });
+  hpTempBtn.addEventListener("click", function(){ amountAction(applyTemp); });
+  hpAmountEl.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); amountAction(applyDamage); } });
+
+  // Typing straight into the fields is a manual correction: it never triggers concentration saves.
+  hpMaxEl.addEventListener("change", function(){
+    var oldMax = state.hpMax || 0, m = Math.max(0, parseInt(hpMaxEl.value, 10) || 0);
+    state.hpMax = m;
+    if(oldMax <= 0 && m > 0 && (state.hpCur || 0) <= 0 && !state.deathFail && !state.deathSucc) state.hpCur = m;  // first time: start at full
+    if(m > 0 && state.hpCur > m) state.hpCur = m;
+    afterHpChange();
+  });
+  hpCurEl.addEventListener("change", function(){
+    var v = Math.max(0, parseInt(hpCurEl.value, 10) || 0);
+    if(state.hpMax > 0 && v > state.hpMax) v = state.hpMax;
+    state.hpCur = v;
+    if(v > 0){ state.deathSucc = 0; state.deathFail = 0; }
+    afterHpChange();
+  });
+  hpTempEl.addEventListener("change", function(){ state.hpTemp = Math.max(0, parseInt(hpTempEl.value, 10) || 0); afterHpChange(); });
+
+  concOnEl.addEventListener("change", function(){ state.concOn = concOnEl.checked; afterHpChange(); });
+  concSpellEl.addEventListener("input", function(){ state.concSpell = concSpellEl.value; saveState(); renderParty(); });
+  Array.prototype.forEach.call(concModeEl.querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){ state.concMode = b.getAttribute("data-mode"); saveState(); renderHp(); });
+  });
+
+  // ---------- DM party summary ----------
+  var partyEl = document.getElementById("party-panel");
+  function renderParty(){
+    if(!partyEl) return;
+    if(!viewerIsDM()){ partyEl.style.display = "none"; partyEl.innerHTML = ""; return; }
+    partyEl.style.display = "";
+    partyEl.innerHTML = "";
+    var h = document.createElement("h3"); h.textContent = "Party Status"; partyEl.appendChild(h);
+    var shown = 0, unset = [];
+    app.characters.forEach(function(c, i){
+      if(c.isDM) return;
+      if(!charHpReady(c) && !c.concOn){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
+      shown++;
+      var row = document.createElement("div"); row.className = "party-row";
+      row.title = "Open " + c.name + "'s sheet";
+      row.addEventListener("click", function(){ switchTab(i); });
+      var name = document.createElement("span"); name.className = "party-name"; name.style.background = c.color; name.textContent = c.name;
+      row.appendChild(name);
+      var hpBox = document.createElement("div"); hpBox.className = "party-hp";
+      var nums = document.createElement("div"); nums.className = "party-nums";
+      if(charHpReady(c)){
+        var bar = document.createElement("div"); bar.className = "hp-bar";
+        var fill = document.createElement("div"); fill.className = "hp-bar-fill";
+        var tmp = document.createElement("div"); tmp.className = "hp-bar-temp";
+        bar.appendChild(fill); bar.appendChild(tmp); hpBox.appendChild(bar);
+        fillBar(fill, tmp, c);
+        nums.textContent = (c.hpCur || 0) + " / " + c.hpMax + ((c.hpTemp || 0) ? "  (+" + c.hpTemp + " temp)" : "");
+      } else nums.textContent = "HP not set";
+      hpBox.appendChild(nums); row.appendChild(hpBox);
+      var badges = document.createElement("div"); badges.className = "party-badges";
+      var st = charHpStatus(c);
+      if(st){
+        var b = document.createElement("span"); b.className = "hp-status " + st;
+        b.textContent = st === "down"
+          ? "Down  ✓" + (c.deathSucc || 0) + " ✗" + (c.deathFail || 0)
+          : (HP_STATUS_TEXT[st] || "").replace(" (0 HP)", "");
+        badges.appendChild(b);
+      }
+      row.appendChild(badges);
+      if(c.concOn){
+        var cc = document.createElement("div"); cc.className = "party-conc";
+        cc.textContent = "✦ Concentrating" + ((c.concSpell || "").trim() ? ": " + c.concSpell.trim() : "");
+        row.appendChild(cc);
+      }
+      partyEl.appendChild(row);
+    });
+    if(unset.length){
+      var foot = document.createElement("div"); foot.className = "party-nums"; foot.style.marginTop = "6px";
+      foot.textContent = (shown ? "No HP set yet: " : "Nobody has set Max HP yet: ") + unset.join(", ");
+      partyEl.appendChild(foot);
+    }
   }
 
   // ---------- Settings ----------
@@ -2636,6 +3006,12 @@
       text: "Click Start Combat to begin — a \"Combat Has Started\" message flashes across every player's screen and Join Combat unlocks for them. You can start it before anyone has joined; each player who then clicks Join Combat rolls their own initiative and slots into the order automatically. The button becomes End Combat while a fight is running. To split the group, tick accounts and use Move selected to send them to a new combat or an existing one — each combat tracks its own order and round (with more than one combat running, new joiners wait in a list for you to place them). Skip passes the current turn along, and ✕ removes someone from combat."
     },
     {
+      targetSelector: "#party-panel",
+      title: "Party Status",
+      showIf: function(){ return currentAccount !== null && viewerIsDM(); },
+      text: "Every player's HP at a glance: a health bar, current / max (plus any temp HP), whether they're Bloodied, Down (with their death save pips), Stable or Dead, and who's concentrating on what. It updates live as players take damage, and clicking a row opens that player's sheet."
+    },
+    {
       targetSelector: "#prof-bonus-label",
       title: "Proficiency Bonus",
       text: "Set this to your character's current proficiency bonus. It's used automatically anywhere proficiency applies — skill checks, saving throws, and attack rolls with a prof checkbox checked — so you only have to update it here as you level up instead of hunting down every roll on the sheet."
@@ -2670,6 +3046,16 @@
       showIf: function(){ return !!state.isDM; },
       title: "Hide Rolls",
       text: "Only visible on the DM tab. Turn this on and every new roll you make is hidden from the rest of the group — they'll see a \"Hidden roll\" entry in the log instead of the details. Handy for secret checks, like a Perception roll a player shouldn't know they failed. Only your own signed-in DM account can toggle it."
+    },
+    {
+      targetSelector: "#hp-main",
+      title: "Hit Points",
+      text: "Type your Max HP in by hand (the second box), then use the Amount box with Damage, Heal and Temp HP. Damage burns through temp HP first, healing stops at your max, and temp HP doesn't stack — you keep the higher number. Drop to 0 and a Death Saves box appears: Death Save rolls a d20 (10 or more succeeds, a 1 is two failures, a 20 puts you back up at 1 HP), taking damage while down adds a failure, and you can click any pip to correct it. Damage taken, healing and every death save land in your roll log."
+    },
+    {
+      targetSelector: "#conc-row",
+      title: "Concentration",
+      text: "Tick Concentrating (and name the spell if you like). From then on, every time you take damage with the Damage button the sheet rolls your Constitution save for you against DC 10 or half the damage, whichever is higher — adding your CON modifier and save proficiency. Fail and concentration drops with a banner; dropping to 0 HP also ends it. The small Dis / Normal / Adv buttons beside it only affect these concentration saves, so an Advantage you turned on for something else won't leak into them."
     },
     {
       targetSelector: ".ability-row",
@@ -3631,6 +4017,7 @@
     renderCombat();
     renderTabs();
     renderSettingsBar();
+    renderHp();
     renderAbilities();
     renderAttacks();
     renderSpellAbilitySelect();
@@ -3702,6 +4089,10 @@
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
       if(typeof c.hideRolls === "undefined") c.hideRolls = false;
       if(typeof c.initBonus === "undefined") c.initBonus = 0;
+      ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
+      if(typeof c.concOn !== "boolean") c.concOn = false;
+      if(typeof c.concSpell !== "string") c.concSpell = "";
+      if(c.concMode !== "adv" && c.concMode !== "dis") c.concMode = "normal";
       app.characters[i] = c;
       if(i === app.activeIndex){
         state = c;
