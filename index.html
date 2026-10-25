@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.62.0</title>
+<title>Roll Tracker V1.63.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -364,6 +364,11 @@
   .hp-row label{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
   .hp-row input[type=number]{width:64px;padding:5px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
   .hp-row input[type=text]{flex:1 1 140px;min-width:0;padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
+  .class-panel{margin-bottom:22px;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;}
+  .class-panel h2{font-family:Georgia,serif;}
+  .class-panel select,#hit-die-custom{padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;max-width:100%;}
+  #level-label input{width:56px;}
+  .party-class{font-size:0.76rem;color:var(--ink);margin-bottom:3px;font-weight:600;}
   .hp-slash{color:var(--ink-soft);}
   .hp-status{font-weight:700;font-size:0.8rem;padding:2px 9px;border-radius:99px;background:var(--border-soft);color:var(--ink-soft);}
   .hp-status.bloodied{background:var(--ochre);color:#fff;}
@@ -766,7 +771,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.62.0</div>
+      <div class="version-tag" id="version-tag">Version 1.63.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -778,6 +783,9 @@
   <div class="sheet-content" id="sheet-content">
 
   <div class="settings-bar">
+    <label id="level-label" title="Your character level (1–20). Proficiency Bonus follows it automatically.">Level
+      <input type="number" id="char-level" value="1" min="1" max="20" inputmode="numeric">
+    </label>
     <label id="prof-bonus-label">Proficiency Bonus
       <input type="number" id="prof-bonus" value="2">
     </label>
@@ -794,6 +802,21 @@
     <button type="button" class="hide-rolls-toggle" id="hide-rolls-toggle" title="While on, new rolls on this tab are only visible when signed in as the DM — everyone else sees a hidden entry." style="display:none;">Hide Rolls</button>
   </div>
 
+  <section class="panel class-panel" id="class-panel">
+    <h2>Class</h2>
+    <div class="hp-row">
+      <label>Class <select id="class-select"></select></label>
+      <input type="text" id="class-custom" placeholder="Custom class" maxlength="40" style="display:none;">
+      <label id="subclass-label">Subclass <select id="subclass-select"></select></label>
+      <input type="text" id="subclass-custom" placeholder="Custom subclass" maxlength="50" style="display:none;">
+      <span class="conc-mode-label" id="subclass-hint" style="display:none;"></span>
+    </div>
+    <div class="hp-row" id="class-defaults-row" style="margin-bottom:0;">
+      <button type="button" class="hp-btn" id="class-defaults-btn" title="Ticks this class's saving-throw proficiencies and sets your spellcasting ability if it's a spellcasting class. Never unticks anything.">Apply class defaults</button>
+      <span class="conc-mode-label" id="class-defaults-note"></span>
+    </div>
+  </section>
+
   <section class="panel hp-panel" id="hp-panel">
     <h2>Hit Points</h2>
     <div id="hp-main">
@@ -808,6 +831,12 @@
         <button type="button" class="hp-btn dmg" id="hp-damage" title="Take damage: temp HP first, then HP. Auto-rolls a concentration save if you're concentrating.">Damage</button>
         <button type="button" class="hp-btn heal" id="hp-heal">Heal</button>
         <button type="button" class="hp-btn tmp" id="hp-addtemp" title="Gain temporary HP — doesn't stack, so you keep the higher of the old and new amount.">Temp HP</button>
+      </div>
+      <div class="hp-actions" id="hit-dice-row" style="display:none;">
+        <span id="hit-dice-label" class="conc-mode-label" style="font-size:0.84rem;"></span>
+        <label class="conc-mode-label" style="display:flex;align-items:center;gap:5px;">Left <input type="number" id="hit-dice-left" min="0" max="20" style="width:60px;"></label>
+        <select id="hit-die-custom" style="display:none;"><option>d6</option><option>d8</option><option>d10</option><option>d12</option></select>
+        <button type="button" class="hp-btn heal" id="hit-dice-spend" title="Roll one hit die, add your Constitution modifier, and heal that much.">Spend Hit Die</button>
       </div>
       <div class="death-saves" id="death-saves" style="display:none;"></div>
     </div>
@@ -1051,6 +1080,13 @@
     concOn: false,
     concSpell: "",
     concMode: "normal",
+    level: 1,
+    charClass: "",
+    charClassCustom: "",
+    charSubclass: "",
+    charSubclassCustom: "",
+    hitDieCustom: "d8",
+    hitDiceSpent: 0,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: (function(){
       var s = blankSkillList();
@@ -1098,6 +1134,13 @@
     concOn: false,
     concSpell: "",
     concMode: "normal",
+    level: 1,
+    charClass: "",
+    charClassCustom: "",
+    charSubclass: "",
+    charSubclassCustom: "",
+    hitDieCustom: "d8",
+    hitDiceSpent: 0,
     abilities: JSON.parse(JSON.stringify(blankAbilities)),
     skills: blankSkillList(),
     attacks: [
@@ -1224,6 +1267,11 @@
     if(typeof c.concOn !== "boolean") c.concOn = false;
     if(typeof c.concSpell !== "string") c.concSpell = "";
     if(c.concMode !== "adv" && c.concMode !== "dis") c.concMode = "normal";
+    if(typeof c.level !== "number" || isNaN(c.level) || c.level < 1) c.level = 1;
+    if(c.level > 20) c.level = 20;
+    ["charClass","charClassCustom","charSubclass","charSubclassCustom"].forEach(function(k){ if(typeof c[k] !== "string") c[k] = ""; });
+    if(["d6","d8","d10","d12"].indexOf(c.hitDieCustom) === -1) c.hitDieCustom = "d8";
+    if(typeof c.hitDiceSpent !== "number" || isNaN(c.hitDiceSpent) || c.hitDiceSpent < 0) c.hitDiceSpent = 0;
   });
   if(typeof app.activeIndex !== "number" || app.activeIndex < 0 || app.activeIndex >= app.characters.length){
     app.activeIndex = 0;
@@ -1547,6 +1595,7 @@
     saveState();
     renderTabs();
     renderSettingsBar();
+    renderClass();
     renderHp();
     renderAbilities();
     renderAttacks();
@@ -1557,6 +1606,174 @@
     updateLockOverlay();
     renderCombat();  // Join Combat is only clickable while you're on your own tab
   }
+
+  // ---------- Class, subclass and level ----------
+  // 2014-rules content from: PHB, DMG, SCAG, XGtE, TCoE, GGtR, EGtW, MOoT, VRGtR, FToD, ERLW,
+  // Dragonlance: Shadow of the Dragon Queen and Bigby Presents: Glory of the Giants. Each subclass is
+  // tagged with the book it first appeared in (reprints aren't repeated).
+  var CLASS_BOOKS = {
+    PHB:"Player's Handbook", DMG:"Dungeon Master's Guide", SCAG:"Sword Coast Adventurer's Guide",
+    XGtE:"Xanathar's Guide to Everything", ERLW:"Eberron: Rising from the Last War",
+    GGtR:"Guildmasters' Guide to Ravnica", EGtW:"Explorer's Guide to Wildemount",
+    MOoT:"Mythic Odysseys of Theros", TCoE:"Tasha's Cauldron of Everything",
+    VRGtR:"Van Richten's Guide to Ravenloft", FToD:"Fizban's Treasury of Dragons",
+    DSotDQ:"Dragonlance: Shadow of the Dragon Queen", BPGotG:"Bigby Presents: Glory of the Giants"
+  };
+  var CLASS_ORDER = ["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
+  // die: hit die; saves: saving-throw proficiencies; spell: spellcasting ability (if the class itself casts);
+  // sub: level the subclass is chosen at; subs: [name, book]
+  var CLASS_INFO = {
+    Artificer:{die:"d8", saves:["CON","INT"], spell:"INT", sub:3, subs:[["Alchemist","ERLW"],["Artillerist","ERLW"],["Battle Smith","ERLW"],["Armorer","TCoE"]]},
+    Barbarian:{die:"d12", saves:["STR","CON"], spell:null, sub:3, subs:[["Path of the Berserker","PHB"],["Path of the Totem Warrior","PHB"],["Path of the Battlerager","SCAG"],["Path of the Ancestral Guardian","XGtE"],["Path of the Storm Herald","XGtE"],["Path of the Zealot","XGtE"],["Path of the Beast","TCoE"],["Path of Wild Magic","TCoE"],["Path of the Giant","BPGotG"]]},
+    Bard:{die:"d8", saves:["DEX","CHA"], spell:"CHA", sub:3, subs:[["College of Lore","PHB"],["College of Valor","PHB"],["College of Glamour","XGtE"],["College of Swords","XGtE"],["College of Whispers","XGtE"],["College of Eloquence","MOoT"],["College of Creation","TCoE"],["College of Spirits","VRGtR"]]},
+    Cleric:{die:"d8", saves:["WIS","CHA"], spell:"WIS", sub:1, subs:[["Knowledge Domain","PHB"],["Life Domain","PHB"],["Light Domain","PHB"],["Nature Domain","PHB"],["Tempest Domain","PHB"],["Trickery Domain","PHB"],["War Domain","PHB"],["Death Domain","DMG"],["Arcana Domain","SCAG"],["Forge Domain","XGtE"],["Grave Domain","XGtE"],["Order Domain","GGtR"],["Peace Domain","TCoE"],["Twilight Domain","TCoE"]]},
+    Druid:{die:"d8", saves:["INT","WIS"], spell:"WIS", sub:2, subs:[["Circle of the Land","PHB"],["Circle of the Moon","PHB"],["Circle of Dreams","XGtE"],["Circle of the Shepherd","XGtE"],["Circle of Spores","GGtR"],["Circle of Stars","TCoE"],["Circle of Wildfire","TCoE"]]},
+    Fighter:{die:"d10", saves:["STR","CON"], spell:null, sub:3, subs:[["Champion","PHB"],["Battle Master","PHB"],["Eldritch Knight","PHB"],["Purple Dragon Knight","SCAG"],["Arcane Archer","XGtE"],["Cavalier","XGtE"],["Samurai","XGtE"],["Echo Knight","EGtW"],["Psi Warrior","TCoE"],["Rune Knight","TCoE"]]},
+    Monk:{die:"d8", saves:["STR","DEX"], spell:null, sub:3, subs:[["Way of the Open Hand","PHB"],["Way of Shadow","PHB"],["Way of the Four Elements","PHB"],["Way of the Long Death","SCAG"],["Way of the Sun Soul","SCAG"],["Way of the Drunken Master","XGtE"],["Way of the Kensei","XGtE"],["Way of Mercy","TCoE"],["Way of the Astral Self","TCoE"],["Way of the Ascendant Dragon","FToD"]]},
+    Paladin:{die:"d10", saves:["WIS","CHA"], spell:"CHA", sub:3, subs:[["Oath of Devotion","PHB"],["Oath of the Ancients","PHB"],["Oath of Vengeance","PHB"],["Oathbreaker","DMG"],["Oath of the Crown","SCAG"],["Oath of Conquest","XGtE"],["Oath of Redemption","XGtE"],["Oath of Glory","MOoT"],["Oath of the Watchers","TCoE"]]},
+    Ranger:{die:"d10", saves:["STR","DEX"], spell:"WIS", sub:3, subs:[["Hunter","PHB"],["Beast Master","PHB"],["Gloom Stalker","XGtE"],["Horizon Walker","XGtE"],["Monster Slayer","XGtE"],["Fey Wanderer","TCoE"],["Swarmkeeper","TCoE"],["Drakewarden","FToD"]]},
+    Rogue:{die:"d8", saves:["DEX","INT"], spell:null, sub:3, subs:[["Thief","PHB"],["Assassin","PHB"],["Arcane Trickster","PHB"],["Mastermind","SCAG"],["Swashbuckler","SCAG"],["Inquisitive","XGtE"],["Scout","XGtE"],["Phantom","TCoE"],["Soulknife","TCoE"]]},
+    Sorcerer:{die:"d6", saves:["CON","CHA"], spell:"CHA", sub:1, subs:[["Draconic Bloodline","PHB"],["Wild Magic","PHB"],["Storm Sorcery","SCAG"],["Divine Soul","XGtE"],["Shadow Magic","XGtE"],["Aberrant Mind","TCoE"],["Clockwork Soul","TCoE"],["Lunar Sorcery","DSotDQ"]]},
+    Warlock:{die:"d8", saves:["WIS","CHA"], spell:"CHA", sub:1, subs:[["The Archfey","PHB"],["The Fiend","PHB"],["The Great Old One","PHB"],["The Undying","SCAG"],["The Celestial","XGtE"],["The Hexblade","XGtE"],["The Fathomless","TCoE"],["The Genie","TCoE"],["The Undead","VRGtR"]]},
+    Wizard:{die:"d6", saves:["INT","WIS"], spell:"INT", sub:2, subs:[["School of Abjuration","PHB"],["School of Conjuration","PHB"],["School of Divination","PHB"],["School of Enchantment","PHB"],["School of Evocation","PHB"],["School of Illusion","PHB"],["School of Necromancy","PHB"],["School of Transmutation","PHB"],["Bladesinging","SCAG"],["War Magic","XGtE"],["Chronurgy Magic","EGtW"],["Graviturgy Magic","EGtW"],["Order of Scribes","TCoE"]]}
+  };
+  var CUSTOM_CHOICE = "__custom__";
+  function profForLevel(lvl){ return 2 + Math.floor((Math.max(1, Math.min(20, lvl)) - 1) / 4); }
+  function classLabel(c){
+    var name = c.charClass === CUSTOM_CHOICE ? (c.charClassCustom || "").trim() : (c.charClass || "");
+    if(!name) return "";
+    var sub = (c.charClass === CUSTOM_CHOICE || c.charSubclass === CUSTOM_CHOICE) ? (c.charSubclassCustom || "").trim() : (c.charSubclass || "");
+    var info = CLASS_INFO[c.charClass];
+    if(info && (c.level || 1) < info.sub) sub = "";   // not chosen yet at this level
+    return name + " " + (c.level || 1) + (sub ? " · " + sub : "");
+  }
+  function charHitDie(c){
+    var info = CLASS_INFO[c.charClass];
+    if(info) return info.die;
+    if(c.charClass === CUSTOM_CHOICE) return c.hitDieCustom || "d8";
+    return "";
+  }
+
+  var levelInput = document.getElementById("char-level");
+  var classSelectEl = document.getElementById("class-select"), classCustomEl = document.getElementById("class-custom");
+  var subclassLabelEl = document.getElementById("subclass-label"), subclassSelectEl = document.getElementById("subclass-select");
+  var subclassCustomEl = document.getElementById("subclass-custom"), subclassHintEl = document.getElementById("subclass-hint");
+  var classDefaultsBtn = document.getElementById("class-defaults-btn"), classDefaultsNote = document.getElementById("class-defaults-note");
+
+  function opt(value, text, selected){
+    var o = document.createElement("option"); o.value = value; o.textContent = text; if(selected) o.selected = true; return o;
+  }
+  function renderClass(){
+    if(!classSelectEl) return;
+    levelInput.value = state.level || 1;
+    // class dropdown
+    classSelectEl.innerHTML = "";
+    classSelectEl.appendChild(opt("", "— Choose —", !state.charClass));
+    CLASS_ORDER.forEach(function(n){ classSelectEl.appendChild(opt(n, n, state.charClass === n)); });
+    classSelectEl.appendChild(opt(CUSTOM_CHOICE, "Custom…", state.charClass === CUSTOM_CHOICE));
+    var isCustomClass = state.charClass === CUSTOM_CHOICE, info = CLASS_INFO[state.charClass];
+    classCustomEl.style.display = isCustomClass ? "" : "none";
+    if(document.activeElement !== classCustomEl) classCustomEl.value = state.charClassCustom || "";
+    // subclass: a dropdown for known classes once the level allows it; free text for a custom class
+    subclassSelectEl.innerHTML = "";
+    var showSelect = false, showHint = "", showCustomText = false;
+    if(info){
+      if((state.level || 1) >= info.sub){
+        showSelect = true;
+        subclassSelectEl.appendChild(opt("", "— Choose —", !state.charSubclass));
+        Object.keys(CLASS_BOOKS).forEach(function(bk){
+          var group = document.createElement("optgroup"); group.label = CLASS_BOOKS[bk];
+          info.subs.forEach(function(sb){ if(sb[1] === bk) group.appendChild(opt(sb[0], sb[0], state.charSubclass === sb[0])); });
+          if(group.children.length) subclassSelectEl.appendChild(group);
+        });
+        subclassSelectEl.appendChild(opt(CUSTOM_CHOICE, "Custom…", state.charSubclass === CUSTOM_CHOICE));
+        showCustomText = state.charSubclass === CUSTOM_CHOICE;
+      } else showHint = "Subclass unlocks at level " + info.sub;
+    } else if(isCustomClass){ showCustomText = true; }
+    subclassLabelEl.style.display = showSelect ? "" : "none";
+    subclassCustomEl.style.display = showCustomText ? "" : "none";
+    if(document.activeElement !== subclassCustomEl) subclassCustomEl.value = state.charSubclassCustom || "";
+    if(isCustomClass) subclassCustomEl.placeholder = "Subclass (optional)";
+    else subclassCustomEl.placeholder = "Custom subclass";
+    subclassHintEl.style.display = showHint ? "" : "none";
+    subclassHintEl.textContent = showHint;
+    classDefaultsBtn.disabled = !info;
+    classDefaultsBtn.parentNode.style.display = info ? "" : "none";
+  }
+
+  levelInput.addEventListener("change", function(){
+    var v = Math.max(1, Math.min(20, parseInt(levelInput.value, 10) || 1));
+    state.level = v;
+    state.profBonus = profForLevel(v);   // proficiency bonus always follows level
+    var pb = document.getElementById("prof-bonus"); if(pb) pb.value = state.profBonus;
+    saveState();
+    renderClass(); renderHp(); renderAttacks(); renderParty();
+  });
+  classSelectEl.addEventListener("change", function(){
+    state.charClass = classSelectEl.value;
+    state.charSubclass = ""; classDefaultsNote.textContent = "";
+    saveState(); renderClass(); renderHp(); renderParty();
+  });
+  classCustomEl.addEventListener("input", function(){ state.charClassCustom = classCustomEl.value; saveState(); renderParty(); });
+  subclassSelectEl.addEventListener("change", function(){
+    state.charSubclass = subclassSelectEl.value; classDefaultsNote.textContent = "";
+    saveState(); renderClass(); renderParty();
+  });
+  subclassCustomEl.addEventListener("input", function(){ state.charSubclassCustom = subclassCustomEl.value; saveState(); renderParty(); });
+
+  classDefaultsBtn.addEventListener("click", function(){
+    var info = CLASS_INFO[state.charClass];
+    if(!info) return;
+    var done = [];
+    info.saves.forEach(function(ab){
+      (state.abilities || []).forEach(function(a){ if(a.name === ab) a.save = true; });
+    });
+    done.push(info.saves.join(" & ") + " saves ticked");
+    var spell = info.spell;
+    if(!spell && (state.charSubclass === "Eldritch Knight" || state.charSubclass === "Arcane Trickster") && (state.level || 1) >= info.sub) spell = "INT";
+    if(!spell && state.charSubclass === "Eldritch Knight") spell = "INT";
+    if(spell){ state.spellAbility = spell; done.push("spellcasting ability " + spell); }
+    saveState();
+    renderAbilities(); renderSpellAbilitySelect(); renderSpells();
+    classDefaultsNote.textContent = "Applied: " + done.join(", ") + ".";
+  });
+
+  // ---------- Hit dice ----------
+  var hitDiceRow = document.getElementById("hit-dice-row"), hitDiceLabel = document.getElementById("hit-dice-label");
+  var hitDiceLeftEl = document.getElementById("hit-dice-left"), hitDiceSpendBtn = document.getElementById("hit-dice-spend");
+  var hitDieCustomEl = document.getElementById("hit-die-custom");
+  function hitDiceLeft(c){ return Math.max(0, (c.level || 1) - (c.hitDiceSpent || 0)); }
+  function renderHitDice(){
+    var die = charHitDie(state);
+    hitDiceRow.style.display = die ? "" : "none";
+    if(!die) return;
+    hitDieCustomEl.style.display = state.charClass === CUSTOM_CHOICE ? "" : "none";
+    hitDieCustomEl.value = state.hitDieCustom || "d8";
+    hitDiceLabel.textContent = "Hit Dice (" + die + ")";
+    hitDiceLeftEl.max = state.level || 1;
+    if(document.activeElement !== hitDiceLeftEl) hitDiceLeftEl.value = hitDiceLeft(state);
+    var dead = charDead(state);
+    hitDiceSpendBtn.disabled = !charHpReady(state) || dead || hitDiceLeft(state) <= 0;
+    hitDiceSpendBtn.title = !charHpReady(state) ? "Enter your Max HP first." : dead ? "Dead." : hitDiceLeft(state) <= 0 ? "No hit dice left — they come back on a long rest." : "Roll one hit die, add your Constitution modifier, and heal that much.";
+  }
+  hitDiceLeftEl.addEventListener("change", function(){
+    var left = Math.max(0, Math.min(state.level || 1, parseInt(hitDiceLeftEl.value, 10) || 0));
+    state.hitDiceSpent = (state.level || 1) - left;
+    saveState(); renderHitDice();
+  });
+  hitDieCustomEl.addEventListener("change", function(){ state.hitDieCustom = hitDieCustomEl.value; saveState(); renderHitDice(); });
+  hitDiceSpendBtn.addEventListener("click", function(){
+    var die = charHitDie(state), sides = parseInt(die.slice(1), 10);
+    if(!sides || !charHpReady(state) || charDead(state) || hitDiceLeft(state) <= 0) return;
+    var con = null; (state.abilities || []).forEach(function(a){ if(a.name === "CON") con = a; });
+    var mod = con ? (con.mod || 0) : 0, r = rollDie(sides), heal = Math.max(0, r + mod);
+    state.hitDiceSpent = (state.hitDiceSpent || 0) + 1;
+    var before = state.hpCur || 0;
+    state.hpCur = Math.min(state.hpMax, before + heal);
+    if(before <= 0 && state.hpCur > 0){ state.deathSucc = 0; state.deathFail = 0; }
+    addLog("Hit Die (" + die + ")", die + "(" + r + ") + " + mod + " CON → " + hpLogState() + " · " + hitDiceLeft(state) + " left", heal, false, null);
+    afterHpChange();
+  });
 
   // ---------- Hit points, death saves, concentration ----------
   var hpCurEl = document.getElementById("hp-cur"), hpMaxEl = document.getElementById("hp-max"), hpTempEl = document.getElementById("hp-temp");
@@ -1649,6 +1866,7 @@
     Array.prototype.forEach.call(concModeEl.querySelectorAll("button"), function(b){
       b.classList.toggle("active", b.getAttribute("data-mode") === (state.concMode || "normal"));
     });
+    renderHitDice();
   }
 
   function hpLogState(){ return state.hpCur + "/" + state.hpMax + (state.hpTemp ? " (+" + state.hpTemp + " temp)" : ""); }
@@ -1789,7 +2007,7 @@
     var shown = 0, unset = [];
     app.characters.forEach(function(c, i){
       if(c.isDM) return;
-      if(!charHpReady(c) && !c.concOn){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
+      if(!charHpReady(c) && !c.concOn && !classLabel(c)){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
       shown++;
       var row = document.createElement("div"); row.className = "party-row";
       row.title = "Open " + c.name + "'s sheet";
@@ -1797,6 +2015,8 @@
       var name = document.createElement("span"); name.className = "party-name"; name.style.background = c.color; name.textContent = c.name;
       row.appendChild(name);
       var hpBox = document.createElement("div"); hpBox.className = "party-hp";
+      var cl = classLabel(c);
+      if(cl){ var clEl = document.createElement("div"); clEl.className = "party-class"; clEl.textContent = cl; hpBox.appendChild(clEl); }
       var nums = document.createElement("div"); nums.className = "party-nums";
       if(charHpReady(c)){
         var bar = document.createElement("div"); bar.className = "hp-bar";
@@ -1878,6 +2098,7 @@
 
   function renderSettingsBar(){
     profInput.value = state.profBonus;
+    if(levelInput) levelInput.value = state.level || 1;
     initInput.value = state.initBonus || 0;
     Array.prototype.forEach.call(modeGroup.querySelectorAll("button"), function(b){
       b.classList.toggle("active", b.getAttribute("data-mode") === state.mode);
@@ -3012,6 +3233,11 @@
       text: "Every player's HP at a glance: a health bar, current / max (plus any temp HP), whether they're Bloodied, Down (with their death save pips), Stable or Dead, and who's concentrating on what. It updates live as players take damage, and clicking a row opens that player's sheet."
     },
     {
+      targetSelector: "#level-label",
+      title: "Level",
+      text: "Set this to your character's level (1–20). Your Proficiency Bonus follows it automatically — change the level and the bonus updates to match, including everywhere it's used on the sheet. You can still type over Proficiency Bonus yourself if you ever need to, until the next time the level changes."
+    },
+    {
       targetSelector: "#prof-bonus-label",
       title: "Proficiency Bonus",
       text: "Set this to your character's current proficiency bonus. It's used automatically anywhere proficiency applies — skill checks, saving throws, and attack rolls with a prof checkbox checked — so you only have to update it here as you level up instead of hunting down every roll on the sheet."
@@ -3048,9 +3274,14 @@
       text: "Only visible on the DM tab. Turn this on and every new roll you make is hidden from the rest of the group — they'll see a \"Hidden roll\" entry in the log instead of the details. Handy for secret checks, like a Perception roll a player shouldn't know they failed. Only your own signed-in DM account can toggle it."
     },
     {
+      targetSelector: "#class-panel",
+      title: "Class & Subclass",
+      text: "Pick your class here, and your subclass once your level is high enough to have one (Cleric, Sorcerer and Warlock at level 1, Druid and Wizard at level 2, everyone else at level 3). Subclasses are grouped by the official book they come from, and Custom… lets you type in anything homebrew. Apply class defaults ticks your class's saving-throw proficiencies and sets your spellcasting ability — it only ever adds, so it won't undo anything you've set. Your class also decides your hit die, shown in the Hit Points card."
+    },
+    {
       targetSelector: "#hp-main",
       title: "Hit Points",
-      text: "Type your Max HP in by hand (the second box), then use the Amount box with Damage, Heal and Temp HP. Damage burns through temp HP first, healing stops at your max, and temp HP doesn't stack — you keep the higher number. Drop to 0 and a Death Saves box appears: Death Save rolls a d20 (10 or more succeeds, a 1 is two failures, a 20 puts you back up at 1 HP), taking damage while down adds a failure, and you can click any pip to correct it. Damage taken, healing and every death save land in your roll log."
+      text: "Type your Max HP in by hand (the second box), then use the Amount box with Damage, Heal and Temp HP. Damage burns through temp HP first, healing stops at your max, and temp HP doesn't stack — you keep the higher number. Drop to 0 and a Death Saves box appears: Death Save rolls a d20 (10 or more succeeds, a 1 is two failures, a 20 puts you back up at 1 HP), taking damage while down adds a failure, and you can click any pip to correct it. Once you've picked a class, a Hit Dice row appears: Spend Hit Die rolls your class's die, adds your Constitution modifier and heals you, and the Left box tracks how many you have. Damage taken, healing, hit dice and every death save land in your roll log."
     },
     {
       targetSelector: "#conc-row",
@@ -4017,6 +4248,7 @@
     renderCombat();
     renderTabs();
     renderSettingsBar();
+    renderClass();
     renderHp();
     renderAbilities();
     renderAttacks();
@@ -4093,6 +4325,11 @@
       if(typeof c.concOn !== "boolean") c.concOn = false;
       if(typeof c.concSpell !== "string") c.concSpell = "";
       if(c.concMode !== "adv" && c.concMode !== "dis") c.concMode = "normal";
+      if(typeof c.level !== "number" || isNaN(c.level) || c.level < 1) c.level = 1;
+      if(c.level > 20) c.level = 20;
+      ["charClass","charClassCustom","charSubclass","charSubclassCustom"].forEach(function(k){ if(typeof c[k] !== "string") c[k] = ""; });
+      if(["d6","d8","d10","d12"].indexOf(c.hitDieCustom) === -1) c.hitDieCustom = "d8";
+      if(typeof c.hitDiceSpent !== "number" || isNaN(c.hitDiceSpent) || c.hitDiceSpent < 0) c.hitDiceSpent = 0;
       app.characters[i] = c;
       if(i === app.activeIndex){
         state = c;
