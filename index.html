@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.64.2</title>
+<title>Roll Tracker V1.65.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -771,7 +771,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.64.2</div>
+      <div class="version-tag" id="version-tag">Version 1.65.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1624,20 +1624,20 @@
   // die: hit die; saves: saving-throw proficiencies; spell: spellcasting ability (if the class itself casts);
   // sub: level the subclass is chosen at; subs: [name, book]
   var CLASS_INFO = {
-    Artificer:{die:"d8", saves:["CON","INT"], spell:"INT", sub:3, subs:[["Alchemist","TCoE"],["Artillerist","TCoE"],["Battle Smith","TCoE"],["Armorer","TCoE"]]},
+    Artificer:{die:"d8", saves:["CON","INT"], spell:"INT", sub:3, subs:[["Alchemist","TCoE"],["Armorer","TCoE"],["Artillerist","TCoE"],["Battle Smith","TCoE"]]},
     Barbarian:{die:"d12", saves:["STR","CON"], spell:null, sub:3, subs:[["Path of the Berserker","PHB"],["Path of the Totem Warrior","PHB"],["Path of the Battlerager","SCAG"],["Path of the Ancestral Guardian","XGtE"],["Path of the Storm Herald","XGtE"],["Path of the Zealot","XGtE"],["Path of the Beast","TCoE"],["Path of Wild Magic","TCoE"],["Path of the Giant","BPGotG"]]},
     Bard:{die:"d8", saves:["DEX","CHA"], spell:"CHA", sub:3, subs:[["College of Lore","PHB"],["College of Valor","PHB"],["College of Glamour","XGtE"],["College of Swords","XGtE"],["College of Whispers","XGtE"],["College of Eloquence","MOoT"],["College of Creation","TCoE"],["College of Spirits","VRGtR"]]},
     "Blood Hunter":{die:"d10", saves:["DEX","INT"], spell:null, sub:3, subs:[["Order of the Ghostslayer","HB"],["Order of the Lycan","HB"],["Order of the Mutant","HB"],["Order of the Profane Soul","HB"]]},
     Cleric:{die:"d8", saves:["WIS","CHA"], spell:"WIS", sub:1, subs:[["Knowledge Domain","PHB"],["Life Domain","PHB"],["Light Domain","PHB"],["Nature Domain","PHB"],["Tempest Domain","PHB"],["Trickery Domain","PHB"],["War Domain","PHB"],["Death Domain","DMG"],["Arcana Domain","SCAG"],["Forge Domain","XGtE"],["Grave Domain","XGtE"],["Order Domain","GGtR"],["Peace Domain","TCoE"],["Twilight Domain","TCoE"]]},
     Druid:{die:"d8", saves:["INT","WIS"], spell:"WIS", sub:2, subs:[["Circle of the Land","PHB"],["Circle of the Moon","PHB"],["Circle of Dreams","XGtE"],["Circle of the Shepherd","XGtE"],["Circle of Spores","GGtR"],["Circle of Stars","TCoE"],["Circle of Wildfire","TCoE"]]},
-    Fighter:{die:"d10", saves:["STR","CON"], spell:null, sub:3, subs:[["Champion","PHB"],["Battle Master","PHB"],["Eldritch Knight","PHB"],["Purple Dragon Knight","SCAG"],["Arcane Archer","XGtE"],["Cavalier","XGtE"],["Samurai","XGtE"],["Echo Knight","EGtW"],["Psi Warrior","TCoE"],["Rune Knight","TCoE"]]},
-    Monk:{die:"d8", saves:["STR","DEX"], spell:null, sub:3, subs:[["Way of the Open Hand","PHB"],["Way of Shadow","PHB"],["Way of the Four Elements","PHB"],["Way of the Long Death","SCAG"],["Way of the Sun Soul","TCoE"],["Way of the Drunken Master","XGtE"],["Way of the Kensei","XGtE"],["Way of Mercy","TCoE"],["Way of the Astral Self","TCoE"],["Way of the Ascendant Dragon","FToD"]]},
+    Fighter:{die:"d10", saves:["STR","CON"], spell:null, sub:3, subs:[["Battle Master","PHB"],["Champion","PHB"],["Eldritch Knight","PHB"],["Purple Dragon Knight","SCAG"],["Arcane Archer","XGtE"],["Cavalier","XGtE"],["Samurai","XGtE"],["Echo Knight","EGtW"],["Psi Warrior","TCoE"],["Rune Knight","TCoE"]]},
+    Monk:{die:"d8", saves:["STR","DEX"], spell:null, sub:3, subs:[["Way of Shadow","PHB"],["Way of the Four Elements","PHB"],["Way of the Open Hand","PHB"],["Way of the Long Death","SCAG"],["Way of the Drunken Master","XGtE"],["Way of the Kensei","XGtE"],["Way of Mercy","TCoE"],["Way of the Astral Self","TCoE"],["Way of the Sun Soul","TCoE"],["Way of the Ascendant Dragon","FToD"]]},
     Paladin:{die:"d10", saves:["WIS","CHA"], spell:"CHA", sub:3, subs:[["Oath of Devotion","PHB"],["Oath of the Ancients","PHB"],["Oath of Vengeance","PHB"],["Oathbreaker","DMG"],["Oath of the Crown","SCAG"],["Oath of Conquest","XGtE"],["Oath of Redemption","XGtE"],["Oath of Glory","MOoT"],["Oath of the Watchers","TCoE"]]},
-    Ranger:{die:"d10", saves:["STR","DEX"], spell:"WIS", sub:3, subs:[["Hunter","PHB"],["Beast Master","PHB"],["Gloom Stalker","XGtE"],["Horizon Walker","XGtE"],["Monster Slayer","XGtE"],["Fey Wanderer","TCoE"],["Swarmkeeper","TCoE"],["Drakewarden","FToD"]]},
-    Rogue:{die:"d8", saves:["DEX","INT"], spell:null, sub:3, subs:[["Thief","PHB"],["Assassin","PHB"],["Arcane Trickster","PHB"],["Mastermind","XGtE"],["Swashbuckler","XGtE"],["Inquisitive","XGtE"],["Scout","XGtE"],["Phantom","TCoE"],["Soulknife","TCoE"]]},
+    Ranger:{die:"d10", saves:["STR","DEX"], spell:"WIS", sub:3, subs:[["Beast Master","PHB"],["Hunter","PHB"],["Gloom Stalker","XGtE"],["Horizon Walker","XGtE"],["Monster Slayer","XGtE"],["Fey Wanderer","TCoE"],["Swarmkeeper","TCoE"],["Drakewarden","FToD"]]},
+    Rogue:{die:"d8", saves:["DEX","INT"], spell:null, sub:3, subs:[["Arcane Trickster","PHB"],["Assassin","PHB"],["Thief","PHB"],["Inquisitive","XGtE"],["Mastermind","XGtE"],["Scout","XGtE"],["Swashbuckler","XGtE"],["Phantom","TCoE"],["Soulknife","TCoE"]]},
     Sorcerer:{die:"d6", saves:["CON","CHA"], spell:"CHA", sub:1, subs:[["Draconic Bloodline","PHB"],["Wild Magic","PHB"],["Storm Sorcery","SCAG"],["Divine Soul","XGtE"],["Shadow Magic","XGtE"],["Aberrant Mind","TCoE"],["Clockwork Soul","TCoE"],["Lunar Sorcery","DSotDQ"]]},
     Warlock:{die:"d8", saves:["WIS","CHA"], spell:"CHA", sub:1, subs:[["The Archfey","PHB"],["The Fiend","PHB"],["The Great Old One","PHB"],["The Undying","SCAG"],["The Celestial","XGtE"],["The Hexblade","XGtE"],["The Fathomless","TCoE"],["The Genie","TCoE"],["The Undead","VRGtR"]]},
-    Wizard:{die:"d6", saves:["INT","WIS"], spell:"INT", sub:2, subs:[["School of Abjuration","PHB"],["School of Conjuration","PHB"],["School of Divination","PHB"],["School of Enchantment","PHB"],["School of Evocation","PHB"],["School of Illusion","PHB"],["School of Necromancy","PHB"],["School of Transmutation","PHB"],["Bladesinging","TCoE"],["War Magic","XGtE"],["Chronurgy Magic","EGtW"],["Graviturgy Magic","EGtW"],["Order of Scribes","TCoE"]]}
+    Wizard:{die:"d6", saves:["INT","WIS"], spell:"INT", sub:2, subs:[["School of Abjuration","PHB"],["School of Conjuration","PHB"],["School of Divination","PHB"],["School of Enchantment","PHB"],["School of Evocation","PHB"],["School of Illusion","PHB"],["School of Necromancy","PHB"],["School of Transmutation","PHB"],["War Magic","XGtE"],["Chronurgy Magic","EGtW"],["Graviturgy Magic","EGtW"],["Bladesinging","TCoE"],["Order of Scribes","TCoE"]]}
   };
   var CUSTOM_CHOICE = "__custom__";
   function profForLevel(lvl){ return 2 + Math.floor((Math.max(1, Math.min(20, lvl)) - 1) / 4); }
@@ -1712,7 +1712,7 @@
     state.profBonus = profForLevel(v);   // proficiency bonus always follows level
     var pb = document.getElementById("prof-bonus"); if(pb) pb.value = state.profBonus;
     saveState();
-    renderClass(); renderHp(); renderAttacks(); renderParty();
+    renderClass(); renderHp(); renderAttacks(); renderSpells(); renderParty();
   });
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
@@ -2803,6 +2803,16 @@
     renderSpells();
   });
 
+  // Cantrips scale with character level: 1 die, 2 at 5th, 3 at 11th, 4 at 17th.
+  function isCantripPreset(pr){ return !!(pr && pr.category && pr.category.indexOf("Cantrip") !== -1); }
+  function cantripDice(pr, sp){
+    var base = (pr.hpToggle && sp.notFullHp && pr.altDice) ? pr.altDice : pr.dice;
+    var m = /^\d+d(\d+)$/.exec(base);
+    if(!m) return base;
+    var lvl = state.level || 1;
+    var n = 1 + (lvl >= 5 ? 1 : 0) + (lvl >= 11 ? 1 : 0) + (lvl >= 17 ? 1 : 0);
+    return n + "d" + m[1];
+  }
   function renderSpells(){
     spellsEl.innerHTML = "";
     state.spells.forEach(function(sp, idx){
@@ -2995,9 +3005,14 @@
       var diceInput = document.createElement("input");
       diceInput.type = "text";
       diceInput.className = "dice";
+      if(isCantripPreset(currentSpell)) sp.dice = state.spells[idx].dice = cantripDice(currentSpell, sp);
       diceInput.value = sp.dice || "";
       diceInput.placeholder = "1d6";
       diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4.";
+      if(isCantripPreset(currentSpell)){
+        diceInput.readOnly = true;
+        diceInput.title = "Cantrip damage follows your Level (1 die, 2 at 5th, 3 at 11th, 4 at 17th). Switch the spell to Custom to type your own dice.";
+      }
       diceInput.addEventListener("input", function(){
         state.spells[idx].dice = diceInput.value;
         saveState();
