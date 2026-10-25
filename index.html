@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.64.1</title>
+<title>Roll Tracker V1.64.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -771,7 +771,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.64.1</div>
+      <div class="version-tag" id="version-tag">Version 1.64.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1619,7 +1619,8 @@
     VRGtR:"Van Richten's Guide to Ravenloft", FToD:"Fizban's Treasury of Dragons",
     DSotDQ:"Dragonlance: Shadow of the Dragon Queen", BPGotG:"Bigby Presents: Glory of the Giants", HB:"Homebrew (Matt Mercer, unofficial)"
   };
-  var CLASS_ORDER = ["Artificer","Barbarian","Bard","Blood Hunter","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
+  var CLASS_ORDER = ["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
+  var HOMEBREW_CLASSES = ["Blood Hunter"];
   // die: hit die; saves: saving-throw proficiencies; spell: spellcasting ability (if the class itself casts);
   // sub: level the subclass is chosen at; subs: [name, book]
   var CLASS_INFO = {
@@ -1671,6 +1672,9 @@
     classSelectEl.innerHTML = "";
     classSelectEl.appendChild(opt("", "— Choose —", !state.charClass));
     CLASS_ORDER.forEach(function(n){ classSelectEl.appendChild(opt(n, n, state.charClass === n)); });
+    var hbGroup = document.createElement("optgroup"); hbGroup.label = "Homebrew (unofficial)";
+    HOMEBREW_CLASSES.forEach(function(n){ hbGroup.appendChild(opt(n, n, state.charClass === n)); });
+    classSelectEl.appendChild(hbGroup);
     classSelectEl.appendChild(opt(CUSTOM_CHOICE, "Custom…", state.charClass === CUSTOM_CHOICE));
     var isCustomClass = state.charClass === CUSTOM_CHOICE, info = CLASS_INFO[state.charClass];
     classCustomEl.style.display = isCustomClass ? "" : "none";
