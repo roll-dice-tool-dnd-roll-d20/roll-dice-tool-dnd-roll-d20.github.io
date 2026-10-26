@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.65.0</title>
+<title>Roll Tracker V1.66.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -771,7 +771,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.65.0</div>
+      <div class="version-tag" id="version-tag">Version 1.66.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1706,10 +1706,34 @@
     classDefaultsBtn.parentNode.style.display = info ? "" : "none";
   }
 
+  // Non-casters start without the blank default spell row; casters get one back.
+  // true = casts, false = doesn't, null = unknown (custom class) -> leave spells alone.
+  function classCasts(){
+    var info = CLASS_INFO[state.charClass];
+    if(!info) return null;
+    if(info.spell) return true;
+    var sc = state.charSubclass, unlocked = (state.level || 1) >= info.sub;
+    if(unlocked && (sc === "Eldritch Knight" || sc === "Arcane Trickster" || sc === "Order of the Profane Soul")) return true;
+    return false;
+  }
+  function isBlankSpell(sp){
+    return sp && (sp.preset || "custom") === "custom" && sp.name === "New Spell" && sp.dice === "1d6" && !(sp.dmgBonus) && !sp.notes;
+  }
+  function syncDefaultSpell(){
+    var casts = classCasts();
+    if(casts === null) return false;
+    if(!casts && state.spells.length === 1 && isBlankSpell(state.spells[0])){ state.spells = []; return true; }
+    if(casts && state.spells.length === 0){
+      state.spells.push({preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false, notFullHp:false, notes:""});
+      return true;
+    }
+    return false;
+  }
   levelInput.addEventListener("change", function(){
     var v = Math.max(1, Math.min(20, parseInt(levelInput.value, 10) || 1));
     state.level = v;
     state.profBonus = profForLevel(v);   // proficiency bonus always follows level
+    syncDefaultSpell();
     var pb = document.getElementById("prof-bonus"); if(pb) pb.value = state.profBonus;
     saveState();
     renderClass(); renderHp(); renderAttacks(); renderSpells(); renderParty();
@@ -1717,12 +1741,14 @@
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
     state.charSubclass = ""; classDefaultsNote.textContent = "";
-    saveState(); renderClass(); renderHp(); renderParty();
+    syncDefaultSpell();
+    saveState(); renderClass(); renderHp(); renderSpells(); renderParty();
   });
   classCustomEl.addEventListener("input", function(){ state.charClassCustom = classCustomEl.value; saveState(); renderParty(); });
   subclassSelectEl.addEventListener("change", function(){
     state.charSubclass = subclassSelectEl.value; classDefaultsNote.textContent = "";
-    saveState(); renderClass(); renderParty();
+    syncDefaultSpell();
+    saveState(); renderClass(); renderSpells(); renderParty();
   });
   subclassCustomEl.addEventListener("input", function(){ state.charSubclassCustom = subclassCustomEl.value; saveState(); renderParty(); });
 
@@ -1738,6 +1764,8 @@
     if(!spell && (state.charSubclass === "Eldritch Knight" || state.charSubclass === "Arcane Trickster") && (state.level || 1) >= info.sub) spell = "INT";
     if(!spell && state.charSubclass === "Eldritch Knight") spell = "INT";
     if(spell){ state.spellAbility = spell; done.push("spellcasting ability " + spell); }
+    var hadSpells = state.spells.length;
+    if(syncDefaultSpell()) done.push(state.spells.length < hadSpells ? "blank spell row removed" : "spell row added");
     saveState();
     renderAbilities(); renderSpellAbilitySelect(); renderSpells();
     classDefaultsNote.textContent = "Applied: " + done.join(", ") + ".";
