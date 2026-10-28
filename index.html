@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.67.0</title>
+<title>Roll Tracker V1.67.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -778,7 +778,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.67.0</div>
+      <div class="version-tag" id="version-tag">Version 1.67.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1412,6 +1412,7 @@
   function renderBuffs(){
     if(!buffsEl) return;
     buffsEl.innerHTML = "";
+    if(!Array.isArray(state.buffs)) state.buffs = [];
     (state.buffs || []).forEach(function(b, i){
       var row = document.createElement("div");
       row.className = "buff-row" + (b.on ? "" : " off");
@@ -1429,6 +1430,7 @@
     });
   }
   document.getElementById("add-buff").addEventListener("click", function(){
+    if(!Array.isArray(state.buffs)) state.buffs = [];
     state.buffs.push({name: "", dice: "1d6", on: true});
     saveState(); renderBuffs(); renderAttacks(); renderSpells();
   });
@@ -3431,6 +3433,11 @@
       text: "Check \"prof\" if you're proficient in a skill, or \"exp\" for Expertise (double proficiency) — checking exp automatically checks prof too, and unchecking prof turns exp back off. Each skill's Roll button adds your modifier plus proficiency (and expertise, if checked) automatically."
     },
     {
+      targetSelector: "#buffs-panel",
+      title: "Bonus Damage (Active Buffs)",
+      text: "For extra damage that rides along on your hits, like Hunter's Mark or a smite. Click + Add Bonus Damage, name it, and type its dice (a flat number works too, like 1d6+2). Tick it on and it's added to every attack that has + buffs ticked, until you turn it off. It doesn't switch off on its own when concentration drops, since you may be concentrating on something else. Weapons have + buffs ticked by default; spells start unticked. A crit doubles the buff's dice, and Half Damage halves the combined total.",
+    },
+    {
       // Scoped to #attacks specifically — the Spells section below reuses the same
       // .attack-top class for its own rows, which would otherwise get highlighted too.
       targetSelector: "#attacks .attack-top",
@@ -4455,6 +4462,10 @@
       if(typeof c.initBonus === "undefined") c.initBonus = 0;
       ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
       if(typeof c.concOn !== "boolean") c.concOn = false;
+      if(!Array.isArray(c.buffs)) c.buffs = [];
+      c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
+        return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
+      });
       if(typeof c.concSpell !== "string") c.concSpell = "";
       if(c.concMode !== "adv" && c.concMode !== "dis") c.concMode = "normal";
       if(typeof c.level !== "number" || isNaN(c.level) || c.level < 1) c.level = 1;
