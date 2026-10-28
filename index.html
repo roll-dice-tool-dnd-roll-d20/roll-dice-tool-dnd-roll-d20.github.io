@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.66.0</title>
+<title>Roll Tracker V1.67.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -612,6 +612,13 @@
   .attack-tracking-fields.tutorial-highlight{color:var(--ink);}
   .attack-core-fields.tutorial-highlight label.prof,
   .attack-tracking-fields.tutorial-highlight label.prof{color:var(--ink);}
+  .buff-hint{font-size:13px;opacity:.75;margin:0 0 10px;}
+  .buff-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+  .buff-row input[type=text].buff-name{flex:1 1 140px;min-width:0;}
+  .buff-row input[type=text].buff-dice{width:90px;}
+  .buff-row.off input[type=text]{opacity:.55;}
+  #add-buff{background:none;border:1px dashed var(--border, #bbb);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;color:inherit;}
+  #add-buff:hover{border-color:var(--moss);color:var(--moss-dark);}
   #add-attack{
     font-family:-apple-system,"Segoe UI",sans-serif;
     width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;
@@ -771,7 +778,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.66.0</div>
+      <div class="version-tag" id="version-tag">Version 1.67.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -855,6 +862,13 @@
   <section class="panel">
     <h2>Ability Checks &amp; Saves</h2>
     <div id="abilities"></div>
+  </section>
+
+  <section class="panel" id="buffs-panel">
+    <h2>Bonus Damage (Active Buffs)</h2>
+    <p class="buff-hint">Extra damage that rides along on your hits, like Hunter's Mark or a smite. Tick one on and it's added to every attack that has "+ buffs" ticked. It stays on until you turn it off.</p>
+    <div id="buffs"></div>
+    <button id="add-buff">+ Add Bonus Damage</button>
   </section>
 
   <div class="grid">
@@ -1072,6 +1086,7 @@
     mode: "normal",
     critMode: false,
     halfMode: false,
+    buffs: [],
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1126,6 +1141,7 @@
     mode: "normal",
     critMode: false,
     halfMode: false,
+    buffs: [],
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1263,6 +1279,10 @@
     if(!c.mode) c.mode = "normal";
     if(typeof c.critMode !== "boolean") c.critMode = false;
     if(typeof c.halfMode !== "boolean") c.halfMode = false;
+    if(!Array.isArray(c.buffs)) c.buffs = [];
+    c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
+      return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
+    });
     ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
     if(typeof c.concOn !== "boolean") c.concOn = false;
     if(typeof c.concSpell !== "string") c.concSpell = "";
@@ -1362,6 +1382,65 @@
       partsArr.push(count + "d" + g.sides + "(" + rolls.join(",") + ")");
     });
     return {total: total, partsStr: partsArr.join(" + ")};
+  }
+
+  // ---------- Shared bonus damage (Hunter's Mark, smites, etc.) ----------
+  // A buff's damage text may mix dice and flat numbers, e.g. "1d6", "2d8", "1d6+2".
+  function parseBuffDamage(str){
+    var groups = parseDiceGroups(str) || [];
+    var rest = String(str || "").replace(/(\d+)\s*d\s*(\d+)/ig, " ");
+    var flat = 0, m, re = /([+-]?)\s*(\d+)/g;
+    while((m = re.exec(rest))) flat += (m[1] === "-" ? -1 : 1) * parseInt(m[2], 10);
+    return {groups: groups, flat: flat};
+  }
+  // Adds every ticked buff to a damage total and its log string. Dice double on a crit like any damage dice.
+  function applyBuffs(total, partsStr, isCrit, enabled){
+    if(!enabled) return {total: total, partsStr: partsStr};
+    (state.buffs || []).forEach(function(b){
+      if(!b.on) return;
+      var pd = parseBuffDamage(b.dice);
+      if(!pd.groups.length && !pd.flat) return;
+      var sub = [], t = 0;
+      if(pd.groups.length){ var r = rollDiceGroups(pd.groups, isCrit); t += r.total; sub.push(r.partsStr); }
+      if(pd.flat){ t += pd.flat; sub.push(String(pd.flat)); }
+      total += t;
+      partsStr += " + " + (b.name ? b.name + " " : "") + "[" + sub.join(" + ") + "]";
+    });
+    return {total: total, partsStr: partsStr};
+  }
+  var buffsEl = document.getElementById("buffs");
+  function renderBuffs(){
+    if(!buffsEl) return;
+    buffsEl.innerHTML = "";
+    (state.buffs || []).forEach(function(b, i){
+      var row = document.createElement("div");
+      row.className = "buff-row" + (b.on ? "" : " off");
+      var on = document.createElement("input"); on.type = "checkbox"; on.checked = !!b.on; on.title = "Add this to your hits";
+      on.addEventListener("change", function(){ state.buffs[i].on = on.checked; row.classList.toggle("off", !on.checked); saveState(); });
+      var name = document.createElement("input"); name.type = "text"; name.className = "buff-name"; name.placeholder = "Name (Hunter's Mark)"; name.value = b.name;
+      name.addEventListener("input", function(){ state.buffs[i].name = name.value; saveState(); });
+      var dice = document.createElement("input"); dice.type = "text"; dice.className = "buff-dice"; dice.placeholder = "1d6"; dice.value = b.dice;
+      dice.title = "Dice and/or a flat number, e.g. 1d6, 2d8, or 1d6+2.";
+      dice.addEventListener("input", function(){ state.buffs[i].dice = dice.value; saveState(); });
+      var del = document.createElement("button"); del.className = "del"; del.textContent = "✕"; del.title = "Remove";
+      del.addEventListener("click", function(){ state.buffs.splice(i, 1); saveState(); renderBuffs(); renderAttacks(); renderSpells(); });
+      row.appendChild(on); row.appendChild(name); row.appendChild(dice); row.appendChild(del);
+      buffsEl.appendChild(row);
+    });
+  }
+  document.getElementById("add-buff").addEventListener("click", function(){
+    state.buffs.push({name: "", dice: "1d6", on: true});
+    saveState(); renderBuffs(); renderAttacks(); renderSpells();
+  });
+  function buffTick(obj, isSpell, rerender){
+    if(!(state.buffs && state.buffs.length)) return null;
+    var label = document.createElement("label"); label.className = "prof";
+    var cb = document.createElement("input"); cb.type = "checkbox";
+    cb.checked = isSpell ? obj.useBuffs === true : obj.useBuffs !== false;
+    cb.title = "Include your active Bonus Damage buffs when rolling damage.";
+    cb.addEventListener("change", function(){ obj.useBuffs = cb.checked; saveState(); });
+    label.appendChild(cb); label.appendChild(document.createTextNode("+ buffs"));
+    return label;
   }
 
   // Order of the Lycan (Blood Hunter) scaling: Feral Might (melee damage, from 3rd level) and
@@ -2304,6 +2383,7 @@
   var attacksEl = document.getElementById("attacks");
 
   function renderAttacks(){
+    renderBuffs();
     attacksEl.innerHTML = "";
     state.attacks.forEach(function(atk, idx){
       var box = document.createElement("div");
@@ -2672,6 +2752,7 @@
         var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
         var total = rolled.total + freshDmgBonus + freshFeralBonus;
         var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "");
+        var bfW = applyBuffs(total, partsStr, isCrit, a.useBuffs !== false); total = bfW.total; partsStr = bfW.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
         addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
 
@@ -2772,6 +2853,7 @@
       coreFields.appendChild(diceLabel);
       if(versatileLabel) coreFields.appendChild(versatileLabel);
       coreFields.appendChild(dmgBonusLabel);
+      var tickW = buffTick(state.attacks[idx], false); if(tickW) coreFields.appendChild(tickW);
       fields.appendChild(coreFields);
 
       // Blood Hunter-specific fields (niche) — kept outside the core group, right after it.
@@ -3121,6 +3203,7 @@
         var rolled = rollDiceGroups(parsed, isCrit);
         var total = rolled.total + (s.dmgBonus || 0);
         var partsStr = rolled.partsStr + " + " + (s.dmgBonus||0);
+        var bfS = applyBuffs(total, partsStr, isCrit, s.useBuffs === true); total = bfS.total; partsStr = bfS.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
         addLog(s.name + " Damage" + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
         if(wasArmed){
@@ -3136,6 +3219,7 @@
       coreFields.appendChild(diceLabel);
       if(hpToggleLabel) coreFields.appendChild(hpToggleLabel);
       coreFields.appendChild(dmgBonusLabel);
+      var tickS = buffTick(state.spells[idx], true); if(tickS) coreFields.appendChild(tickS);
       fields.appendChild(coreFields);
 
       var rollButtons = document.createElement("div");
