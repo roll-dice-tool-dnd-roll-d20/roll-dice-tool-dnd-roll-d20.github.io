@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.67.1</title>
+<title>Roll Tracker V1.68.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -778,7 +778,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.67.1</div>
+      <div class="version-tag" id="version-tag">Version 1.68.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -817,6 +817,10 @@
       <label id="subclass-label">Subclass <select id="subclass-select"></select></label>
       <input type="text" id="subclass-custom" placeholder="Custom subclass" maxlength="50" style="display:none;">
       <span class="conc-mode-label" id="subclass-hint" style="display:none;"></span>
+    </div>
+    <div class="hp-row" id="fstyle-row" style="display:none;">
+      <label>Fighting Style <select id="fstyle-select"></select></label>
+      <span class="conc-mode-label" id="fstyle-hint"></span>
     </div>
     <div class="hp-row" id="class-defaults-row" style="margin-bottom:0;">
       <button type="button" class="hp-btn" id="class-defaults-btn" title="Ticks this class's saving-throw proficiencies and sets your spellcasting ability if it's a spellcasting class. Never unticks anything.">Apply class defaults</button>
@@ -1087,6 +1091,7 @@
     critMode: false,
     halfMode: false,
     buffs: [],
+    fightingStyle: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1142,6 +1147,7 @@
     critMode: false,
     halfMode: false,
     buffs: [],
+    fightingStyle: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1279,6 +1285,7 @@
     if(!c.mode) c.mode = "normal";
     if(typeof c.critMode !== "boolean") c.critMode = false;
     if(typeof c.halfMode !== "boolean") c.halfMode = false;
+    if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
     if(!Array.isArray(c.buffs)) c.buffs = [];
     c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
       return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
@@ -1746,9 +1753,29 @@
   function opt(value, text, selected){
     var o = document.createElement("option"); o.value = value; o.textContent = text; if(selected) o.selected = true; return o;
   }
+  // Fighting styles unlock at the level each class gets the Fighting Style feature.
+  var FIGHTING_STYLE_LEVEL = {Fighter:1, Paladin:2, Ranger:2};
+  var FIGHTING_STYLES = [["", "None"], ["twf", "Two-Weapon Fighting"]];
+  function fightingStyleAvailable(c){
+    c = c || state;
+    var lvl = FIGHTING_STYLE_LEVEL[c.charClass];
+    return !!lvl && (c.level || 1) >= lvl;
+  }
+  function activeFightingStyle(){ return fightingStyleAvailable() ? (state.fightingStyle || "") : ""; }
+  function renderFightingStyle(){
+    var row = document.getElementById("fstyle-row"), sel = document.getElementById("fstyle-select");
+    if(!row || !sel) return;
+    var avail = fightingStyleAvailable();
+    row.style.display = avail ? "" : "none";
+    if(!avail) return;
+    sel.innerHTML = "";
+    FIGHTING_STYLES.forEach(function(f){ sel.appendChild(opt(f[0], f[1], (state.fightingStyle || "") === f[0])); });
+    document.getElementById("fstyle-hint").textContent = state.fightingStyle === "twf" ? "Off-hand attacks add your ability modifier to damage." : "";
+  }
   function renderClass(){
     if(!classSelectEl) return;
     levelInput.value = state.level || 1;
+    renderFightingStyle();
     // class dropdown
     classSelectEl.innerHTML = "";
     classSelectEl.appendChild(opt("", "— Choose —", !state.charClass));
@@ -1818,6 +1845,10 @@
     var pb = document.getElementById("prof-bonus"); if(pb) pb.value = state.profBonus;
     saveState();
     renderClass(); renderHp(); renderAttacks(); renderSpells(); renderParty();
+  });
+  document.getElementById("fstyle-select").addEventListener("change", function(){
+    state.fightingStyle = this.value;
+    saveState(); renderFightingStyle(); renderAttacks();
   });
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
@@ -2751,12 +2782,22 @@
         var isCrit = !!state.critMode || wasArmed;
         var rolled = rollDiceGroups(parsed, isCrit);
         var freshDmgBonus = a.dmgBonus || 0;
+        var offNote = "";
+        if(a.offhand){
+          if(activeFightingStyle() === "twf"){ offNote = " (Off-hand, TWF)"; }
+          else {
+            // Without the style, the off-hand attack drops a positive ability modifier from damage.
+            var offMod = computeAbilityBonus(a.preset || "custom");
+            if(offMod !== null && offMod > 0) freshDmgBonus -= offMod;
+            offNote = " (Off-hand)";
+          }
+        }
         var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
         var total = rolled.total + freshDmgBonus + freshFeralBonus;
         var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "");
         var bfW = applyBuffs(total, partsStr, isCrit, a.useBuffs !== false); total = bfW.total; partsStr = bfW.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
-        addLog(a.name + " Damage" + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
+        addLog(a.name + " Damage" + offNote + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
 
         // The nat-20 crit is one-time: spend it now. (The manual Crit toggle is separate and stays on.)
         if(wasArmed){
@@ -2856,7 +2897,22 @@
       if(versatileLabel) coreFields.appendChild(versatileLabel);
       coreFields.appendChild(dmgBonusLabel);
       var tickW = buffTick(state.attacks[idx], false); if(tickW) coreFields.appendChild(tickW);
+      var offLabel = document.createElement("label"); offLabel.className = "prof";
+      var offCb = document.createElement("input"); offCb.type = "checkbox"; offCb.checked = !!atk.offhand;
+      offCb.title = "Bonus-action off-hand attack with a second weapon. Both weapons must be Light unless you have Dual Wielder.";
+      offCb.addEventListener("change", function(){ state.attacks[idx].offhand = offCb.checked; saveState(); renderAttacks(); });
+      offLabel.appendChild(offCb); offLabel.appendChild(document.createTextNode("off-hand"));
+      coreFields.appendChild(offLabel);
       fields.appendChild(coreFields);
+      if(atk.offhand){
+        var offNoteEl = document.createElement("div"); offNoteEl.className = "conc-mode-label";
+        offNoteEl.style.margin = "4px 0";
+        offNoteEl.textContent = (activeFightingStyle() === "twf"
+          ? "Off-hand: your ability modifier is added to damage (Two-Weapon Fighting). "
+          : "Off-hand: no ability modifier on damage without the Two-Weapon Fighting style. ")
+          + "Both weapons must be Light unless you have Dual Wielder.";
+        fields.appendChild(offNoteEl);
+      }
 
       // Blood Hunter-specific fields (niche) — kept outside the core group, right after it.
       if(lycanLevelLabel) fields.appendChild(lycanLevelLabel);
@@ -3431,6 +3487,12 @@
       targetSelector: ".skills-wrap",
       title: "Skills: Proficiency & Expertise",
       text: "Check \"prof\" if you're proficient in a skill, or \"exp\" for Expertise (double proficiency) — checking exp automatically checks prof too, and unchecking prof turns exp back off. Each skill's Roll button adds your modifier plus proficiency (and expertise, if checked) automatically."
+    },
+    {
+      targetSelector: "#fstyle-row",
+      title: "Fighting Style",
+      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2. Pick Two-Weapon Fighting and your off-hand attacks add your ability modifier to damage. Tick the off-hand box on a weapon to roll its Damage as the bonus-action attack. Without the style, an off-hand attack drops that modifier, like the rules say. Both weapons need to be Light unless you have Dual Wielder.",
+      showIf: function(){ return fightingStyleAvailable(); },
     },
     {
       targetSelector: "#buffs-panel",
@@ -4462,6 +4524,7 @@
       if(typeof c.initBonus === "undefined") c.initBonus = 0;
       ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
       if(typeof c.concOn !== "boolean") c.concOn = false;
+      if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
       if(!Array.isArray(c.buffs)) c.buffs = [];
       c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
         return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
