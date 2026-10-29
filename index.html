@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.69.0</title>
+<title>Roll Tracker V1.70.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -404,6 +404,10 @@
   .party-name{font-weight:700;color:#fff;padding:3px 8px;border-radius:6px;font-size:0.78rem;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .party-hp{min-width:0;}
   .party-hp .hp-bar{margin:0 0 2px;height:8px;}
+  .ac-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+  .ac-total{min-width:64px;height:64px;border-radius:12px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:var(--ink);background:var(--bg);}
+  .ac-breakdown{color:var(--ink-soft);font-size:0.9rem;}
+  .ac-panel .conc-mode-label{display:block;margin-top:2px;}
   .party-nums{font-size:0.78rem;color:var(--ink-soft);}
   .party-badges{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
   .party-conc{grid-column:2 / 4;font-size:0.76rem;color:#4f86b5;}
@@ -778,7 +782,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.69.0</div>
+      <div class="version-tag" id="version-tag">Version 1.70.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -865,6 +869,27 @@
         <button type="button" data-mode="adv">Adv</button>
       </div>
     </div>
+  </section>
+
+  <section class="panel ac-panel" id="ac-panel">
+    <h2>Armor Class</h2>
+    <div class="ac-top">
+      <div class="ac-total" id="ac-total">10</div>
+      <div class="ac-breakdown" id="ac-breakdown"></div>
+    </div>
+    <div class="hp-row">
+      <label>Armor <select id="ac-armor"></select></label>
+      <label class="prof"><input type="checkbox" id="ac-shield"> Shield (+2)</label>
+    </div>
+    <div class="hp-row" id="ac-custom-row" style="display:none;">
+      <label>Base AC <input type="number" id="ac-custom-base" inputmode="numeric"></label>
+      <label>Dex <select id="ac-custom-dex"><option value="full">full Dex</option><option value="max2">Dex (max +2)</option><option value="none">no Dex</option></select></label>
+    </div>
+    <div class="hp-row">
+      <label>Magic bonus <input type="number" id="ac-magic" inputmode="numeric"></label>
+      <label>Other bonus <input type="number" id="ac-other" inputmode="numeric"></label>
+    </div>
+    <div class="conc-mode-label" id="ac-notes"></div>
   </section>
 
   <section class="panel">
@@ -1088,6 +1113,34 @@
     ];
   }
 
+  // dex: "full" = whole Dex modifier, "max2" = capped at +2, "none" = no Dex.
+  var ARMORS = {
+    none:{label:"No armor", group:"Unarmored", base:10, dex:"full"},
+    magearmor:{label:"Mage Armor (13 + Dex)", group:"Unarmored", base:13, dex:"full"},
+    draconic:{label:"Draconic Resilience (13 + Dex)", group:"Unarmored", base:13, dex:"full"},
+    padded:{label:"Padded", group:"Light armor", base:11, dex:"full", stealth:true},
+    leather:{label:"Leather", group:"Light armor", base:11, dex:"full"},
+    studded:{label:"Studded Leather", group:"Light armor", base:12, dex:"full"},
+    hide:{label:"Hide", group:"Medium armor", base:12, dex:"max2"},
+    chainshirt:{label:"Chain Shirt", group:"Medium armor", base:13, dex:"max2"},
+    scale:{label:"Scale Mail", group:"Medium armor", base:14, dex:"max2", stealth:true},
+    breastplate:{label:"Breastplate", group:"Medium armor", base:14, dex:"max2"},
+    halfplate:{label:"Half Plate", group:"Medium armor", base:15, dex:"max2", stealth:true},
+    ringmail:{label:"Ring Mail", group:"Heavy armor", base:14, dex:"none", stealth:true},
+    chainmail:{label:"Chain Mail", group:"Heavy armor", base:16, dex:"none", stealth:true, str:13},
+    splint:{label:"Splint", group:"Heavy armor", base:17, dex:"none", stealth:true, str:15},
+    plate:{label:"Plate", group:"Heavy armor", base:18, dex:"none", stealth:true, str:15},
+    custom:{label:"Other / Custom armor…", group:"Other"}
+  };
+  var UNARMORED_KEYS = {none:1, magearmor:1, draconic:1};
+  function backfillAc(c){
+    if(!ARMORS[c.armor]) c.armor = "none";
+    c.shield = !!c.shield;
+    ["acMagic","acOther"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
+    if(typeof c.acCustomBase !== "number" || isNaN(c.acCustomBase)) c.acCustomBase = 10;
+    if(["full","max2","none"].indexOf(c.acCustomDex) === -1) c.acCustomDex = "full";
+  }
+
   var fullTemplate = {
     profBonus: 2,
     initBonus: 0,
@@ -1097,6 +1150,12 @@
     buffs: [],
     fightingStyle: "",
     fightingStyle2: "",
+    armor: "none",
+    shield: false,
+    acMagic: 0,
+    acOther: 0,
+    acCustomBase: 10,
+    acCustomDex: "full",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1154,6 +1213,12 @@
     buffs: [],
     fightingStyle: "",
     fightingStyle2: "",
+    armor: "none",
+    shield: false,
+    acMagic: 0,
+    acOther: 0,
+    acCustomBase: 10,
+    acCustomDex: "full",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1293,6 +1358,7 @@
     if(typeof c.halfMode !== "boolean") c.halfMode = false;
     if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
     if(typeof c.fightingStyle2 !== "string") c.fightingStyle2 = "";
+    backfillAc(c);
     if(!Array.isArray(c.buffs)) c.buffs = [];
     c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
       return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
@@ -1762,17 +1828,18 @@
   }
   // Fighting styles. Each class only gets its own list; Swords Bards pick from Dueling / Two-Weapon Fighting.
   var FIGHTING_STYLE_LEVEL = {Fighter:1, Paladin:2, Ranger:2};
-  var STYLE_NAMES = {archery:"Archery", dueling:"Dueling", thrown:"Thrown Weapon Fighting", twf:"Two-Weapon Fighting"};
+  var STYLE_NAMES = {archery:"Archery", defense:"Defense", dueling:"Dueling", thrown:"Thrown Weapon Fighting", twf:"Two-Weapon Fighting"};
   var STYLE_HINTS = {
     archery:"+2 to attack rolls with ranged weapons.",
+    defense:"+1 AC while you're wearing armor.",
     dueling:"+2 damage with a one-handed melee weapon and no weapon in your other hand.",
     thrown:"+2 damage with thrown weapon attacks (tick \"thrown\" on the attack).",
     twf:"Off-hand attacks add your ability modifier to damage."
   };
   var CLASS_STYLE_LISTS = {
-    Fighter:["archery","dueling","thrown","twf"],
-    Ranger:["archery","dueling","thrown","twf"],
-    Paladin:["dueling"]
+    Fighter:["archery","defense","dueling","thrown","twf"],
+    Ranger:["archery","defense","dueling","thrown","twf"],
+    Paladin:["defense","dueling"]
   };
   // Returns the list of styles this character can choose from, or null if they have no Fighting Style yet.
   function styleOptionsFor(c){
@@ -1787,12 +1854,13 @@
     return c.charClass === "Fighter" && c.charSubclass === "Champion" && (c.level || 1) >= 10;
   }
   function fightingStyleAvailable(c){ return styleOptionsFor(c) !== null; }
-  function activeStyles(){
-    var opts = styleOptionsFor();
+  function activeStyles(c){
+    c = c || state;
+    var opts = styleOptionsFor(c);
     if(!opts) return [];
     var out = [];
-    if(opts.indexOf(state.fightingStyle) !== -1) out.push(state.fightingStyle);
-    if(secondStyleAvailable() && opts.indexOf(state.fightingStyle2) !== -1 && state.fightingStyle2 !== state.fightingStyle) out.push(state.fightingStyle2);
+    if(opts.indexOf(c.fightingStyle) !== -1) out.push(c.fightingStyle);
+    if(secondStyleAvailable(c) && opts.indexOf(c.fightingStyle2) !== -1 && c.fightingStyle2 !== c.fightingStyle) out.push(c.fightingStyle2);
     return out;
   }
   function hasStyle(k){ return activeStyles().indexOf(k) !== -1; }
@@ -1827,9 +1895,9 @@
     if(key !== "custom" && pr){
       if(NON_WEAPON_PRESETS[key]) return null;
       var note = pr.note || "", cat = pr.category || "";
-      return {custom:false, ranged:/Ranged/.test(cat), twoHandedWeapon:/Two-Handed/.test(note), thrownProp:/Thrown/.test(note)};
+      return {custom:false, ranged:/Ranged/.test(cat), twoHandedWeapon:/Two-Handed(?! unless)/.test(note), thrownProp:/Thrown/.test(note)};
     }
-    return {custom:true, ranged:!!a.cRanged, twoHandedWeapon:!a.cOneHand, thrownProp:true};
+    return {custom:true, ranged:!!a.cRanged, twoHandedWeapon:!!a.cTwoHanded, thrownProp:true};
   }
   function styleAtkBonus(a){
     var t = weaponTraits(a);
@@ -1844,10 +1912,72 @@
     if(hasStyle("dueling") && !t.ranged && !t.twoHandedWeapon && !a.twoHanded && !a.offhand && !a.thrown) return {n:2, label:"Dueling"};
     return {n:0, label:""};
   }
+  // ---------- Armor Class ----------
+  function acCalc(c){
+    var mod = function(n){ var f = (c.abilities || []).filter(function(x){ return x.name === n; })[0]; return f ? (f.mod || 0) : 0; };
+    var key = ARMORS[c.armor] ? c.armor : "none";
+    var ar = key === "custom" ? {label:"Custom armor", base: c.acCustomBase || 0, dex: c.acCustomDex || "full"} : ARMORS[key];
+    var dex = mod("DEX"), notes = [];
+    var wearingArmor = !UNARMORED_KEYS[key];
+    var total = ar.base, parts = [ar.label + " " + ar.base];
+    var add = function(name, v){ if(!v) return; total += v; parts.push((v < 0 ? "− " : "+ ") + Math.abs(v) + " " + name); };
+    if(ar.dex === "full") add("Dex", dex);
+    else if(ar.dex === "max2") add("Dex", Math.min(dex, 2));
+    if(key === "none"){
+      if(c.charClass === "Barbarian"){ parts[0] = "Unarmored Defense (Barbarian) 10"; add("Con", mod("CON")); }
+      else if(c.charClass === "Monk"){
+        if(!c.shield){ parts[0] = "Unarmored Defense (Monk) 10"; add("Wis", mod("WIS")); }
+        else notes.push("A Monk's Unarmored Defense doesn't work with a shield.");
+      }
+    }
+    if(c.shield) add("Shield", 2);
+    if(wearingArmor && activeStyles(c).indexOf("defense") !== -1) add("Defense", 1);
+    add("magic", c.acMagic || 0);
+    add("other", c.acOther || 0);
+    if(ar.stealth) notes.push(ar.label + " gives disadvantage on Stealth checks.");
+    if(ar.str) notes.push(ar.label + " needs Strength " + ar.str + " or your speed drops by 10 feet.");
+    return {total: total, text: parts.join(" ") + (parts.length > 1 ? " = " + total : ""), notes: notes};
+  }
+  var acBuilt = false;
+  function renderAc(){
+    var sel = document.getElementById("ac-armor");
+    if(!sel) return;
+    if(!acBuilt){
+      var lastGroup = null, grp = null;
+      Object.keys(ARMORS).forEach(function(k){
+        if(ARMORS[k].group !== lastGroup){ grp = document.createElement("optgroup"); grp.label = ARMORS[k].group; sel.appendChild(grp); lastGroup = ARMORS[k].group; }
+        var o = document.createElement("option"); o.value = k; o.textContent = ARMORS[k].label; grp.appendChild(o);
+      });
+      acBuilt = true;
+    }
+    sel.value = ARMORS[state.armor] ? state.armor : "none";
+    document.getElementById("ac-shield").checked = !!state.shield;
+    document.getElementById("ac-custom-row").style.display = state.armor === "custom" ? "" : "none";
+    var setNum = function(id, v){ var el = document.getElementById(id); if(document.activeElement !== el) el.value = v; };
+    setNum("ac-custom-base", state.acCustomBase); setNum("ac-magic", state.acMagic || 0); setNum("ac-other", state.acOther || 0);
+    document.getElementById("ac-custom-dex").value = state.acCustomDex || "full";
+    var r = acCalc(state);
+    document.getElementById("ac-total").textContent = r.total;
+    document.getElementById("ac-breakdown").textContent = r.text;
+    document.getElementById("ac-notes").textContent = r.notes.join(" ");
+  }
+  function acChanged(){ saveState(); renderAc(); renderParty(); }
+  document.getElementById("ac-armor").addEventListener("change", function(){ state.armor = this.value; acChanged(); });
+  document.getElementById("ac-shield").addEventListener("change", function(){
+    state.shield = this.checked;
+    if(state.shield){ state.attacks.forEach(function(a){ a.twoHanded = false; a.offhand = false; }); }   // a shield fills the second hand
+    acChanged(); renderAttacks();
+  });
+  document.getElementById("ac-custom-base").addEventListener("input", function(){ state.acCustomBase = parseInt(this.value, 10) || 0; acChanged(); });
+  document.getElementById("ac-custom-dex").addEventListener("change", function(){ state.acCustomDex = this.value; acChanged(); });
+  document.getElementById("ac-magic").addEventListener("input", function(){ state.acMagic = parseInt(this.value, 10) || 0; acChanged(); });
+  document.getElementById("ac-other").addEventListener("input", function(){ state.acOther = parseInt(this.value, 10) || 0; acChanged(); });
+
   function renderClass(){
     if(!classSelectEl) return;
     levelInput.value = state.level || 1;
     renderFightingStyle();
+    renderAc();
     // class dropdown
     classSelectEl.innerHTML = "";
     classSelectEl.appendChild(opt("", "— Choose —", !state.charClass));
@@ -1921,11 +2051,11 @@
   document.getElementById("fstyle-select").addEventListener("change", function(){
     state.fightingStyle = this.value;
     if(state.fightingStyle2 === state.fightingStyle) state.fightingStyle2 = "";
-    saveState(); renderFightingStyle(); renderAttacks();
+    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderAttacks();
   });
   document.getElementById("fstyle2-select").addEventListener("change", function(){
     state.fightingStyle2 = this.value;
-    saveState(); renderFightingStyle(); renderAttacks();
+    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderAttacks();
   });
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
@@ -2229,7 +2359,7 @@
     var shown = 0, unset = [];
     app.characters.forEach(function(c, i){
       if(c.isDM) return;
-      if(!charHpReady(c) && !c.concOn && !classLabel(c)){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
+      if(!charHpReady(c) && !c.concOn && !classLabel(c) && !(c.armor && c.armor !== "none") && !c.shield){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
       shown++;
       var row = document.createElement("div"); row.className = "party-row";
       row.title = "Open " + c.name + "'s sheet";
@@ -2248,6 +2378,7 @@
         fillBar(fill, tmp, c);
         nums.textContent = (c.hpCur || 0) + " / " + c.hpMax + ((c.hpTemp || 0) ? "  (+" + c.hpTemp + " temp)" : "");
       } else nums.textContent = "HP not set";
+      nums.textContent += "  ·  AC " + acCalc(c).total;
       hpBox.appendChild(nums); row.appendChild(hpBox);
       var badges = document.createElement("div"); badges.className = "party-badges";
       var st = charHpStatus(c);
@@ -2747,6 +2878,7 @@
           saveState();
           renderAttacks();
         });
+        if(state.shield){ versatileCheck.disabled = true; versatileCheck.title = "A shield fills your other hand, so this weapon can only be used one-handed."; }
         versatileLabel.appendChild(versatileCheck);
         versatileLabel.appendChild(document.createTextNode("2H"));
       }
@@ -2978,10 +3110,12 @@
       var offLabel = document.createElement("label"); offLabel.className = "prof";
       var offCb = document.createElement("input"); offCb.type = "checkbox"; offCb.checked = !!atk.offhand;
       offCb.title = "Bonus-action off-hand attack with a second weapon. Both weapons must be Light unless you have Dual Wielder.";
+      if(state.shield){ offCb.disabled = true; offCb.title = "A shield fills your other hand, so there's no off-hand weapon."; }
       offCb.addEventListener("change", function(){ state.attacks[idx].offhand = offCb.checked; saveState(); renderAttacks(); });
       offLabel.appendChild(offCb); offLabel.appendChild(document.createTextNode("off-hand"));
       coreFields.appendChild(offLabel);
       var wt = weaponTraits(atk);
+      var shieldBlocked = !!state.shield && !!wt && wt.twoHandedWeapon;
       function styleTick(text, field, title){
         var lb = document.createElement("label"); lb.className = "prof";
         var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!atk[field]; cb.title = title;
@@ -2989,15 +3123,16 @@
         lb.appendChild(cb); lb.appendChild(document.createTextNode(text));
         coreFields.appendChild(lb);
       }
-      if(wt && wt.custom && (hasStyle("archery") || hasStyle("dueling"))){
+      if(wt && wt.custom && (hasStyle("archery") || hasStyle("dueling") || state.shield)){
         styleTick("ranged", "cRanged", "A ranged weapon (bow, crossbow...). Archery adds +2 to its attack rolls.");
-        styleTick("one-handed", "cOneHand", "A melee weapon held in one hand. Dueling adds +2 damage when no other weapon is in your other hand.");
+        styleTick("two-handed", "cTwoHanded", "A two-handed weapon. It can't be used while a shield is equipped, and Dueling doesn't apply to it.");
       }
       if(wt && hasStyle("thrown") && wt.thrownProp && (wt.custom || !wt.ranged)){
         styleTick("thrown", "thrown", "Tick when you're throwing this weapon. Thrown Weapon Fighting adds +2 damage.");
       }
       fields.appendChild(coreFields);
       var noteParts = [];
+      if(shieldBlocked) noteParts.push("Can't use a two-handed weapon while a shield is equipped.");
       if(atk.offhand){
         noteParts.push(hasStyle("twf")
           ? "Off-hand: your ability modifier is added to damage (Two-Weapon Fighting)."
@@ -3020,6 +3155,11 @@
 
       var rollButtons = document.createElement("div");
       rollButtons.className = "attack-roll-buttons";
+      if(shieldBlocked){
+        atkBtn.disabled = true; dmgBtn.disabled = true;
+        var lockMsg = "Two-handed weapons cannot be used while a shield is equipped.";
+        atkBtn.title = lockMsg; dmgBtn.title = lockMsg; rollButtons.title = lockMsg;
+      }
       rollButtons.appendChild(atkBtn);
       rollButtons.appendChild(dmgBtn);
       fields.appendChild(rollButtons);
@@ -3579,6 +3719,11 @@
       text: "Tick Concentrating (and name the spell if you like). From then on, every time you take damage with the Damage button the sheet rolls your Constitution save for you against DC 10 or half the damage, whichever is higher — adding your CON modifier and save proficiency. Fail and concentration drops with a banner; dropping to 0 HP also ends it. The small Dis / Normal / Adv buttons beside it only affect these concentration saves, so an Advantage you turned on for something else won't leak into them."
     },
     {
+      targetSelector: "#ac-panel",
+      title: "Armor Class",
+      text: "Pick your armor and your AC is worked out for you: base AC, plus Dexterity (capped for medium armor, none for heavy). With no armor, Barbarians and Monks get Unarmored Defense automatically, and Mage Armor and Draconic Resilience are in the list too. Tick Shield for +2, and use Magic bonus and Other bonus for things like a +1 shield or a Ring of Protection. The Defense fighting style adds +1 while you wear armor. Two-handed weapons are locked out while a shield is equipped, and the DM sees everyone's AC in the party list.",
+    },
+    {
       targetSelector: ".ability-row",
       title: "Ability Scores, Checks & Saves",
       text: "Each ability shows its modifier — not the raw score, just the +/- you add to rolls — plus Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
@@ -3591,7 +3736,7 @@
     {
       targetSelector: "#fstyle-row",
       title: "Fighting Style",
-      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2, and Bards once they pick College of Swords at level 3. Each class only sees its own styles, and Champions get a second box at level 10 (the first pick is greyed out there). Dueling, Archery and Thrown Weapon Fighting add their +2 automatically and say so under the attack. Custom weapons get small ranged / one-handed ticks so the styles know what they are, and weapons with the Thrown property get a thrown tick. Two-Weapon Fighting works with the off-hand box on a weapon: with the style, the off-hand attack adds your ability modifier to damage; without it, it drops that modifier. Both weapons need to be Light unless you have Dual Wielder.",
+      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2, and Bards once they pick College of Swords at level 3. Each class only sees its own styles, and Champions get a second box at level 10 (the first pick is greyed out there). Defense adds +1 AC while you wear armor. Dueling, Archery and Thrown Weapon Fighting add their +2 automatically and say so under the attack. Custom weapons get small ranged / two-handed ticks so the styles know what they are, and weapons with the Thrown property get a thrown tick. Two-Weapon Fighting works with the off-hand box on a weapon: with the style, the off-hand attack adds your ability modifier to damage; without it, it drops that modifier. Both weapons need to be Light unless you have Dual Wielder.",
       showIf: function(){ return fightingStyleAvailable(); },
     },
     {
@@ -4626,6 +4771,7 @@
       if(typeof c.concOn !== "boolean") c.concOn = false;
       if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
     if(typeof c.fightingStyle2 !== "string") c.fightingStyle2 = "";
+    backfillAc(c);
       if(!Array.isArray(c.buffs)) c.buffs = [];
       c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
         return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
