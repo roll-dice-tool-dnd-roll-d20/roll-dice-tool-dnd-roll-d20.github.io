@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.68.0</title>
+<title>Roll Tracker V1.69.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -778,7 +778,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.68.0</div>
+      <div class="version-tag" id="version-tag">Version 1.69.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -821,6 +821,10 @@
     <div class="hp-row" id="fstyle-row" style="display:none;">
       <label>Fighting Style <select id="fstyle-select"></select></label>
       <span class="conc-mode-label" id="fstyle-hint"></span>
+    </div>
+    <div class="hp-row" id="fstyle2-row" style="display:none;">
+      <label>Second Fighting Style <select id="fstyle2-select"></select></label>
+      <span class="conc-mode-label">Champion, level 10. Can't repeat your first pick.</span>
     </div>
     <div class="hp-row" id="class-defaults-row" style="margin-bottom:0;">
       <button type="button" class="hp-btn" id="class-defaults-btn" title="Ticks this class's saving-throw proficiencies and sets your spellcasting ability if it's a spellcasting class. Never unticks anything.">Apply class defaults</button>
@@ -1092,6 +1096,7 @@
     halfMode: false,
     buffs: [],
     fightingStyle: "",
+    fightingStyle2: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1148,6 +1153,7 @@
     halfMode: false,
     buffs: [],
     fightingStyle: "",
+    fightingStyle2: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1286,6 +1292,7 @@
     if(typeof c.critMode !== "boolean") c.critMode = false;
     if(typeof c.halfMode !== "boolean") c.halfMode = false;
     if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
+    if(typeof c.fightingStyle2 !== "string") c.fightingStyle2 = "";
     if(!Array.isArray(c.buffs)) c.buffs = [];
     c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
       return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
@@ -1753,24 +1760,89 @@
   function opt(value, text, selected){
     var o = document.createElement("option"); o.value = value; o.textContent = text; if(selected) o.selected = true; return o;
   }
-  // Fighting styles unlock at the level each class gets the Fighting Style feature.
+  // Fighting styles. Each class only gets its own list; Swords Bards pick from Dueling / Two-Weapon Fighting.
   var FIGHTING_STYLE_LEVEL = {Fighter:1, Paladin:2, Ranger:2};
-  var FIGHTING_STYLES = [["", "None"], ["twf", "Two-Weapon Fighting"]];
-  function fightingStyleAvailable(c){
+  var STYLE_NAMES = {archery:"Archery", dueling:"Dueling", thrown:"Thrown Weapon Fighting", twf:"Two-Weapon Fighting"};
+  var STYLE_HINTS = {
+    archery:"+2 to attack rolls with ranged weapons.",
+    dueling:"+2 damage with a one-handed melee weapon and no weapon in your other hand.",
+    thrown:"+2 damage with thrown weapon attacks (tick \"thrown\" on the attack).",
+    twf:"Off-hand attacks add your ability modifier to damage."
+  };
+  var CLASS_STYLE_LISTS = {
+    Fighter:["archery","dueling","thrown","twf"],
+    Ranger:["archery","dueling","thrown","twf"],
+    Paladin:["dueling"]
+  };
+  // Returns the list of styles this character can choose from, or null if they have no Fighting Style yet.
+  function styleOptionsFor(c){
     c = c || state;
-    var lvl = FIGHTING_STYLE_LEVEL[c.charClass];
-    return !!lvl && (c.level || 1) >= lvl;
+    var lvl = FIGHTING_STYLE_LEVEL[c.charClass], lv = c.level || 1;
+    if(lvl && lv >= lvl) return CLASS_STYLE_LISTS[c.charClass];
+    if(c.charClass === "Bard" && c.charSubclass === "College of Swords" && lv >= 3) return ["dueling","twf"];
+    return null;
   }
-  function activeFightingStyle(){ return fightingStyleAvailable() ? (state.fightingStyle || "") : ""; }
+  function secondStyleAvailable(c){
+    c = c || state;
+    return c.charClass === "Fighter" && c.charSubclass === "Champion" && (c.level || 1) >= 10;
+  }
+  function fightingStyleAvailable(c){ return styleOptionsFor(c) !== null; }
+  function activeStyles(){
+    var opts = styleOptionsFor();
+    if(!opts) return [];
+    var out = [];
+    if(opts.indexOf(state.fightingStyle) !== -1) out.push(state.fightingStyle);
+    if(secondStyleAvailable() && opts.indexOf(state.fightingStyle2) !== -1 && state.fightingStyle2 !== state.fightingStyle) out.push(state.fightingStyle2);
+    return out;
+  }
+  function hasStyle(k){ return activeStyles().indexOf(k) !== -1; }
+  function fillStyleSelect(sel, opts, current, taken){
+    sel.innerHTML = "";
+    sel.appendChild(opt("", "None", !current));
+    opts.forEach(function(k){
+      var o = opt(k, STYLE_NAMES[k], current === k);
+      if(taken && taken === k){ o.disabled = true; o.textContent = STYLE_NAMES[k] + " (taken)"; }
+      sel.appendChild(o);
+    });
+  }
   function renderFightingStyle(){
     var row = document.getElementById("fstyle-row"), sel = document.getElementById("fstyle-select");
+    var row2 = document.getElementById("fstyle2-row"), sel2 = document.getElementById("fstyle2-select");
     if(!row || !sel) return;
-    var avail = fightingStyleAvailable();
-    row.style.display = avail ? "" : "none";
-    if(!avail) return;
-    sel.innerHTML = "";
-    FIGHTING_STYLES.forEach(function(f){ sel.appendChild(opt(f[0], f[1], (state.fightingStyle || "") === f[0])); });
-    document.getElementById("fstyle-hint").textContent = state.fightingStyle === "twf" ? "Off-hand attacks add your ability modifier to damage." : "";
+    var opts = styleOptionsFor();
+    row.style.display = opts ? "" : "none";
+    var showSecond = !!opts && secondStyleAvailable();
+    row2.style.display = showSecond ? "" : "none";
+    if(!opts) return;
+    fillStyleSelect(sel, opts, state.fightingStyle || "", showSecond ? (state.fightingStyle2 || "") : "");
+    // the first pick is greyed out in the second box, since it's already taken
+    if(showSecond) fillStyleSelect(sel2, opts, state.fightingStyle2 || "", state.fightingStyle || "");
+    document.getElementById("fstyle-hint").textContent = activeStyles().map(function(k){ return STYLE_NAMES[k] + ": " + STYLE_HINTS[k]; }).join(" ");
+  }
+
+  // ---- how a weapon interacts with the styles
+  var NON_WEAPON_PRESETS = {unarmedstrike:1, grapple:1, shove:1, lycanclaws:1};
+  function weaponTraits(a){
+    var key = a.preset || "custom", pr = PRESETS[key];
+    if(key !== "custom" && pr){
+      if(NON_WEAPON_PRESETS[key]) return null;
+      var note = pr.note || "", cat = pr.category || "";
+      return {custom:false, ranged:/Ranged/.test(cat), twoHandedWeapon:/Two-Handed/.test(note), thrownProp:/Thrown/.test(note)};
+    }
+    return {custom:true, ranged:!!a.cRanged, twoHandedWeapon:!a.cOneHand, thrownProp:true};
+  }
+  function styleAtkBonus(a){
+    var t = weaponTraits(a);
+    return (t && hasStyle("archery") && t.ranged) ? 2 : 0;
+  }
+  // Returns {n, label} for automatic damage from Dueling / Thrown Weapon Fighting (only one applies to a given attack).
+  function styleDmgBonus(a){
+    var t = weaponTraits(a);
+    if(!t) return {n:0, label:""};
+    var thrownNow = !!a.thrown || (!t.custom && t.ranged && t.thrownProp);
+    if(hasStyle("thrown") && t.thrownProp && thrownNow) return {n:2, label:"Thrown Weapon Fighting"};
+    if(hasStyle("dueling") && !t.ranged && !t.twoHandedWeapon && !a.twoHanded && !a.offhand && !a.thrown) return {n:2, label:"Dueling"};
+    return {n:0, label:""};
   }
   function renderClass(){
     if(!classSelectEl) return;
@@ -1848,19 +1920,24 @@
   });
   document.getElementById("fstyle-select").addEventListener("change", function(){
     state.fightingStyle = this.value;
+    if(state.fightingStyle2 === state.fightingStyle) state.fightingStyle2 = "";
+    saveState(); renderFightingStyle(); renderAttacks();
+  });
+  document.getElementById("fstyle2-select").addEventListener("change", function(){
+    state.fightingStyle2 = this.value;
     saveState(); renderFightingStyle(); renderAttacks();
   });
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
     state.charSubclass = ""; classDefaultsNote.textContent = "";
     syncDefaultSpell();
-    saveState(); renderClass(); renderHp(); renderSpells(); renderParty();
+    saveState(); renderClass(); renderHp(); renderSpells(); renderAttacks(); renderParty();
   });
   classCustomEl.addEventListener("input", function(){ state.charClassCustom = classCustomEl.value; saveState(); renderParty(); });
   subclassSelectEl.addEventListener("change", function(){
     state.charSubclass = subclassSelectEl.value; classDefaultsNote.textContent = "";
     syncDefaultSpell();
-    saveState(); renderClass(); renderSpells(); renderParty();
+    saveState(); renderClass(); renderSpells(); renderAttacks(); renderParty();
   });
   subclassCustomEl.addEventListener("input", function(){ state.charSubclassCustom = subclassCustomEl.value; saveState(); renderParty(); });
 
@@ -2735,7 +2812,7 @@
           profAdd = a.prof ? (state.profBonus||0) : 0;
         }
         var freshStalkerBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).stalker : 0;
-        var liveBonus = baseBonus + profAdd + freshStalkerBonus;
+        var liveBonus = baseBonus + profAdd + freshStalkerBonus + styleAtkBonus(a);
         var total = d.value + liveBonus;
         var partsStr = "d20(" + d.rolls.join("/") + ") + " + liveBonus;
         var logLabel = (currentPreset && currentPreset.attackLabel) ? (a.name + " Check") : (a.name + " Attack");
@@ -2784,7 +2861,7 @@
         var freshDmgBonus = a.dmgBonus || 0;
         var offNote = "";
         if(a.offhand){
-          if(activeFightingStyle() === "twf"){ offNote = " (Off-hand, TWF)"; }
+          if(hasStyle("twf")){ offNote = " (Off-hand, TWF)"; }
           else {
             // Without the style, the off-hand attack drops a positive ability modifier from damage.
             var offMod = computeAbilityBonus(a.preset || "custom");
@@ -2793,8 +2870,9 @@
           }
         }
         var freshFeralBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).feral : 0;
-        var total = rolled.total + freshDmgBonus + freshFeralBonus;
-        var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "");
+        var styleD = styleDmgBonus(a);
+        var total = rolled.total + freshDmgBonus + freshFeralBonus + styleD.n;
+        var partsStr = rolled.partsStr + " + " + freshDmgBonus + (freshFeralBonus ? " + " + freshFeralBonus + " (Feral Might)" : "") + (styleD.n ? " + " + styleD.n + " (" + styleD.label + ")" : "");
         var bfW = applyBuffs(total, partsStr, isCrit, a.useBuffs !== false); total = bfW.total; partsStr = bfW.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
         addLog(a.name + " Damage" + offNote + (a.twoHanded ? " (2H)" : "") + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
@@ -2903,14 +2981,36 @@
       offCb.addEventListener("change", function(){ state.attacks[idx].offhand = offCb.checked; saveState(); renderAttacks(); });
       offLabel.appendChild(offCb); offLabel.appendChild(document.createTextNode("off-hand"));
       coreFields.appendChild(offLabel);
+      var wt = weaponTraits(atk);
+      function styleTick(text, field, title){
+        var lb = document.createElement("label"); lb.className = "prof";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!atk[field]; cb.title = title;
+        cb.addEventListener("change", function(){ state.attacks[idx][field] = cb.checked; saveState(); renderAttacks(); });
+        lb.appendChild(cb); lb.appendChild(document.createTextNode(text));
+        coreFields.appendChild(lb);
+      }
+      if(wt && wt.custom && (hasStyle("archery") || hasStyle("dueling"))){
+        styleTick("ranged", "cRanged", "A ranged weapon (bow, crossbow...). Archery adds +2 to its attack rolls.");
+        styleTick("one-handed", "cOneHand", "A melee weapon held in one hand. Dueling adds +2 damage when no other weapon is in your other hand.");
+      }
+      if(wt && hasStyle("thrown") && wt.thrownProp && (wt.custom || !wt.ranged)){
+        styleTick("thrown", "thrown", "Tick when you're throwing this weapon. Thrown Weapon Fighting adds +2 damage.");
+      }
       fields.appendChild(coreFields);
+      var noteParts = [];
       if(atk.offhand){
+        noteParts.push(hasStyle("twf")
+          ? "Off-hand: your ability modifier is added to damage (Two-Weapon Fighting)."
+          : "Off-hand: no ability modifier on damage without the Two-Weapon Fighting style.");
+        noteParts.push("Both weapons must be Light unless you have Dual Wielder.");
+      }
+      if(styleAtkBonus(atk)) noteParts.push("Archery: +2 to attack rolls.");
+      var sdb = styleDmgBonus(atk);
+      if(sdb.n) noteParts.push(sdb.label + ": +2 damage.");
+      if(noteParts.length){
         var offNoteEl = document.createElement("div"); offNoteEl.className = "conc-mode-label";
         offNoteEl.style.margin = "4px 0";
-        offNoteEl.textContent = (activeFightingStyle() === "twf"
-          ? "Off-hand: your ability modifier is added to damage (Two-Weapon Fighting). "
-          : "Off-hand: no ability modifier on damage without the Two-Weapon Fighting style. ")
-          + "Both weapons must be Light unless you have Dual Wielder.";
+        offNoteEl.textContent = noteParts.join(" ");
         fields.appendChild(offNoteEl);
       }
 
@@ -3491,7 +3591,7 @@
     {
       targetSelector: "#fstyle-row",
       title: "Fighting Style",
-      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2. Pick Two-Weapon Fighting and your off-hand attacks add your ability modifier to damage. Tick the off-hand box on a weapon to roll its Damage as the bonus-action attack. Without the style, an off-hand attack drops that modifier, like the rules say. Both weapons need to be Light unless you have Dual Wielder.",
+      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2, and Bards once they pick College of Swords at level 3. Each class only sees its own styles, and Champions get a second box at level 10 (the first pick is greyed out there). Dueling, Archery and Thrown Weapon Fighting add their +2 automatically and say so under the attack. Custom weapons get small ranged / one-handed ticks so the styles know what they are, and weapons with the Thrown property get a thrown tick. Two-Weapon Fighting works with the off-hand box on a weapon: with the style, the off-hand attack adds your ability modifier to damage; without it, it drops that modifier. Both weapons need to be Light unless you have Dual Wielder.",
       showIf: function(){ return fightingStyleAvailable(); },
     },
     {
@@ -4525,6 +4625,7 @@
       ["hpCur","hpMax","hpTemp","deathSucc","deathFail"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
       if(typeof c.concOn !== "boolean") c.concOn = false;
       if(typeof c.fightingStyle !== "string") c.fightingStyle = "";
+    if(typeof c.fightingStyle2 !== "string") c.fightingStyle2 = "";
       if(!Array.isArray(c.buffs)) c.buffs = [];
       c.buffs = c.buffs.filter(function(b){ return b && typeof b === "object"; }).map(function(b){
         return {name: typeof b.name === "string" ? b.name : "", dice: typeof b.dice === "string" ? b.dice : "", on: !!b.on};
