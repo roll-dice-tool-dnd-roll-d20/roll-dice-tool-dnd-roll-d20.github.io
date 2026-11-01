@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.70.0</title>
+<title>Roll Tracker V1.71.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -782,7 +782,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.70.0</div>
+      <div class="version-tag" id="version-tag">Version 1.71.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -825,10 +825,19 @@
     <div class="hp-row" id="fstyle-row" style="display:none;">
       <label>Fighting Style <select id="fstyle-select"></select></label>
       <span class="conc-mode-label" id="fstyle-hint"></span>
+      <button type="button" class="hp-btn" id="intercept-roll" style="display:none;" title="Reaction: reduce damage to a nearby ally by 1d10 + your proficiency bonus.">Roll Interception</button>
     </div>
     <div class="hp-row" id="fstyle2-row" style="display:none;">
       <label>Second Fighting Style <select id="fstyle2-select"></select></label>
       <span class="conc-mode-label">Champion, level 10. Can't repeat your first pick.</span>
+    </div>
+    <div class="hp-row" id="sd-row" style="display:none;">
+      <label>Superiority Dice (d6) <b id="sd-left">1</b> / <b id="sd-max">1</b></label>
+      <button type="button" class="hp-btn" id="sd-roll" title="Spend one superiority die and roll it.">Roll die</button>
+      <button type="button" class="hp-btn" id="sd-regain" title="Get your superiority dice back (short or long rest).">Regain</button>
+      <label>Maneuver <select id="sd-maneuver"></select></label>
+      <span class="conc-mode-label" id="sd-dc"></span>
+      <span class="conc-mode-label" id="sd-desc" style="flex-basis:100%;"></span>
     </div>
     <div class="hp-row" id="class-defaults-row" style="margin-bottom:0;">
       <button type="button" class="hp-btn" id="class-defaults-btn" title="Ticks this class's saving-throw proficiencies and sets your spellcasting ability if it's a spellcasting class. Never unticks anything.">Apply class defaults</button>
@@ -1139,6 +1148,8 @@
     ["acMagic","acOther"].forEach(function(k){ if(typeof c[k] !== "number" || isNaN(c[k])) c[k] = 0; });
     if(typeof c.acCustomBase !== "number" || isNaN(c.acCustomBase)) c.acCustomBase = 10;
     if(["full","max2","none"].indexOf(c.acCustomDex) === -1) c.acCustomDex = "full";
+    if(typeof c.sdSpent !== "number" || isNaN(c.sdSpent) || c.sdSpent < 0) c.sdSpent = 0;
+    if(typeof c.maneuver !== "string") c.maneuver = "";
   }
 
   var fullTemplate = {
@@ -1156,6 +1167,8 @@
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
+    sdSpent: 0,
+    maneuver: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1219,6 +1232,8 @@
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
+    sdSpent: 0,
+    maneuver: "",
     hpCur: 0,
     hpMax: 0,
     hpTemp: 0,
@@ -1450,16 +1465,21 @@
   }
 
   // Rolls every dice group found by parseDiceGroups and combines them into one total + log string.
-  function rollDiceGroups(groups, isCrit){
+  function rollDiceGroups(groups, isCrit, gwf){
     var total = 0;
     var partsArr = [];
     groups.forEach(function(g){
       var count = isCrit ? g.count * 2 : g.count;
-      var rolls = [];
-      for(var i=0;i<count;i++) rolls.push(rollDie(g.sides));
+      var rolls = [], shown = [];
+      for(var i=0;i<count;i++){
+        var r = rollDie(g.sides);
+        if(gwf && r <= 2){ var r2 = rollDie(g.sides); shown.push(r + "\u2192" + r2); r = r2; }   // Great Weapon Fighting: reroll 1s and 2s, keep the new roll
+        else shown.push(String(r));
+        rolls.push(r);
+      }
       var sum = rolls.reduce(function(x,y){return x+y;},0);
       total += sum;
-      partsArr.push(count + "d" + g.sides + "(" + rolls.join(",") + ")");
+      partsArr.push(count + "d" + g.sides + "(" + shown.join(",") + ")");
     });
     return {total: total, partsStr: partsArr.join(" + ")};
   }
@@ -1828,18 +1848,30 @@
   }
   // Fighting styles. Each class only gets its own list; Swords Bards pick from Dueling / Two-Weapon Fighting.
   var FIGHTING_STYLE_LEVEL = {Fighter:1, Paladin:2, Ranger:2};
-  var STYLE_NAMES = {archery:"Archery", defense:"Defense", dueling:"Dueling", thrown:"Thrown Weapon Fighting", twf:"Two-Weapon Fighting"};
+  var STYLE_NAMES = {
+    archery:"Archery", blessed:"Blessed Warrior", blind:"Blind Fighting", defense:"Defense", druidic:"Druidic Warrior",
+    dueling:"Dueling", gwf:"Great Weapon Fighting", intercept:"Interception", protection:"Protection",
+    superior:"Superior Technique", thrown:"Thrown Weapon Fighting", twf:"Two-Weapon Fighting", unarmed:"Unarmed Fighting"
+  };
   var STYLE_HINTS = {
     archery:"+2 to attack rolls with ranged weapons.",
+    blessed:"You know two Cleric cantrips (Charisma). Add them under Spell Attacks.",
+    blind:"Blindsight out to 10 feet.",
     defense:"+1 AC while you're wearing armor.",
+    druidic:"You know two Druid cantrips (Wisdom). Add them under Spell Attacks.",
     dueling:"+2 damage with a one-handed melee weapon and no weapon in your other hand.",
+    gwf:"Rerolls 1s and 2s on the weapon's damage dice when you wield a melee weapon in two hands.",
+    intercept:"Reaction: reduce damage to a nearby ally by 1d10 + your proficiency bonus.",
+    protection:"Reaction with a shield: impose disadvantage on an attack against an ally within 5 feet.",
+    superior:"One maneuver and one d6 superiority die (see Superiority Dice).",
     thrown:"+2 damage with thrown weapon attacks (tick \"thrown\" on the attack).",
-    twf:"Off-hand attacks add your ability modifier to damage."
+    twf:"Off-hand attacks add your ability modifier to damage.",
+    unarmed:"Unarmed strikes deal 1d6 (1d8 with both hands free), and you can squeeze a grappled creature for 1d4."
   };
   var CLASS_STYLE_LISTS = {
-    Fighter:["archery","defense","dueling","thrown","twf"],
-    Ranger:["archery","defense","dueling","thrown","twf"],
-    Paladin:["defense","dueling"]
+    Fighter:["archery","blind","defense","dueling","gwf","intercept","protection","superior","thrown","twf","unarmed"],
+    Ranger:["archery","blind","defense","druidic","dueling","thrown","twf"],
+    Paladin:["blessed","blind","defense","dueling","gwf","intercept","protection"]
   };
   // Returns the list of styles this character can choose from, or null if they have no Fighting Style yet.
   function styleOptionsFor(c){
@@ -1873,7 +1905,67 @@
       sel.appendChild(o);
     });
   }
+  var MANEUVERS = [
+    ["Commander's Strike","Give up one of your attacks; a friendly creature that can hear you uses its reaction for a weapon attack, adding the die to damage."],
+    ["Disarming Attack","Add the die to damage. The target makes a Strength save or drops one item you choose."],
+    ["Distracting Strike","Add the die to damage. The next attack against the target by someone else has advantage."],
+    ["Evasive Footwork","Add the die to your AC while you move."],
+    ["Feinting Attack","Bonus action: advantage on your next attack against a creature within 5 feet; add the die to damage if it hits."],
+    ["Goading Attack","Add the die to damage. The target makes a Wisdom save or has disadvantage on attacks against anyone but you."],
+    ["Lunging Attack","Add 5 feet to your reach for one attack and add the die to damage."],
+    ["Maneuvering Attack","Add the die to damage. A friendly creature uses its reaction to move without provoking opportunity attacks."],
+    ["Menacing Attack","Add the die to damage. The target makes a Wisdom save or is frightened of you."],
+    ["Parry","Reaction: reduce melee damage to you by the die + your Dexterity modifier."],
+    ["Precision Attack","Add the die to an attack roll."],
+    ["Pushing Attack","Add the die to damage. A Large or smaller target makes a Strength save or is pushed up to 15 feet."],
+    ["Rally","Bonus action: a friendly creature gains temporary HP equal to the die + your Charisma modifier."],
+    ["Riposte","Reaction when a creature misses you in melee: attack it and add the die to damage."],
+    ["Sweeping Attack","If you hit, deal damage equal to the die to another creature within reach and within 5 feet of the target."],
+    ["Trip Attack","Add the die to damage. A Large or smaller target makes a Strength save or is knocked prone."]
+  ];
+  function sdMax(){ return hasStyle("superior") ? 1 : 0; }
+  function sdLeft(){ return Math.max(0, sdMax() - (state.sdSpent || 0)); }
+  function renderSd(){
+    var row = document.getElementById("sd-row");
+    if(!row) return;
+    var max = sdMax();
+    row.style.display = max ? "" : "none";
+    if(!max) return;
+    document.getElementById("sd-left").textContent = sdLeft();
+    document.getElementById("sd-max").textContent = max;
+    document.getElementById("sd-roll").disabled = sdLeft() <= 0;
+    var sel = document.getElementById("sd-maneuver");
+    sel.innerHTML = "";
+    sel.appendChild(opt("", "— Choose —", !state.maneuver));
+    MANEUVERS.forEach(function(m){ sel.appendChild(opt(m[0], m[0], state.maneuver === m[0])); });
+    var dc = 8 + (state.profBonus || 0) + Math.max(getAbilityMod("STR"), getAbilityMod("DEX"));
+    document.getElementById("sd-dc").textContent = "Maneuver save DC " + dc;
+    var found = MANEUVERS.filter(function(m){ return m[0] === state.maneuver; })[0];
+    document.getElementById("sd-desc").textContent = found ? found[1] : "";
+  }
+  document.getElementById("sd-roll").addEventListener("click", function(){
+    if(sdLeft() <= 0) return;
+    var r = rollDie(6);
+    state.sdSpent = (state.sdSpent || 0) + 1;
+    addLog((state.maneuver || "Maneuver") + " (superiority die)", "d6(" + r + ")", r, false, null);
+    saveState(); renderSd();
+  });
+  document.getElementById("sd-regain").addEventListener("click", function(){ state.sdSpent = 0; saveState(); renderSd(); });
+  document.getElementById("sd-maneuver").addEventListener("change", function(){ state.maneuver = this.value; saveState(); renderSd(); });
+  document.getElementById("intercept-roll").addEventListener("click", function(){
+    var r = rollDie(10), prof = state.profBonus || 0;
+    addLog("Interception (damage reduced)", "1d10(" + r + ") + " + prof, r + prof, false, null);
+  });
+  // Blessed Warrior / Druidic Warrior give two cantrips, so make sure there's a spell row to put them in.
+  function ensureCantripRow(){
+    if((hasStyle("blessed") || hasStyle("druidic")) && state.spells.length === 0){
+      state.spells.push({preset:"custom", name:"New Spell", dice:"1d6", dmgBonus:0, critArmed:false, notFullHp:false, notes:""});
+    }
+  }
   function renderFightingStyle(){
+    renderSd();
+    var icBtn = document.getElementById("intercept-roll");
+    if(icBtn) icBtn.style.display = hasStyle("intercept") ? "" : "none";
     var row = document.getElementById("fstyle-row"), sel = document.getElementById("fstyle-select");
     var row2 = document.getElementById("fstyle2-row"), sel2 = document.getElementById("fstyle2-select");
     if(!row || !sel) return;
@@ -1898,6 +1990,25 @@
       return {custom:false, ranged:/Ranged/.test(cat), twoHandedWeapon:/Two-Handed(?! unless)/.test(note), thrownProp:/Thrown/.test(note)};
     }
     return {custom:true, ranged:!!a.cRanged, twoHandedWeapon:!!a.cTwoHanded, thrownProp:true};
+  }
+  // Great Weapon Fighting: a melee weapon wielded in two hands (not thrown, not off-hand). Only the weapon's own dice.
+  function gwfApplies(a){
+    var t = weaponTraits(a);
+    return !!(t && hasStyle("gwf") && !t.ranged && !a.thrown && !a.offhand && (t.twoHandedWeapon || a.twoHanded));
+  }
+  // Unarmed Fighting: Unarmed Strike / Claws become 1d6 (1d8 with both hands free); Grapple gets a 1d4 squeeze.
+  var UNARMED_PRESETS = {unarmedstrike:1, lycanclaws:1, grapple:1};
+  function applyUnarmedDice(a){
+    var pr = PRESETS[a.preset];
+    if(!pr || !UNARMED_PRESETS[a.preset]) return false;
+    if(hasStyle("unarmed")){
+      var want = a.preset === "grapple" ? "1d4" : ((a.handsFree && !state.shield) ? "1d8" : "1d6");
+      if(!a.dmgAuto){ a.dmgOrig = a.dice; a.dmgAuto = true; }
+      a.dice = want;
+      return true;
+    }
+    if(a.dmgAuto){ a.dice = (typeof a.dmgOrig === "string") ? a.dmgOrig : pr.dice; a.dmgAuto = false; }
+    return false;
   }
   function styleAtkBonus(a){
     var t = weaponTraits(a);
@@ -1965,7 +2076,7 @@
   document.getElementById("ac-armor").addEventListener("change", function(){ state.armor = this.value; acChanged(); });
   document.getElementById("ac-shield").addEventListener("change", function(){
     state.shield = this.checked;
-    if(state.shield){ state.attacks.forEach(function(a){ a.twoHanded = false; a.offhand = false; }); }   // a shield fills the second hand
+    if(state.shield){ state.attacks.forEach(function(a){ a.twoHanded = false; a.offhand = false; a.handsFree = false; }); }   // a shield fills the second hand
     acChanged(); renderAttacks();
   });
   document.getElementById("ac-custom-base").addEventListener("input", function(){ state.acCustomBase = parseInt(this.value, 10) || 0; acChanged(); });
@@ -2051,11 +2162,13 @@
   document.getElementById("fstyle-select").addEventListener("change", function(){
     state.fightingStyle = this.value;
     if(state.fightingStyle2 === state.fightingStyle) state.fightingStyle2 = "";
-    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderAttacks();
+    ensureCantripRow();
+    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderSpells(); renderAttacks();
   });
   document.getElementById("fstyle2-select").addEventListener("change", function(){
     state.fightingStyle2 = this.value;
-    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderAttacks();
+    ensureCantripRow();
+    saveState(); renderFightingStyle(); renderAc(); renderParty(); renderSpells(); renderAttacks();
   });
   classSelectEl.addEventListener("change", function(){
     state.charClass = classSelectEl.value;
@@ -2656,6 +2769,7 @@
         var key = presetSelect.value;
         var preset = PRESETS[key];
         state.attacks[idx].preset = key;
+        state.attacks[idx].dmgAuto = false;
         state.attacks[idx].critArmed = false;
         state.attacks[idx].twoHanded = false;
         if(key !== "custom"){
@@ -2836,7 +2950,9 @@
         lycanLevelLabel.appendChild(lycanLevelInput);
       }
 
-      var noDamageField = currentPreset && currentPreset.noDamage;
+      var squeezeOn = atk.preset === "grapple" && hasStyle("unarmed");
+      var noDamageField = currentPreset && currentPreset.noDamage && !squeezeOn;
+      var dicelocked = applyUnarmedDice(atk);
       var versatileCapable = !noDamageField && ((atk.preset === "custom") || !!(currentPreset && currentPreset.versatileDice));
       var twoHandedOn = versatileCapable && !!atk.twoHanded;
       var activeDiceField = twoHandedOn ? "dice2h" : "dice";
@@ -2855,9 +2971,13 @@
         diceInput.value = atk[activeDiceField] || "";
         diceInput.placeholder = twoHandedOn ? "e.g. 1d8" : "1d6";
         diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4 for a shortbow plus a Hunter's Mark bonus.";
+        if(dicelocked){
+          diceInput.readOnly = true;
+          diceInput.title = "Set by your Unarmed Fighting style. Remove the style to edit this by hand.";
+        }
       }
       diceInput.addEventListener("input", function(){
-        if(diceInput.disabled) return;
+        if(diceInput.disabled || diceInput.readOnly) return;
         state.attacks[idx][activeDiceField] = diceInput.value;
         saveState();
       });
@@ -2896,6 +3016,10 @@
       } else {
         dmgBonusInput.value = atk.dmgBonus;
         dmgBonusInput.title = "Editable — switching this row's weapon will refresh it to that weapon's ability modifier.";
+        if(squeezeOn){
+          dmgBonusInput.value = 0; dmgBonusInput.disabled = true;
+          dmgBonusInput.title = "The squeeze deals a flat 1d4 — no ability modifier.";
+        }
       }
       dmgBonusInput.addEventListener("input", function(){
         if(dmgBonusInput.disabled) return;
@@ -2969,7 +3093,7 @@
       var dmgBtn = document.createElement("button");
       var critArmed = !!atk.critArmed && !noDamageField;
       dmgBtn.className = "roll-btn save" + (critArmed ? " crit-armed" : "");
-      dmgBtn.textContent = noDamageField ? "No damage" : (critArmed ? "Damage (Crit!)" : "Damage");
+      dmgBtn.textContent = noDamageField ? "No damage" : (squeezeOn ? "Squeeze (1d4)" : (critArmed ? "Damage (Crit!)" : "Damage"));
       if(critArmed){
         dmgBtn.title = "Natural 20! The next Damage roll for this weapon will double its dice.";
       }
@@ -2989,8 +3113,8 @@
         var isHalf = !!state.halfMode;
         var wasArmed = !!a.critArmed;
         var isCrit = !!state.critMode || wasArmed;
-        var rolled = rollDiceGroups(parsed, isCrit);
-        var freshDmgBonus = a.dmgBonus || 0;
+        var rolled = rollDiceGroups(parsed, isCrit, gwfApplies(a));
+        var freshDmgBonus = (a.preset === "grapple" && hasStyle("unarmed")) ? 0 : (a.dmgBonus || 0);
         var offNote = "";
         if(a.offhand){
           if(hasStyle("twf")){ offNote = " (Off-hand, TWF)"; }
@@ -3123,15 +3247,20 @@
         lb.appendChild(cb); lb.appendChild(document.createTextNode(text));
         coreFields.appendChild(lb);
       }
-      if(wt && wt.custom && (hasStyle("archery") || hasStyle("dueling") || state.shield)){
+      if(wt && wt.custom && (hasStyle("archery") || hasStyle("dueling") || hasStyle("gwf") || state.shield)){
         styleTick("ranged", "cRanged", "A ranged weapon (bow, crossbow...). Archery adds +2 to its attack rolls.");
         styleTick("two-handed", "cTwoHanded", "A two-handed weapon. It can't be used while a shield is equipped, and Dueling doesn't apply to it.");
+      }
+      if(hasStyle("unarmed") && (atk.preset === "unarmedstrike" || atk.preset === "lycanclaws")){
+        styleTick("both hands free", "handsFree", "No weapon or shield in either hand: Unarmed Fighting deals 1d8 instead of 1d6.");
+        coreFields.lastChild.querySelector("input").disabled = !!state.shield;
       }
       if(wt && hasStyle("thrown") && wt.thrownProp && (wt.custom || !wt.ranged)){
         styleTick("thrown", "thrown", "Tick when you're throwing this weapon. Thrown Weapon Fighting adds +2 damage.");
       }
       fields.appendChild(coreFields);
       var noteParts = [];
+      if(gwfApplies(atk)) noteParts.push("Great Weapon Fighting: 1s and 2s on the weapon's damage dice are rerolled automatically.");
       if(shieldBlocked) noteParts.push("Can't use a two-handed weapon while a shield is equipped.");
       if(atk.offhand){
         noteParts.push(hasStyle("twf")
@@ -3736,7 +3865,7 @@
     {
       targetSelector: "#fstyle-row",
       title: "Fighting Style",
-      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2, and Bards once they pick College of Swords at level 3. Each class only sees its own styles, and Champions get a second box at level 10 (the first pick is greyed out there). Defense adds +1 AC while you wear armor. Dueling, Archery and Thrown Weapon Fighting add their +2 automatically and say so under the attack. Custom weapons get small ranged / two-handed ticks so the styles know what they are, and weapons with the Thrown property get a thrown tick. Two-Weapon Fighting works with the off-hand box on a weapon: with the style, the off-hand attack adds your ability modifier to damage; without it, it drops that modifier. Both weapons need to be Light unless you have Dual Wielder.",
+      text: "Fighters unlock this at level 1, Paladins and Rangers at level 2, and Bards once they pick College of Swords at level 3. Each class only sees its own styles, and Champions get a second box at level 10 (the first pick is greyed out there). Defense adds +1 AC while you wear armor. Great Weapon Fighting rerolls 1s and 2s on the weapon's dice for you, and says so in the log. Superior Technique adds a Superiority Dice row with a maneuver list and a Roll die button. Unarmed Fighting upgrades Unarmed Strike (tick 'both hands free' for the d8) and gives Grapple a 1d4 squeeze button. Blessed Warrior and Druidic Warrior make sure you have a spell row for your two cantrips, and Interception has a roll button. Dueling, Archery and Thrown Weapon Fighting add their +2 automatically and say so under the attack. Custom weapons get small ranged / two-handed ticks so the styles know what they are, and weapons with the Thrown property get a thrown tick. Two-Weapon Fighting works with the off-hand box on a weapon: with the style, the off-hand attack adds your ability modifier to damage; without it, it drops that modifier. Both weapons need to be Light unless you have Dual Wielder.",
       showIf: function(){ return fightingStyleAvailable(); },
     },
     {
