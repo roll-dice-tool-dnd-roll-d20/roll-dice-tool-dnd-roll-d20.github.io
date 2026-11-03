@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.72.0</title>
+<title>Roll Tracker V1.72.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -408,6 +408,8 @@
   .ac-total{min-width:64px;height:64px;border-radius:12px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:var(--ink);background:var(--bg);}
   .ac-breakdown{color:var(--ink-soft);font-size:0.9rem;}
   .ac-panel .conc-mode-label{display:block;margin-top:2px;}
+  .rest-confirm{left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,calc(100vw - 32px));max-width:340px;box-sizing:border-box;transition:none;}
+  .rest-confirm-list{margin:0 0 14px;padding-left:20px;font-size:0.85rem;line-height:1.5;color:var(--ink-soft);}
   .rest-box{border:1px dashed var(--border);border-radius:8px;padding:10px;margin:8px 0;}
   .rest-box .conc-mode-label{display:block;margin-bottom:8px;}
   .party-nums{font-size:0.78rem;color:var(--ink-soft);}
@@ -784,7 +786,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.72.0</div>
+      <div class="version-tag" id="version-tag">Version 1.72.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2264,10 +2266,42 @@
     document.getElementById("rest-box").style.display = "none";
     saveState(); renderSd(); renderHp(); renderParty();
   });
+  // Styled like the tutorial popups: dimmed backdrop and a centred card.
+  function showLongRestConfirm(gain, onYes){
+    var back = document.createElement("div"); back.className = "tutorial-backdrop";
+    var card = document.createElement("div"); card.className = "tutorial-popup rest-confirm";
+    card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true");
+    card.innerHTML =
+      '<div class="tutorial-step-count">Long Rest</div>' +
+      '<h3>Take a long rest?</h3>' +
+      '<p>Only after at least 6 hours of sleep (4 hours of trance for an elf). This will:</p>' +
+      '<ul class="rest-confirm-list">' +
+        '<li>Restore your HP to max</li>' +
+        '<li>Clear temp HP and death saves</li>' +
+        '<li>Regain ' + gain + ' hit ' + (gain === 1 ? 'die' : 'dice') + '</li>' +
+        '<li>Regain superiority dice</li>' +
+        '<li>End concentration</li>' +
+        '<li>Switch off Bonus Damage buffs</li>' +
+      '</ul>' +
+      '<div class="tutorial-popup-actions">' +
+        '<button type="button" class="tutorial-btn-ghost" id="rest-confirm-no">Cancel</button>' +
+        '<button type="button" id="rest-confirm-yes" style="margin-left:auto;">Take Long Rest</button>' +
+      '</div>';
+    function close(){ document.removeEventListener("keydown", onKey); back.remove(); card.remove(); }
+    function onKey(e){ if(e.key === "Escape") close(); }
+    document.addEventListener("keydown", onKey);
+    back.addEventListener("click", close);
+    document.body.appendChild(back); document.body.appendChild(card);
+    card.querySelector("#rest-confirm-no").addEventListener("click", close);
+    card.querySelector("#rest-confirm-yes").addEventListener("click", function(){ close(); onYes(); });
+    card.querySelector("#rest-confirm-yes").focus();
+  }
   document.getElementById("long-rest-btn").addEventListener("click", function(){
     var gain = Math.max(1, Math.floor((state.level || 1) / 2));
-    var ok = window.confirm("Take a long rest?\n\nOnly after at least 6 hours of sleep (4 hours of trance for an elf).\n\nThis will:\n• restore HP to max\n• clear temp HP and death saves\n• regain " + gain + " hit dice\n• regain superiority dice\n• end concentration\n• switch off Bonus Damage buffs");
-    if(!ok) return;
+    showLongRestConfirm(gain, doLongRest);
+  });
+  function doLongRest(){
+    var gain = Math.max(1, Math.floor((state.level || 1) / 2));
     var parts = [];
     if(charHpReady(state)){ parts.push("HP " + (state.hpCur || 0) + " → " + state.hpMax); state.hpCur = state.hpMax; }
     state.hpTemp = 0; state.deathSucc = 0; state.deathFail = 0;
@@ -2281,7 +2315,7 @@
     addLog("Long Rest", parts.length ? parts.join(" · ") : "rested", "—", false, null);
     document.getElementById("rest-box").style.display = "none";
     saveState(); renderHp(); renderBuffs(); renderSd(); renderParty();
-  });
+  }
 
   hitDiceLeftEl.addEventListener("change", function(){
     var left = Math.max(0, Math.min(state.level || 1, parseInt(hitDiceLeftEl.value, 10) || 0));
