@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.71.0</title>
+<title>Roll Tracker V1.72.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -408,6 +408,8 @@
   .ac-total{min-width:64px;height:64px;border-radius:12px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:var(--ink);background:var(--bg);}
   .ac-breakdown{color:var(--ink-soft);font-size:0.9rem;}
   .ac-panel .conc-mode-label{display:block;margin-top:2px;}
+  .rest-box{border:1px dashed var(--border);border-radius:8px;padding:10px;margin:8px 0;}
+  .rest-box .conc-mode-label{display:block;margin-bottom:8px;}
   .party-nums{font-size:0.78rem;color:var(--ink-soft);}
   .party-badges{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
   .party-conc{grid-column:2 / 4;font-size:0.76rem;color:#4f86b5;}
@@ -782,7 +784,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.71.0</div>
+      <div class="version-tag" id="version-tag">Version 1.72.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -865,6 +867,18 @@
         <label class="conc-mode-label" style="display:flex;align-items:center;gap:5px;">Left <input type="number" id="hit-dice-left" min="0" max="20" style="width:60px;"></label>
         <select id="hit-die-custom" style="display:none;"><option>d6</option><option>d8</option><option>d10</option><option>d12</option></select>
         <button type="button" class="hp-btn heal" id="hit-dice-spend" title="Roll one hit die, add your Constitution modifier, and heal that much.">Spend Hit Die</button>
+      </div>
+      <div class="hp-actions" id="rest-row">
+        <button type="button" class="hp-btn" id="short-rest-btn" title="Open the short rest box: spend hit dice, then finish the rest.">Short Rest</button>
+        <button type="button" class="hp-btn" id="long-rest-btn" title="Full HP, hit dice back, concentration ends. Only after 6 hours of sleep (4 of trance for an elf).">Long Rest</button>
+      </div>
+      <div class="rest-box" id="rest-box" style="display:none;">
+        <div class="conc-mode-label" id="rest-box-info"></div>
+        <div class="hp-actions" style="margin-bottom:0;">
+          <button type="button" class="hp-btn heal" id="rest-spend">Spend Hit Die</button>
+          <button type="button" class="hp-btn" id="rest-finish">Finish Short Rest</button>
+          <button type="button" class="hp-btn" id="rest-cancel">Cancel</button>
+        </div>
       </div>
       <div class="death-saves" id="death-saves" style="display:none;"></div>
     </div>
@@ -2209,6 +2223,7 @@
   var hitDieCustomEl = document.getElementById("hit-die-custom");
   function hitDiceLeft(c){ return Math.max(0, (c.level || 1) - (c.hitDiceSpent || 0)); }
   function renderHitDice(){
+    renderRestBox();
     var die = charHitDie(state);
     hitDiceRow.style.display = die ? "" : "none";
     if(!die) return;
@@ -2221,6 +2236,53 @@
     hitDiceSpendBtn.disabled = !charHpReady(state) || dead || hitDiceLeft(state) <= 0;
     hitDiceSpendBtn.title = !charHpReady(state) ? "Enter your Max HP first." : dead ? "Dead." : hitDiceLeft(state) <= 0 ? "No hit dice left — they come back on a long rest." : "Roll one hit die, add your Constitution modifier, and heal that much.";
   }
+  // ---------- Short and long rests ----------
+  function renderRestBox(){
+    var box = document.getElementById("rest-box");
+    if(!box) return;
+    var dead = charDead(state);
+    document.getElementById("short-rest-btn").disabled = dead;
+    document.getElementById("long-rest-btn").disabled = dead;
+    if(dead) box.style.display = "none";
+    if(box.style.display === "none") return;
+    var die = charHitDie(state);
+    document.getElementById("rest-box-info").textContent = "Short rest — " + (charHpReady(state) ? "HP " + hpLogState() + ". " : "Enter your Max HP to heal. ")
+      + (die ? "Hit dice left: " + hitDiceLeft(state) + " (" + die + ")." : "Choose a class to track hit dice.");
+    document.getElementById("rest-spend").disabled = !die || !charHpReady(state) || hitDiceLeft(state) <= 0;
+  }
+  document.getElementById("short-rest-btn").addEventListener("click", function(){
+    var box = document.getElementById("rest-box");
+    box.style.display = box.style.display === "none" ? "" : "none";
+    renderRestBox();
+  });
+  document.getElementById("rest-cancel").addEventListener("click", function(){ document.getElementById("rest-box").style.display = "none"; });
+  document.getElementById("rest-spend").addEventListener("click", function(){ hitDiceSpendBtn.click(); renderRestBox(); });
+  document.getElementById("rest-finish").addEventListener("click", function(){
+    var parts = [];
+    if(sdMax() > 0 && (state.sdSpent || 0) > 0){ state.sdSpent = 0; parts.push("superiority dice regained"); }
+    addLog("Short Rest", parts.length ? "finished · " + parts.join(" · ") : "finished", "—", false, null);
+    document.getElementById("rest-box").style.display = "none";
+    saveState(); renderSd(); renderHp(); renderParty();
+  });
+  document.getElementById("long-rest-btn").addEventListener("click", function(){
+    var gain = Math.max(1, Math.floor((state.level || 1) / 2));
+    var ok = window.confirm("Take a long rest?\n\nOnly after at least 6 hours of sleep (4 hours of trance for an elf).\n\nThis will:\n• restore HP to max\n• clear temp HP and death saves\n• regain " + gain + " hit dice\n• regain superiority dice\n• end concentration\n• switch off Bonus Damage buffs");
+    if(!ok) return;
+    var parts = [];
+    if(charHpReady(state)){ parts.push("HP " + (state.hpCur || 0) + " → " + state.hpMax); state.hpCur = state.hpMax; }
+    state.hpTemp = 0; state.deathSucc = 0; state.deathFail = 0;
+    var back = Math.min(state.hitDiceSpent || 0, gain);
+    if(back > 0){ state.hitDiceSpent -= back; parts.push("+" + back + " hit dice"); }
+    if(sdMax() > 0 && (state.sdSpent || 0) > 0){ state.sdSpent = 0; parts.push("superiority dice regained"); }
+    if(state.concOn){ parts.push("concentration ended"); }
+    state.concOn = false; state.concSpell = "";
+    var anyBuff = (state.buffs || []).some(function(b){ return b.on; });
+    if(anyBuff){ state.buffs.forEach(function(b){ b.on = false; }); parts.push("bonus damage buffs off"); }
+    addLog("Long Rest", parts.length ? parts.join(" · ") : "rested", "—", false, null);
+    document.getElementById("rest-box").style.display = "none";
+    saveState(); renderHp(); renderBuffs(); renderSd(); renderParty();
+  });
+
   hitDiceLeftEl.addEventListener("change", function(){
     var left = Math.max(0, Math.min(state.level || 1, parseInt(hitDiceLeftEl.value, 10) || 0));
     state.hitDiceSpent = (state.level || 1) - left;
@@ -3846,6 +3908,11 @@
       targetSelector: "#conc-row",
       title: "Concentration",
       text: "Tick Concentrating (and name the spell if you like). From then on, every time you take damage with the Damage button the sheet rolls your Constitution save for you against DC 10 or half the damage, whichever is higher — adding your CON modifier and save proficiency. Fail and concentration drops with a banner; dropping to 0 HP also ends it. The small Dis / Normal / Adv buttons beside it only affect these concentration saves, so an Advantage you turned on for something else won't leak into them."
+    },
+    {
+      targetSelector: "#rest-row",
+      title: "Short & Long Rest",
+      text: "Short Rest opens a small box where you can spend hit dice to heal (each rolls the die plus your Constitution modifier), then Finish Short Rest to bring back short-rest resources like superiority dice. Long Rest asks you to confirm first, since it should only happen after 6 hours of sleep (4 hours of trance for an elf). It restores your HP, clears temp HP and death saves, gives back half your hit dice (minimum 1), regains superiority dice, ends concentration, and switches off your Bonus Damage buffs.",
     },
     {
       targetSelector: "#ac-panel",
