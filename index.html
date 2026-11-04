@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.72.2</title>
+<title>Roll Tracker V1.73.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -426,8 +426,7 @@
     border-bottom:1px solid var(--border-soft);padding-bottom:8px;
   }
   .ability-row{
-    display:grid;
-    grid-template-columns:44px 60px 1fr auto auto auto;
+    display:flex;flex-wrap:wrap;
     align-items:center;
     gap:8px;
     padding:7px 0;
@@ -435,6 +434,12 @@
     font-family:-apple-system,"Segoe UI",sans-serif;
   }
   .ability-row:last-child{border-bottom:none;}
+  .ability-name{min-width:34px;}
+  .ability-nums{display:flex;align-items:flex-end;gap:6px;flex:1 1 auto;}
+  .ability-nums label{display:flex;flex-direction:column;gap:2px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
+  .ability-nums input[type=number]{width:52px;}
+  .ability-nums input.locked{opacity:0.65;cursor:not-allowed;}
+  .ability-ctrls{display:flex;align-items:center;gap:8px;margin-left:auto;}
   .ability-group{margin-bottom:2px;}
   .skills-wrap{margin-bottom:6px;}
   .skill-row{
@@ -786,7 +791,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.72.2</div>
+      <div class="version-tag" id="version-tag">Version 1.73.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1107,13 +1112,25 @@
   ];
 
   var blankAbilities = [
-    {name:"STR", mod:0, save:false},
-    {name:"DEX", mod:0, save:false},
-    {name:"CON", mod:0, save:false},
-    {name:"INT", mod:0, save:false},
-    {name:"WIS", mod:0, save:false},
-    {name:"CHA", mod:0, save:false}
+    {name:"STR", mod:0, save:false, score:null, bonus:0},
+    {name:"DEX", mod:0, save:false, score:null, bonus:0},
+    {name:"CON", mod:0, save:false, score:null, bonus:0},
+    {name:"INT", mod:0, save:false, score:null, bonus:0},
+    {name:"WIS", mod:0, save:false, score:null, bonus:0},
+    {name:"CHA", mod:0, save:false, score:null, bonus:0}
   ];
+  // Older saves only have a typed modifier. score stays null for them, so their modifier is left alone.
+  function backfillAbilities(c){
+    (c.abilities || []).forEach(function(a){
+      if(typeof a.score === "undefined") a.score = null;
+      if(typeof a.bonus === "undefined") a.bonus = 0;
+    });
+  }
+  // Modifier from score + bonus: floor((total - 10) / 2). Returns null when no score is entered.
+  function scoreMod(a){
+    if(a.score === null || typeof a.score === "undefined" || a.score === "") return null;
+    return Math.floor(((a.score || 0) + (a.bonus || 0) - 10) / 2);
+  }
 
   function blankSkillList(){
     return [
@@ -1340,6 +1357,7 @@
     if(!c.skills) c.skills = blankSkillList();
     c.skills.forEach(function(sk){ if(typeof sk.expertise === "undefined") sk.expertise = false; });
     if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
+    backfillAbilities(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -2701,11 +2719,51 @@
       var modInput = document.createElement("input");
       modInput.type = "number";
       modInput.value = ab.mod;
+      function syncModLock(){
+        var locked = scoreMod(state.abilities[idx]) !== null;
+        modInput.readOnly = locked;
+        modInput.classList.toggle("locked", locked);
+        modInput.title = locked ? "Worked out from your score. Clear the Score box to type a modifier yourself." : "";
+      }
+      syncModLock();
       modInput.addEventListener("input", function(){
         state.abilities[idx].mod = parseInt(modInput.value,10) || 0;
         saveState();
         renderAttacks();
       });
+
+      var scoreInput = document.createElement("input");
+      scoreInput.type = "number"; scoreInput.min = "1"; scoreInput.max = "30"; scoreInput.inputMode = "numeric";
+      scoreInput.placeholder = "—";
+      scoreInput.value = (ab.score === null || typeof ab.score === "undefined") ? "" : ab.score;
+      var bonusInput = document.createElement("input");
+      bonusInput.type = "number"; bonusInput.min = "-10"; bonusInput.max = "20"; bonusInput.inputMode = "numeric";
+      bonusInput.title = "Extra points added to the score, for things like ability score improvements or magic items.";
+      bonusInput.value = ab.bonus || 0;
+      function scoreChanged(){
+        var raw = scoreInput.value.trim();
+        var a = state.abilities[idx];
+        if(raw === ""){ a.score = null; }
+        else { a.score = Math.max(1, Math.min(30, parseInt(raw,10) || 1)); }
+        a.bonus = Math.max(-10, Math.min(20, parseInt(bonusInput.value,10) || 0));
+        var m = scoreMod(a);
+        if(m !== null){ a.mod = m; modInput.value = m; }
+        syncModLock();
+        saveState();
+        renderAttacks();
+      }
+      scoreInput.addEventListener("input", scoreChanged);
+      bonusInput.addEventListener("input", scoreChanged);
+      function labelled(text, el){
+        var l = document.createElement("label");
+        l.appendChild(document.createTextNode(text)); l.appendChild(el);
+        return l;
+      }
+      var nums = document.createElement("div");
+      nums.className = "ability-nums";
+      nums.appendChild(labelled("Score", scoreInput));
+      nums.appendChild(labelled("+", bonusInput));
+      nums.appendChild(labelled("Mod", modInput));
 
       var profLabel = document.createElement("label");
       profLabel.className = "prof";
@@ -2740,14 +2798,15 @@
         addLog(ab.name + " Save", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
       });
 
-      var abilitySpacer = document.createElement("div");
+      var ctrls = document.createElement("div");
+      ctrls.className = "ability-ctrls";
+      ctrls.appendChild(profLabel);
+      ctrls.appendChild(checkBtn);
+      ctrls.appendChild(saveBtn);
 
       row.appendChild(name);
-      row.appendChild(modInput);
-      row.appendChild(abilitySpacer);
-      row.appendChild(profLabel);
-      row.appendChild(checkBtn);
-      row.appendChild(saveBtn);
+      row.appendChild(nums);
+      row.appendChild(ctrls);
       group.appendChild(row);
 
       var relatedSkills = state.skills.filter(function(s){ return s.ability === ab.name; });
@@ -3956,7 +4015,7 @@
     {
       targetSelector: ".ability-row",
       title: "Ability Scores, Checks & Saves",
-      text: "Each ability shows its modifier — not the raw score, just the +/- you add to rolls — plus Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
+      text: "Type your ability score in the Score box and the modifier is worked out for you (and locked, so the two can't disagree). The + box adds extra points to the score, for things like ability score improvements or magic items. Clear the Score box if you would rather type the modifier yourself. Each ability also has Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
     },
     {
       targetSelector: ".skills-wrap",
@@ -4992,6 +5051,7 @@
       if(!c.spells) c.spells = [];
       if(!c.skills) c.skills = blankSkillList();
       if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
+      backfillAbilities(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
