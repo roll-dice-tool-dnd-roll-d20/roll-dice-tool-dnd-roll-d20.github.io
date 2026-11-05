@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.73.0</title>
+<title>Roll Tracker V1.74.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -412,6 +412,19 @@
   .rest-confirm-list{margin:0 0 14px;padding-left:20px;font-size:0.85rem;line-height:1.5;color:var(--ink-soft);}
   .rest-box{border:1px dashed var(--border);border-radius:8px;padding:10px;margin:8px 0;}
   .rest-box .conc-mode-label{display:block;margin-bottom:8px;}
+  .senses{border-top:1px solid var(--border-soft);margin-top:10px;padding-top:10px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .passives-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+  .passive{flex:1 1 90px;text-align:center;border:1px solid var(--border);border-radius:8px;padding:6px 4px;background:var(--bg);}
+  .passive-num{font-size:1.4rem;font-weight:700;color:var(--ink);line-height:1.1;}
+  .passive-label{font-size:0.68rem;color:var(--ink-soft);margin:2px 0 4px;}
+  .passive-adv{display:flex;justify-content:center;gap:4px;}
+  .passive-adv button{font-size:0.65rem;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--ink-soft);cursor:pointer;}
+  .passive-adv button.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .speed-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;}
+  .speed-row label{display:flex;flex-direction:column;gap:2px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
+  .speed-row input[type=number]{width:52px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.85rem;}
+  .speed-row label.small input[type=number]{width:42px;padding:3px 4px;font-size:0.75rem;}
+  .senses.tutorial-highlight .passive-label{color:var(--ink);}
   .party-nums{font-size:0.78rem;color:var(--ink-soft);}
   .party-badges{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
   .party-conc{grid-column:2 / 4;font-size:0.76rem;color:#4f86b5;}
@@ -791,7 +804,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.73.0</div>
+      <div class="version-tag" id="version-tag">Version 1.74.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -925,6 +938,20 @@
   <section class="panel">
     <h2>Ability Checks &amp; Saves</h2>
     <div id="abilities"></div>
+    <div class="senses" id="senses">
+      <div class="passives-row">
+        <div class="passive" data-key="perception"><div class="passive-num" id="pp-perception">10</div><div class="passive-label">Passive Perception</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
+        <div class="passive" data-key="investigation"><div class="passive-num" id="pp-investigation">10</div><div class="passive-label">Passive Investigation</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
+        <div class="passive" data-key="insight"><div class="passive-num" id="pp-insight">10</div><div class="passive-label">Passive Insight</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
+      </div>
+      <div class="speed-row">
+        <label>Speed (ft)<input type="number" id="speed-walk" min="0" max="999" inputmode="numeric"></label>
+        <label class="small">Fly<input type="number" id="speed-fly" min="0" max="999" inputmode="numeric"></label>
+        <label class="small">Swim<input type="number" id="speed-swim" min="0" max="999" inputmode="numeric"></label>
+        <label class="small">Climb<input type="number" id="speed-climb" min="0" max="999" inputmode="numeric"></label>
+        <label class="small">Burrow<input type="number" id="speed-burrow" min="0" max="999" inputmode="numeric"></label>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="buffs-panel">
@@ -1120,6 +1147,28 @@
     {name:"CHA", mod:0, save:false, score:null, bonus:0}
   ];
   // Older saves only have a typed modifier. score stays null for them, so their modifier is left alone.
+  var SENSE_KEYS = [["perception","Perception"],["investigation","Investigation"],["insight","Insight"]];
+  var SPEED_KINDS = ["fly","swim","climb","burrow"];
+  function backfillSenses(c){
+    if(typeof c.speed !== "number" || isNaN(c.speed) || c.speed < 0) c.speed = 30;
+    if(!c.speedExtra || typeof c.speedExtra !== "object") c.speedExtra = {};
+    SPEED_KINDS.forEach(function(k){ if(typeof c.speedExtra[k] !== "number" || isNaN(c.speedExtra[k]) || c.speedExtra[k] < 0) c.speedExtra[k] = 0; });
+    if(!c.passiveAdv || typeof c.passiveAdv !== "object") c.passiveAdv = {};
+    SENSE_KEYS.forEach(function(p){ var v = c.passiveAdv[p[0]]; if(v !== 1 && v !== -1) c.passiveAdv[p[0]] = 0; });
+  }
+  // Passive check = 10 + the skill's total bonus (ability modifier + proficiency, doubled for expertise), +5 advantage / -5 disadvantage. Calculated, never stored.
+  function passiveScore(c, key){
+    var skillName = ""; SENSE_KEYS.forEach(function(p){ if(p[0] === key) skillName = p[1]; });
+    var sk = (c.skills || []).filter(function(x){ return x.name === skillName; })[0];
+    var mod = 0, prof = 0;
+    if(sk){
+      var ab = (c.abilities || []).filter(function(a){ return a.name === sk.ability; })[0];
+      mod = ab ? (ab.mod || 0) : 0;
+      prof = sk.prof ? (c.profBonus || 0) * (sk.expertise ? 2 : 1) : 0;
+    }
+    var adv = c.passiveAdv && c.passiveAdv[key] ? c.passiveAdv[key] : 0;
+    return 10 + mod + prof + adv * 5;
+  }
   function backfillAbilities(c){
     (c.abilities || []).forEach(function(a){
       if(typeof a.score === "undefined") a.score = null;
@@ -1197,6 +1246,9 @@
     armor: "none",
     shield: false,
     acMagic: 0,
+    speed: 30,
+    speedExtra: {fly:0, swim:0, climb:0, burrow:0},
+    passiveAdv: {perception:0, investigation:0, insight:0},
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1262,6 +1314,9 @@
     armor: "none",
     shield: false,
     acMagic: 0,
+    speed: 30,
+    speedExtra: {fly:0, swim:0, climb:0, burrow:0},
+    passiveAdv: {perception:0, investigation:0, insight:0},
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1358,6 +1413,7 @@
     c.skills.forEach(function(sk){ if(typeof sk.expertise === "undefined") sk.expertise = false; });
     if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
     backfillAbilities(c);
+    backfillSenses(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -2191,7 +2247,7 @@
     syncDefaultSpell();
     var pb = document.getElementById("prof-bonus"); if(pb) pb.value = state.profBonus;
     saveState();
-    renderClass(); renderHp(); renderAttacks(); renderSpells(); renderParty();
+    renderClass(); renderHp(); renderAttacks(); renderSpells(); renderSenses(); renderParty();
   });
   document.getElementById("fstyle-select").addEventListener("change", function(){
     state.fightingStyle = this.value;
@@ -2605,7 +2661,7 @@
         fillBar(fill, tmp, c);
         nums.textContent = (c.hpCur || 0) + " / " + c.hpMax + ((c.hpTemp || 0) ? "  (+" + c.hpTemp + " temp)" : "");
       } else nums.textContent = "HP not set";
-      nums.textContent += "  ·  AC " + acCalc(c).total;
+      nums.textContent += "  ·  AC " + acCalc(c).total + "  ·  PP " + passiveScore(c, "perception");
       hpBox.appendChild(nums); row.appendChild(hpBox);
       var badges = document.createElement("div"); badges.className = "party-badges";
       var st = charHpStatus(c);
@@ -2636,7 +2692,7 @@
   profInput.addEventListener("input", function(){
     state.profBonus = parseInt(profInput.value,10) || 0;
     saveState();
-    renderAttacks();
+    renderAttacks(); renderSenses();
   });
 
   var initInput = document.getElementById("init-bonus");
@@ -2703,6 +2759,39 @@
   // ---------- Abilities ----------
   var abilitiesEl = document.getElementById("abilities");
 
+  // ---------- Passive scores and speed ----------
+  function renderSenses(){
+    var box = document.getElementById("senses");
+    if(!box) return;
+    SENSE_KEYS.forEach(function(p){
+      var cell = box.querySelector('.passive[data-key="' + p[0] + '"]');
+      var adv = state.passiveAdv ? state.passiveAdv[p[0]] || 0 : 0;
+      document.getElementById("pp-" + p[0]).textContent = passiveScore(state, p[0]);
+      Array.prototype.forEach.call(cell.querySelectorAll("button"), function(b){ b.classList.toggle("on", parseInt(b.getAttribute("data-adv"), 10) === adv); });
+    });
+    var setV = function(id, v){ var el = document.getElementById(id); if(document.activeElement !== el) el.value = v; };
+    setV("speed-walk", state.speed);
+    SPEED_KINDS.forEach(function(k){ setV("speed-" + k, state.speedExtra[k] || ""); });
+    renderParty();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#senses .passive"), function(cell){
+    Array.prototype.forEach.call(cell.querySelectorAll("button"), function(b){
+      b.addEventListener("click", function(){
+        var key = cell.getAttribute("data-key"), v = parseInt(b.getAttribute("data-adv"), 10);
+        state.passiveAdv[key] = state.passiveAdv[key] === v ? 0 : v;
+        saveState(); renderSenses();
+      });
+    });
+  });
+  document.getElementById("speed-walk").addEventListener("input", function(){
+    state.speed = Math.max(0, Math.min(999, parseInt(this.value, 10) || 0)); saveState();
+  });
+  SPEED_KINDS.forEach(function(k){
+    document.getElementById("speed-" + k).addEventListener("input", function(){
+      state.speedExtra[k] = Math.max(0, Math.min(999, parseInt(this.value, 10) || 0)); saveState();
+    });
+  });
+
   function renderAbilities(){
     abilitiesEl.innerHTML = "";
     state.abilities.forEach(function(ab, idx){
@@ -2729,7 +2818,7 @@
       modInput.addEventListener("input", function(){
         state.abilities[idx].mod = parseInt(modInput.value,10) || 0;
         saveState();
-        renderAttacks();
+        renderAttacks(); renderSenses();
       });
 
       var scoreInput = document.createElement("input");
@@ -2750,7 +2839,7 @@
         if(m !== null){ a.mod = m; modInput.value = m; }
         syncModLock();
         saveState();
-        renderAttacks();
+        renderAttacks(); renderSenses();
       }
       scoreInput.addEventListener("input", scoreChanged);
       bonusInput.addEventListener("input", scoreChanged);
@@ -2885,6 +2974,7 @@
       }
 
       abilitiesEl.appendChild(group);
+      if(idx === state.abilities.length - 1) renderSenses();
     });
   }
 
@@ -4018,6 +4108,11 @@
       text: "Type your ability score in the Score box and the modifier is worked out for you (and locked, so the two can't disagree). The + box adds extra points to the score, for things like ability score improvements or magic items. Clear the Score box if you would rather type the modifier yourself. Each ability also has Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
     },
     {
+      targetSelector: "#senses",
+      title: "Passive Scores & Speed",
+      text: "Passive Perception, Investigation and Insight are worked out for you: 10 plus the skill's total bonus (your ability modifier plus proficiency, doubled for expertise). Use the small Adv and Dis buttons under a passive if something gives you advantage or disadvantage on it, which adds or subtracts 5. Click the button again to turn it off. Type your walking Speed in feet, and use the smaller boxes for fly, swim, climb and burrow speeds. The DM sees each player's passive Perception in the party list.",
+    },
+    {
       targetSelector: ".skills-wrap",
       title: "Skills: Proficiency & Expertise",
       text: "Check \"prof\" if you're proficient in a skill, or \"exp\" for Expertise (double proficiency) — checking exp automatically checks prof too, and unchecking prof turns exp back off. Each skill's Roll button adds your modifier plus proficiency (and expertise, if checked) automatically."
@@ -5052,6 +5147,7 @@
       if(!c.skills) c.skills = blankSkillList();
       if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
       backfillAbilities(c);
+      backfillSenses(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
