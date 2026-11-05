@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.74.0</title>
+<title>Roll Tracker V1.75.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -364,8 +364,8 @@
   .hp-row label{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
   .hp-row input[type=number]{width:64px;padding:5px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
   .hp-row input[type=text]{flex:1 1 140px;min-width:0;padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;box-sizing:border-box;}
-  .class-panel,.ac-panel{margin-bottom:22px;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;}
-  .class-panel h2,.ac-panel h2{font-family:Georgia,serif;}
+  .class-panel,.ac-panel,.senses-panel{margin-bottom:22px;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;}
+  .class-panel h2,.ac-panel h2,.senses-panel h2{font-family:Georgia,serif;}
   .class-panel select,.ac-panel select,#hit-die-custom{padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;max-width:100%;}
   #level-label input{width:56px;}
   .party-class{font-size:0.76rem;color:var(--ink);margin-bottom:3px;font-weight:600;}
@@ -412,19 +412,19 @@
   .rest-confirm-list{margin:0 0 14px;padding-left:20px;font-size:0.85rem;line-height:1.5;color:var(--ink-soft);}
   .rest-box{border:1px dashed var(--border);border-radius:8px;padding:10px;margin:8px 0;}
   .rest-box .conc-mode-label{display:block;margin-bottom:8px;}
-  .senses{border-top:1px solid var(--border-soft);margin-top:10px;padding-top:10px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .senses{font-family:-apple-system,"Segoe UI",sans-serif;}
   .passives-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
   .passive{flex:1 1 90px;text-align:center;border:1px solid var(--border);border-radius:8px;padding:6px 4px;background:var(--bg);}
   .passive-num{font-size:1.4rem;font-weight:700;color:var(--ink);line-height:1.1;}
   .passive-label{font-size:0.68rem;color:var(--ink-soft);margin:2px 0 4px;}
-  .passive-adv{display:flex;justify-content:center;gap:4px;}
-  .passive-adv button{font-size:0.65rem;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--ink-soft);cursor:pointer;}
-  .passive-adv button.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .passive-adv{display:flex;justify-content:center;}
+  .passive-adv button{padding:2px 5px !important;font-size:0.65rem !important;}
+  .speed-row input.auto{opacity:0.6;font-style:italic;}
   .speed-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;}
   .speed-row label{display:flex;flex-direction:column;gap:2px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
   .speed-row input[type=number]{width:52px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.85rem;}
   .speed-row label.small input[type=number]{width:42px;padding:3px 4px;font-size:0.75rem;}
-  .senses.tutorial-highlight .passive-label{color:var(--ink);}
+  .senses-panel.tutorial-highlight .passive-label{color:var(--ink);}
   .party-nums{font-size:0.78rem;color:var(--ink-soft);}
   .party-badges{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
   .party-conc{grid-column:2 / 4;font-size:0.76rem;color:#4f86b5;}
@@ -804,7 +804,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.74.0</div>
+      <div class="version-tag" id="version-tag">Version 1.75.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -935,14 +935,13 @@
     <div class="conc-mode-label" id="ac-notes"></div>
   </section>
 
-  <section class="panel">
-    <h2>Ability Checks &amp; Saves</h2>
-    <div id="abilities"></div>
+  <section class="panel senses-panel" id="senses-panel">
+    <h2>Passives &amp; Speed</h2>
     <div class="senses" id="senses">
       <div class="passives-row">
-        <div class="passive" data-key="perception"><div class="passive-num" id="pp-perception">10</div><div class="passive-label">Passive Perception</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
-        <div class="passive" data-key="investigation"><div class="passive-num" id="pp-investigation">10</div><div class="passive-label">Passive Investigation</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
-        <div class="passive" data-key="insight"><div class="passive-num" id="pp-insight">10</div><div class="passive-label">Passive Insight</div><div class="passive-adv"><button type="button" data-adv="1" title="Advantage on this passive check: +5">Adv</button><button type="button" data-adv="-1" title="Disadvantage on this passive check: -5">Dis</button></div></div>
+        <div class="passive" data-key="perception"><div class="passive-num" id="pp-perception">10</div><div class="passive-label">Passive Perception</div><div class="mode-group conc-mode passive-adv" title="Advantage or disadvantage on this passive check: +5 or -5."><button type="button" data-mode="dis">Dis</button><button type="button" data-mode="normal" class="active">Normal</button><button type="button" data-mode="adv">Adv</button></div></div>
+        <div class="passive" data-key="investigation"><div class="passive-num" id="pp-investigation">10</div><div class="passive-label">Passive Investigation</div><div class="mode-group conc-mode passive-adv" title="Advantage or disadvantage on this passive check: +5 or -5."><button type="button" data-mode="dis">Dis</button><button type="button" data-mode="normal" class="active">Normal</button><button type="button" data-mode="adv">Adv</button></div></div>
+        <div class="passive" data-key="insight"><div class="passive-num" id="pp-insight">10</div><div class="passive-label">Passive Insight</div><div class="mode-group conc-mode passive-adv" title="Advantage or disadvantage on this passive check: +5 or -5."><button type="button" data-mode="dis">Dis</button><button type="button" data-mode="normal" class="active">Normal</button><button type="button" data-mode="adv">Adv</button></div></div>
       </div>
       <div class="speed-row">
         <label>Speed (ft)<input type="number" id="speed-walk" min="0" max="999" inputmode="numeric"></label>
@@ -952,6 +951,11 @@
         <label class="small">Burrow<input type="number" id="speed-burrow" min="0" max="999" inputmode="numeric"></label>
       </div>
     </div>
+  </section>
+
+  <section class="panel">
+    <h2>Ability Checks &amp; Saves</h2>
+    <div id="abilities"></div>
   </section>
 
   <section class="panel" id="buffs-panel">
@@ -1149,10 +1153,17 @@
   // Older saves only have a typed modifier. score stays null for them, so their modifier is left alone.
   var SENSE_KEYS = [["perception","Perception"],["investigation","Investigation"],["insight","Insight"]];
   var SPEED_KINDS = ["fly","swim","climb","burrow"];
+  var SPEED_AUTO = ["swim","climb"];
   function backfillSenses(c){
     if(typeof c.speed !== "number" || isNaN(c.speed) || c.speed < 0) c.speed = 30;
     if(!c.speedExtra || typeof c.speedExtra !== "object") c.speedExtra = {};
     SPEED_KINDS.forEach(function(k){ if(typeof c.speedExtra[k] !== "number" || isNaN(c.speedExtra[k]) || c.speedExtra[k] < 0) c.speedExtra[k] = 0; });
+    // Climb and Swim follow half the walking speed (2014: each foot costs 1 extra foot) until the player types their own number.
+    if(!c.speedAuto || typeof c.speedAuto !== "object") c.speedAuto = {};
+    SPEED_AUTO.forEach(function(k){
+      if(typeof c.speedAuto[k] !== "boolean") c.speedAuto[k] = !(c.speedExtra[k] > 0 && c.speedExtra[k] !== Math.floor(c.speed / 2));
+      if(c.speedAuto[k]) c.speedExtra[k] = Math.floor(c.speed / 2);
+    });
     if(!c.passiveAdv || typeof c.passiveAdv !== "object") c.passiveAdv = {};
     SENSE_KEYS.forEach(function(p){ var v = c.passiveAdv[p[0]]; if(v !== 1 && v !== -1) c.passiveAdv[p[0]] = 0; });
   }
@@ -1247,7 +1258,8 @@
     shield: false,
     acMagic: 0,
     speed: 30,
-    speedExtra: {fly:0, swim:0, climb:0, burrow:0},
+    speedExtra: {fly:0, swim:15, climb:15, burrow:0},
+    speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
     acOther: 0,
     acCustomBase: 10,
@@ -1315,7 +1327,8 @@
     shield: false,
     acMagic: 0,
     speed: 30,
-    speedExtra: {fly:0, swim:0, climb:0, burrow:0},
+    speedExtra: {fly:0, swim:15, climb:15, burrow:0},
+    speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
     acOther: 0,
     acCustomBase: 10,
@@ -2767,28 +2780,46 @@
       var cell = box.querySelector('.passive[data-key="' + p[0] + '"]');
       var adv = state.passiveAdv ? state.passiveAdv[p[0]] || 0 : 0;
       document.getElementById("pp-" + p[0]).textContent = passiveScore(state, p[0]);
-      Array.prototype.forEach.call(cell.querySelectorAll("button"), function(b){ b.classList.toggle("on", parseInt(b.getAttribute("data-adv"), 10) === adv); });
+      Array.prototype.forEach.call(cell.querySelectorAll("button"), function(b){ b.classList.toggle("active", b.getAttribute("data-mode") === (adv === 1 ? "adv" : adv === -1 ? "dis" : "normal")); });
     });
     var setV = function(id, v){ var el = document.getElementById(id); if(document.activeElement !== el) el.value = v; };
     setV("speed-walk", state.speed);
-    SPEED_KINDS.forEach(function(k){ setV("speed-" + k, state.speedExtra[k] || ""); });
+    SPEED_KINDS.forEach(function(k){
+      setV("speed-" + k, state.speedExtra[k] || "");
+      var auto = SPEED_AUTO.indexOf(k) !== -1 && state.speedAuto[k];
+      var el = document.getElementById("speed-" + k);
+      el.classList.toggle("auto", !!auto);
+      el.title = SPEED_AUTO.indexOf(k) === -1 ? "" : (auto ? "Automatic: half your walking speed. Type a number to override." : "Set by hand. Clear the box to go back to half your walking speed.");
+    });
     renderParty();
   }
   Array.prototype.forEach.call(document.querySelectorAll("#senses .passive"), function(cell){
     Array.prototype.forEach.call(cell.querySelectorAll("button"), function(b){
       b.addEventListener("click", function(){
-        var key = cell.getAttribute("data-key"), v = parseInt(b.getAttribute("data-adv"), 10);
-        state.passiveAdv[key] = state.passiveAdv[key] === v ? 0 : v;
+        var key = cell.getAttribute("data-key"), m = b.getAttribute("data-mode");
+        state.passiveAdv[key] = m === "adv" ? 1 : m === "dis" ? -1 : 0;
         saveState(); renderSenses();
       });
     });
   });
   document.getElementById("speed-walk").addEventListener("input", function(){
-    state.speed = Math.max(0, Math.min(999, parseInt(this.value, 10) || 0)); saveState();
+    state.speed = Math.max(0, Math.min(999, parseInt(this.value, 10) || 0));
+    SPEED_AUTO.forEach(function(k){ if(state.speedAuto[k]) state.speedExtra[k] = Math.floor(state.speed / 2); });
+    saveState(); renderSenses();
   });
   SPEED_KINDS.forEach(function(k){
     document.getElementById("speed-" + k).addEventListener("input", function(){
-      state.speedExtra[k] = Math.max(0, Math.min(999, parseInt(this.value, 10) || 0)); saveState();
+      var raw = this.value.trim();
+      if(SPEED_AUTO.indexOf(k) !== -1){
+        if(raw === ""){ state.speedAuto[k] = true; state.speedExtra[k] = Math.floor(state.speed / 2); }
+        else { state.speedAuto[k] = false; state.speedExtra[k] = Math.max(0, Math.min(999, parseInt(raw, 10) || 0)); }
+      } else {
+        state.speedExtra[k] = Math.max(0, Math.min(999, parseInt(raw, 10) || 0));
+      }
+      saveState();
+      var el = this; el.classList.toggle("auto", SPEED_AUTO.indexOf(k) !== -1 && state.speedAuto[k]);
+    });
+    document.getElementById("speed-" + k).addEventListener("blur", function(){ renderSenses();
     });
   });
 
@@ -4103,14 +4134,14 @@
       text: "Pick your armor and your AC is worked out for you: base AC, plus Dexterity (capped for medium armor, none for heavy). With no armor, Barbarians and Monks get Unarmored Defense automatically, and Mage Armor and Draconic Resilience are in the list too. Tick Shield for +2, and use Magic bonus and Other bonus for things like a +1 shield or a Ring of Protection. The Defense fighting style adds +1 while you wear armor. Two-handed weapons are locked out while a shield is equipped, and the DM sees everyone's AC in the party list.",
     },
     {
+      targetSelector: "#senses-panel",
+      title: "Passive Scores & Speed",
+      text: "Passive Perception, Investigation and Insight are worked out for you: 10 plus the skill's total bonus (your ability modifier plus proficiency, doubled for expertise). Use the Dis / Normal / Adv buttons under a passive if something gives you advantage or disadvantage on it, which adds or subtracts 5. Click the button again to turn it off. Type your walking Speed in feet. Climb and Swim fill in as half your walking speed by default (the 2014 rule for when you have no special speed) and the field is shown in grey italics; type your own number to override it, or clear the box to go back to automatic. Fly and Burrow stay blank until you need them. The DM sees each player's passive Perception in the party list.",
+    },
+    {
       targetSelector: ".ability-row",
       title: "Ability Scores, Checks & Saves",
       text: "Type your ability score in the Score box and the modifier is worked out for you (and locked, so the two can't disagree). The + box adds extra points to the score, for things like ability score improvements or magic items. Clear the Score box if you would rather type the modifier yourself. Each ability also has Check and Save buttons for a quick d20 roll. Check \"save prof\" if you're proficient in that ability's saving throw, and it's added automatically whenever you click Save."
-    },
-    {
-      targetSelector: "#senses",
-      title: "Passive Scores & Speed",
-      text: "Passive Perception, Investigation and Insight are worked out for you: 10 plus the skill's total bonus (your ability modifier plus proficiency, doubled for expertise). Use the small Adv and Dis buttons under a passive if something gives you advantage or disadvantage on it, which adds or subtracts 5. Click the button again to turn it off. Type your walking Speed in feet, and use the smaller boxes for fly, swim, climb and burrow speeds. The DM sees each player's passive Perception in the party list.",
     },
     {
       targetSelector: ".skills-wrap",
