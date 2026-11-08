@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.78.0</title>
+<title>Roll Tracker V1.79.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -716,6 +716,14 @@
   .nb-seg{display:flex;gap:6px;margin-bottom:10px;}
   .nb-seg button{flex:1 1 0;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.82rem;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .nb-seg button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .nb-view{margin-bottom:8px;}
+  .nb-view button{padding:5px 6px;font-size:0.74rem;}
+  .nb-act{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;padding:6px 5px;flex:0 0 auto;}
+  .nb-act:hover{color:var(--ink);}
+  .nb-note.archived textarea{opacity:0.85;}
+  .nb-dl{margin:6px 0 2px;}
+  .nb-dl button{width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);cursor:pointer;font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.8rem;}
+  .nb-dl button:hover{border-color:var(--moss);color:var(--moss-dark);}
   .nb-tools{display:flex;gap:6px;margin-bottom:10px;font-family:-apple-system,"Segoe UI",sans-serif;}
   .nb-tools input{flex:1 1 0;min-width:0;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:0.85rem;}
   .nb-tools button{padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--ink);cursor:pointer;font:inherit;font-size:0.82rem;white-space:nowrap;}
@@ -870,7 +878,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.78.0</div>
+      <div class="version-tag" id="version-tag">Version 1.79.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1073,9 +1081,11 @@
   <aside id="notes-drawer" class="side-drawer" role="dialog" aria-modal="true" aria-label="Notebook" aria-hidden="true">
     <div class="inv-drawer-head"><h2>Notebook</h2><button type="button" id="notes-close" aria-label="Close notebook" title="Close">✕</button></div>
     <div class="nb-seg" id="nb-seg"><button type="button" id="nb-seg-mine">My Notes</button><button type="button" id="nb-seg-party">Party Notes</button></div>
+    <div class="nb-seg nb-view" id="nb-view"><button type="button" id="nb-view-active" class="active">Notes</button><button type="button" id="nb-view-archive">Archive</button></div>
     <div class="nb-tools" id="nb-tools"><input type="search" id="nb-search" placeholder="Search notes" autocomplete="off"><button type="button" id="nb-new">+ New Note</button></div>
     <div id="nb-list"></div>
     <div class="nb-foot" id="nb-foot"></div>
+    <div class="nb-dl"><button type="button" id="nb-download">Download notes (.txt)</button></div>
   </aside>
   <aside id="inv-drawer" class="side-drawer" role="dialog" aria-modal="true" aria-label="Inventory" aria-hidden="true">
     <div class="inv-drawer-head"><h2>Inventory</h2><button type="button" id="inv-close" aria-label="Close inventory" title="Close">✕</button></div>
@@ -4128,7 +4138,7 @@
   // right away and would catch it mid-slide).
   var DRAWERS = {
     inv:   {tab: document.getElementById("inv-tab"),   el: document.getElementById("inv-drawer"),   open: false, byTut: false, onOpen: function(){ renderInventory(); sizeInvBoxes(); }},
-    notes: {tab: document.getElementById("notes-tab"), el: document.getElementById("notes-drawer"), open: false, byTut: false, onOpen: function(){ renderNotes(); }}
+    notes: {tab: document.getElementById("notes-tab"), el: document.getElementById("notes-drawer"), open: false, byTut: false, onOpen: function(){ renderNotes(); }, onClose: function(){ nbView = "active"; renderNotes(); }}
   };
   var drawerBackdropEl = document.getElementById("inv-backdrop");
   function openDrawer(name, fromTutorial){
@@ -4154,6 +4164,7 @@
     drawerBackdropEl.classList.remove("open");
     if(hadLock) unlockPageScroll();
     if(document.activeElement && d.el.contains(document.activeElement)) document.activeElement.blur();
+    if(d.onClose) d.onClose();
   }
   function closeAllDrawers(onlyTutorialOnes){
     if(!DRAWERS) return;   // can be reached from the lock banner before this block has run
@@ -4204,18 +4215,64 @@
     note.u = Date.now();
     if(sec === "party") pushPartyNote(note, false); else saveState();
   }
+  // ----- Archive: old notes move out of the sheet's data into their own database entries, and are only loaded while
+  // the Archive view is open.
+  var ARCHIVE_MAX = 500;
+  var nbView = "active", archives = {}, archiveUnsub = null, archiveOwnerOn = null, nbFlash = "", nbFlashTimer = null;
+  function archiveOwner(sec){ return sec === "party" ? "party" : String(app.activeIndex); }
+  function flashNote(msg){
+    nbFlash = msg; noteFooter();
+    clearTimeout(nbFlashTimer); nbFlashTimer = setTimeout(function(){ nbFlash = ""; noteFooter(); }, 5000);
+  }
+  function ioError(e){ return (e && (e.code || e.message)) || "unknown"; }
+  function parseArchive(raw){
+    var next = {};
+    if(raw && typeof raw === "object"){
+      Object.keys(raw).forEach(function(k){
+        var v = raw[k];
+        if(typeof v === "string"){ try{ v = JSON.parse(v); }catch(e){ return; } }
+        var n = cleanNote(v); if(n) next[n.id] = n;
+      });
+    }
+    return next;
+  }
+  function syncArchiveListener(){
+    var want = (DRAWERS && DRAWERS.notes.open && nbView === "archive") ? archiveOwner(nbSection) : null;
+    if(want === archiveOwnerOn) return;
+    if(archiveUnsub){ try{ archiveUnsub(); }catch(e){} archiveUnsub = null; }
+    if(archiveOwnerOn) delete archives[archiveOwnerOn];
+    archiveOwnerOn = want;
+    if(!want) return;
+    var entry = archives[want] = {loaded: false, notes: {}, error: ""};
+    if(!window.rtArchiveIO){ entry.error = "The archive needs a connection."; return; }
+    archiveUnsub = window.rtArchiveIO.listen(want, function(raw){
+      if(archiveOwnerOn !== want) return;
+      entry.notes = parseArchive(raw); entry.loaded = true; entry.error = ""; renderNotes();
+    }, function(err){
+      if(archiveOwnerOn !== want) return;
+      entry.error = "Archive unavailable (" + ioError(err) + ")"; renderNotes();
+    });
+  }
   function noteFooter(){
     var foot = document.getElementById("nb-foot");
     if(!foot) return;
     var msg = "", warn = false;
-    if(nbSection === "party"){
+    if(nbFlash){ msg = nbFlash; warn = true; }
+    else if(nbView === "archive"){
+      var ent = archives[archiveOwner(nbSection)];
+      var count = ent ? Object.keys(ent.notes).length : 0;
+      msg = (ent && ent.error) ? ent.error : "Archived notes are kept in the database and only loaded while this view is open. " + count + " archived. Tap ↩ to bring one back.";
+      warn = !!(ent && ent.error);
+    } else if(nbSection === "party"){
+      var pc = Object.keys(partyNotes).length;
       if(partyNotesError){ msg = partyNotesError; warn = true; }
       else if(!window.rtPartyIO){ msg = "Party notes sync once you're signed in and online."; }
+      else if(pc >= NOTES_COUNT_MAX * 0.9){ msg = "Nearly full. Tap 📦 on older notes to move them to the Archive."; warn = true; }
       else msg = "Shared with everyone in the group. Anyone can edit or delete these.";
     } else {
       var total = myNotesTotal();
       msg = (state.isDM ? "Hidden from players in the app. " : "") + total.toLocaleString() + " / " + NOTES_TOTAL_MAX.toLocaleString() + " characters used.";
-      if(total > NOTES_TOTAL_MAX * 0.9) warn = true;
+      if(total > NOTES_TOTAL_MAX * 0.9){ msg += " Nearly full: tap 📦 on older notes to move them to the Archive."; warn = true; }
     }
     foot.textContent = msg; foot.classList.toggle("warn", warn);
   }
@@ -4228,12 +4285,19 @@
     segMine.textContent = state.isDM ? "DM Notes" : (currentAccount === app.activeIndex ? "My Notes" : ((state.name || "Player") + "'s Notes"));
     segMine.classList.toggle("active", nbSection === "mine");
     segParty.classList.toggle("active", nbSection === "party");
-    var sec = nbSection;
-    var all = sec === "party" ? Object.keys(partyNotes).map(function(k){ return partyNotes[k]; }) : (state.notes || []);
+    var sec = nbSection, view = nbView === "archive" ? "archive" : "active";
+    document.getElementById("nb-view-active").classList.toggle("active", view === "active");
+    document.getElementById("nb-view-archive").classList.toggle("active", view === "archive");
+    document.getElementById("nb-new").style.display = view === "archive" ? "none" : "";
+    syncArchiveListener();
+    var ent = view === "archive" ? archives[archiveOwner(sec)] : null;
+    var all;
+    if(view === "archive") all = ent ? Object.keys(ent.notes).map(function(k){ return ent.notes[k]; }) : [];
+    else all = sec === "party" ? Object.keys(partyNotes).map(function(k){ return partyNotes[k]; }) : (state.notes || []);
     var q = nbQuery.trim().toLowerCase();
     var shown = all.slice().sort(function(a, b){ return b.t - a.t; }).filter(function(n){ return !q || (n.title + "\n" + n.body).toLowerCase().indexOf(q) !== -1; });
-    var ids = shown.map(function(n){ return n.id; }).join(",");
-    if(nbListEl.contains(document.activeElement) && nbListEl.getAttribute("data-ids") === ids && nbListEl.getAttribute("data-sec") === sec){
+    var ids = view + ":" + shown.map(function(n){ return n.id; }).join(",");
+    if(view === "active" && nbListEl.contains(document.activeElement) && nbListEl.getAttribute("data-ids") === ids && nbListEl.getAttribute("data-sec") === sec){
       // Someone is typing and nothing was added or removed: refresh only the boxes they aren't in.
       shown.forEach(function(n){
         var row = nbListEl.querySelector('[data-id="' + n.id + '"]'); if(!row) return;
@@ -4246,13 +4310,108 @@
       nbListEl.setAttribute("data-ids", ids); nbListEl.setAttribute("data-sec", sec);
       if(!shown.length){
         var empty = document.createElement("div"); empty.className = "nb-empty";
-        empty.textContent = q ? "No notes match your search." : "No notes yet. Tap + New Note to start one.";
+        if(view === "archive") empty.textContent = (ent && ent.error) ? ent.error : (!ent || !ent.loaded) ? "Loading the archive…" : q ? "No archived notes match your search." : "Nothing archived yet. Tap 📦 on a note to move it here.";
+        else empty.textContent = q ? "No notes match your search." : "No notes yet. Tap + New Note to start one.";
         nbListEl.appendChild(empty);
       }
-      shown.forEach(function(n){ nbListEl.appendChild(buildNote(sec, n, !!q)); });
+      shown.forEach(function(n){ nbListEl.appendChild(view === "archive" ? buildArchivedNote(sec, n, !!q) : buildNote(sec, n, !!q)); });
       Array.prototype.forEach.call(nbListEl.querySelectorAll("textarea"), autoGrow);
     }
     noteFooter();
+  }
+  function removeActiveNote(sec, ownerState, id){
+    if(sec === "party"){ clearTimeout(partyTimers[id]); delete partyTimers[id]; delete partyNotes[id]; if(window.rtPartyIO) window.rtPartyIO.write(id, null); }
+    else { ownerState.notes = ownerState.notes.filter(function(x){ return x.id !== id; }); saveState(); }
+  }
+  function archiveNote(sec, note){
+    if(!window.rtArchiveIO){ flashNote("Archiving needs a connection."); return; }
+    var owner = archiveOwner(sec), ownerState = state, copy = JSON.parse(JSON.stringify(note));
+    clearTimeout(partyTimers[note.id]);
+    window.rtArchiveIO.count(owner).then(function(n){
+      if(n >= ARCHIVE_MAX){ flashNote("The archive is full (" + ARCHIVE_MAX + " notes). Delete some archived notes first."); return null; }
+      return window.rtArchiveIO.write(owner, copy.id, JSON.stringify(copy)).then(function(){
+        removeActiveNote(sec, ownerState, copy.id); renderNotes();
+      });
+    }).catch(function(e){ flashNote("Couldn't archive that note (" + ioError(e) + ")."); });
+  }
+  function restoreNote(sec, note){
+    var owner = archiveOwner(sec);
+    var count = sec === "party" ? Object.keys(partyNotes).length : state.notes.length;
+    if(count >= NOTES_COUNT_MAX){ flashNote("There's no room: " + NOTES_COUNT_MAX + " notes is the limit. Archive or delete another first."); return; }
+    if(sec === "mine" && myNotesTotal() + note.title.length + note.body.length > NOTES_TOTAL_MAX){ flashNote("Not enough room to restore that note. Archive or shorten another first."); return; }
+    var copy = JSON.parse(JSON.stringify(note));
+    if(sec === "party"){ partyNotes[copy.id] = copy; pushPartyNote(copy, true); }
+    else { state.notes.unshift(copy); saveState(); }
+    if(window.rtArchiveIO) window.rtArchiveIO.write(owner, copy.id, null).catch(function(e){ flashNote("Restored, but couldn't clear it from the archive (" + ioError(e) + ")."); });
+    renderNotes();
+  }
+  function buildArchivedNote(sec, n, searching){
+    var row = document.createElement("div");
+    row.className = "nb-note archived"; row.setAttribute("data-id", n.id);
+    var folded = nbCollapsed[n.id] !== false && !searching;   // archived notes start folded
+    row.classList.toggle("collapsed", folded);
+    var head = document.createElement("div"); head.className = "nb-head";
+    var fold = document.createElement("button"); fold.type = "button"; fold.className = "nb-fold"; fold.textContent = folded ? "▸" : "▾"; fold.title = "Show or hide this note";
+    var title = document.createElement("textarea"); title.className = "nb-title"; title.rows = 1; title.readOnly = true; title.value = n.title;
+    var back = document.createElement("button"); back.type = "button"; back.className = "nb-act"; back.textContent = "↩"; back.title = "Restore to your notes";
+    var del = document.createElement("button"); del.type = "button"; del.className = "nb-del"; del.textContent = "✕"; del.title = "Delete this archived note for good";
+    var meta = document.createElement("div"); meta.className = "nb-meta";
+    meta.textContent = noteDate(n.t) + (n.by ? " · " + n.by : "");
+    var body = document.createElement("textarea"); body.className = "nb-body"; body.readOnly = true; body.value = n.body;
+    fold.addEventListener("click", function(){
+      var nowFolded = !row.classList.contains("collapsed");
+      nbCollapsed[n.id] = nowFolded; row.classList.toggle("collapsed", nowFolded);
+      fold.textContent = nowFolded ? "▸" : "▾";
+      if(!nowFolded) autoGrow(body);
+    });
+    back.addEventListener("click", function(){ restoreNote(sec, n); });
+    del.addEventListener("click", function(){
+      if(!del.classList.contains("confirm")){
+        clearTimeout(nbConfirmTimer);
+        Array.prototype.forEach.call(nbListEl.querySelectorAll(".nb-del.confirm"), function(b){ b.classList.remove("confirm"); b.textContent = "✕"; });
+        del.classList.add("confirm"); del.textContent = "Delete?";
+        nbConfirmTimer = setTimeout(function(){ del.classList.remove("confirm"); del.textContent = "✕"; }, 3000);
+        return;
+      }
+      clearTimeout(nbConfirmTimer);
+      if(window.rtArchiveIO) window.rtArchiveIO.write(archiveOwner(sec), n.id, null).catch(function(e){ flashNote("Couldn't delete that note (" + ioError(e) + ")."); });
+    });
+    head.appendChild(fold); head.appendChild(title); head.appendChild(back); head.appendChild(del);
+    row.appendChild(head); row.appendChild(meta); row.appendChild(body);
+    return row;
+  }
+  function downloadNotes(){
+    var blocked = notesBlockedForViewer(), owner = String(app.activeIndex);
+    function readArchive(o){
+      if(!window.rtArchiveIO) return Promise.resolve(null);
+      return window.rtArchiveIO.read(o).then(parseArchive, function(){ return null; });
+    }
+    function block(heading, notes){
+      var list = notes.slice().sort(function(a, b){ return a.t - b.t; });
+      var out = "==== " + heading + " ====\n\n";
+      if(!list.length) return out + "(none)\n\n";
+      list.forEach(function(n){ out += "## " + (n.title || "(untitled)") + "\n" + noteDate(n.t) + (n.by ? " · " + n.by : "") + "\n\n" + n.body + "\n\n"; });
+      return out;
+    }
+    function archBlock(heading, map){
+      if(map === null) return "==== " + heading + " ====\n\n(couldn't be loaded, so it isn't in this file)\n\n";
+      return block(heading, Object.keys(map).map(function(k){ return map[k]; }));
+    }
+    Promise.all([blocked ? null : readArchive(owner), readArchive("party")]).then(function(r){
+      var who = state.isDM ? "DM" : (state.name || "Player");
+      var text = "Roll Tracker notes\nSaved " + new Date().toLocaleString() + "\n\n";
+      if(!blocked){
+        text += block(who + " — notes", state.notes || []);
+        text += archBlock(who + " — archive", r[0]);
+      }
+      text += block("Party notes", Object.keys(partyNotes).map(function(k){ return partyNotes[k]; }));
+      text += archBlock("Party archive", r[1]);
+      var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+      var url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = "Roll Tracker notes - " + (blocked ? "Party" : who) + " - " + new Date().toISOString().slice(0, 10) + ".txt";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    });
   }
   function buildNote(sec, n, searching){
     var row = document.createElement("div");
@@ -4307,10 +4466,15 @@
       }
       renderNotes();
     });
-    head.appendChild(fold); head.appendChild(title); head.appendChild(del);
+    var arch = document.createElement("button"); arch.type = "button"; arch.className = "nb-act"; arch.textContent = "📦"; arch.title = "Move to the Archive";
+    arch.addEventListener("click", function(){ var note = noteFindFor(sec, n.id); if(note) archiveNote(sec, note); });
+    head.appendChild(fold); head.appendChild(title); head.appendChild(arch); head.appendChild(del);
     row.appendChild(head); row.appendChild(meta); row.appendChild(body);
     return row;
   }
+  document.getElementById("nb-view-active").addEventListener("click", function(){ nbView = "active"; renderNotes(); });
+  document.getElementById("nb-view-archive").addEventListener("click", function(){ nbView = "archive"; renderNotes(); });
+  document.getElementById("nb-download").addEventListener("click", downloadNotes);
   document.getElementById("nb-seg-mine").addEventListener("click", function(){ nbSection = "mine"; renderNotes(); });
   document.getElementById("nb-seg-party").addEventListener("click", function(){ nbSection = "party"; renderNotes(); });
   document.getElementById("nb-search").addEventListener("input", function(){ nbQuery = this.value; renderNotes(); });
@@ -4694,6 +4858,12 @@
       openDrawer: "notes",
       title: "New Notes and Search",
       text: "Tap + New Note to start one. Each note has a title, the date it was started and a body that grows as you type. Tap the arrow to fold a note up, and tap the ✕ twice to delete it. The search box filters by title and text, which is handy once the notebook gets long."
+    },
+    {
+      targetSelector: "#nb-view",
+      openDrawer: "notes",
+      title: "Archive and Download",
+      text: "Once a notebook fills up, tap the 📦 on an older note to move it to the Archive. Archived notes don't count toward the limit and aren't loaded with your sheet, so nothing slows down; they only load while the Archive view is open. Tap ↩ to bring one back. The Download button at the bottom saves all your notes, archived ones included, as a text file for your own backup."
     },
     {
       targetSelector: "#nb-seg",
@@ -5683,7 +5853,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCoKItW-sZBT8VciZGHmW33O9qvn-BOnQA",
@@ -6084,6 +6254,13 @@
           bridge.setPartyNotesError("Couldn't save shared notes (" + ((e && (e.code || e.message)) || "unknown") + ")");
         });
       }
+    };
+    // Notes archive: one entry per note under rollTracker/notesArchive/{owner}/{id}, read only while the Archive view is open.
+    window.rtArchiveIO = {
+      listen: function(owner, cb, errCb){ return onValue(ref(db, "rollTracker/notesArchive/" + owner), function(snap){ cb(snap.val()); }, errCb); },
+      read: function(owner){ return get(ref(db, "rollTracker/notesArchive/" + owner)).then(function(snap){ return snap.val(); }); },
+      count: function(owner){ return get(ref(db, "rollTracker/notesArchive/" + owner)).then(function(snap){ var v = snap.val(); return (v && typeof v === "object") ? Object.keys(v).length : 0; }); },
+      write: function(owner, id, json){ return set(ref(db, "rollTracker/notesArchive/" + owner + "/" + id), json); }
     };
     var partyRetryMs = 2000;
     function listenParty(){
