@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.79.0</title>
+<title>Roll Tracker V1.79.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -716,6 +716,9 @@
   .nb-seg{display:flex;gap:6px;margin-bottom:10px;}
   .nb-seg button{flex:1 1 0;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.82rem;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .nb-seg button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  /* Themed tooltip: replaces the browser's own white hint box for anything with a title */
+  #rt-tooltip{position:fixed;left:0;top:0;z-index:10001;max-width:260px;padding:6px 9px;border-radius:6px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.78rem;line-height:1.35;box-shadow:0 3px 10px rgba(0,0,0,0.25);pointer-events:none;opacity:0;visibility:hidden;transition:opacity 0.12s ease;}
+  #rt-tooltip.show{opacity:1;visibility:visible;}
   .nb-view{margin-bottom:8px;}
   .nb-view button{padding:5px 6px;font-size:0.74rem;}
   .nb-act{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;padding:6px 5px;flex:0 0 auto;}
@@ -878,7 +881,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.79.0</div>
+      <div class="version-tag" id="version-tag">Version 1.79.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -5737,6 +5740,78 @@
     renderNotes();
     updateLockOverlay();
   }
+
+  // ---------- Themed tooltips ----------
+  // The browser draws title="" hints itself (white box, can't be styled), so we take each title over on first hover and
+  // show it in our own box instead. Mouse hover waits a moment like the native one; keyboard focus shows it at once.
+  (function(){
+    var tip = document.createElement("div");
+    tip.id = "rt-tooltip"; tip.setAttribute("role", "tooltip");
+    document.body.appendChild(tip);
+    var current = null, timer = null;
+    function canHover(){ return !window.matchMedia || window.matchMedia("(hover: hover) and (pointer: fine)").matches; }
+    function tipText(el){
+      var t = el.getAttribute("title");
+      if(t !== null){
+        // A fresh title always wins over what we saved earlier (the app rewrites titles as things change).
+        if(t === "") el.removeAttribute("data-tip"); else el.setAttribute("data-tip", t);
+        el.removeAttribute("title");
+        if(t !== "" && !el.hasAttribute("aria-label") && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (el.tagName === "BUTTON" && el.textContent.trim().length <= 2))) el.setAttribute("aria-label", t);
+      }
+      return el.getAttribute("data-tip") || "";
+    }
+    function hide(){
+      clearTimeout(timer); timer = null;
+      tip.classList.remove("show");
+      if(current && current.getAttribute("aria-describedby") === "rt-tooltip") current.removeAttribute("aria-describedby");
+      current = null;
+    }
+    function place(el){
+      var r = el.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      tip.style.left = "0px"; tip.style.top = "0px";
+      var w = tip.offsetWidth, h = tip.offsetHeight;
+      var left = Math.max(6, Math.min(vw - w - 6, r.left + r.width / 2 - w / 2));
+      var top = r.bottom + 8;
+      if(top + h > vh - 6) top = Math.max(6, r.top - h - 8);   // no room below: go above
+      tip.style.left = Math.round(left) + "px"; tip.style.top = Math.round(top) + "px";
+    }
+    function show(el){
+      var text = tipText(el);
+      if(!text){ hide(); return; }
+      current = el; tip.textContent = text;
+      el.setAttribute("aria-describedby", "rt-tooltip");
+      place(el); tip.classList.add("show");
+    }
+    function target(e){ return e.target && e.target.closest ? e.target.closest("[title],[data-tip]") : null; }
+    document.addEventListener("mouseover", function(e){
+      if(!canHover()) return;
+      var el = target(e);
+      if(!el || el === current) return;
+      hide();
+      var el2 = el;
+      // Take the title away right now so the browser's own box never gets a chance to appear.
+      tipText(el2);
+      timer = setTimeout(function(){ show(el2); }, 350);
+    });
+    document.addEventListener("mouseout", function(e){
+      var el = target(e);
+      if(!el) return;
+      if(e.relatedTarget && el.contains(e.relatedTarget)) return;
+      if(el === current || timer) hide();
+    });
+    document.addEventListener("focusin", function(e){
+      var el = target(e);
+      if(!el) return;
+      var kb = true;
+      try{ kb = el.matches(":focus-visible"); }catch(err){}
+      if(kb && !(el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && /text|search|number/.test(el.type))) ) show(el);
+    });
+    document.addEventListener("focusout", hide);
+    document.addEventListener("pointerdown", hide, true);
+    document.addEventListener("scroll", hide, true);
+    document.addEventListener("keydown", function(e){ if(e.key === "Escape") hide(); }, true);
+    window.addEventListener("resize", hide);
+  })();
 
   window.rtBridge = {
     lockScroll: function(){ lockPageScroll(); },
