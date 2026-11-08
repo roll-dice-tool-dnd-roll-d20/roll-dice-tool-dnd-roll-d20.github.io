@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.75.1</title>
+<title>Roll Tracker V1.76.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -682,6 +682,24 @@
      Account, Hide Rolls, Clear Log) — without this it stays looking greyed-out under the
      highlight. */
   #add-prof.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
+  .inv-panel{margin-top:22px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .inv-panel h2{font-family:Georgia,serif;}
+  .coin-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+  .coin-row label{display:flex;flex-direction:column;gap:2px;flex:1 1 56px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
+  .coin-row input[type=number]{width:100%;min-width:0;box-sizing:border-box;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.85rem;}
+  .coin-total{font-size:0.76rem;color:var(--ink-soft);margin:4px 0 12px;}
+  .inv-list{display:flex;flex-direction:column;}
+  .inv-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border-soft);}
+  .inv-row:last-child{border-bottom:none;}
+  .inv-row input{padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.88rem;min-width:0;box-sizing:border-box;}
+  .inv-row .inv-name{flex:3 1 90px;}
+  .inv-row .inv-qty{flex:0 0 56px;width:56px;}
+  .inv-row .inv-note{flex:3 1 90px;}
+  .inv-row button.del{background:none;border:none;color:var(--berry);font-size:1rem;cursor:pointer;padding:2px 6px;}
+  #add-item{width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:8px;}
+  #add-item:hover{border-color:var(--moss);color:var(--moss-dark);}
+  #add-item.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
+  .inv-panel.tutorial-highlight .coin-total{color:var(--ink);}
   .prof-bulk-details{margin-top:10px;}
   .prof-bulk-details summary{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -804,7 +822,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.75.1</div>
+      <div class="version-tag" id="version-tag">Version 1.76.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1001,6 +1019,24 @@
     </details>
   </section>
 
+  <section class="panel inv-panel" id="inv-panel">
+    <h2>Inventory</h2>
+    <div id="coins-group">
+      <div class="coin-row">
+        <label>CP<input type="number" id="coin-cp" min="0" inputmode="numeric"></label>
+        <label>SP<input type="number" id="coin-sp" min="0" inputmode="numeric"></label>
+        <label>EP<input type="number" id="coin-ep" min="0" inputmode="numeric"></label>
+        <label>GP<input type="number" id="coin-gp" min="0" inputmode="numeric"></label>
+        <label>PP<input type="number" id="coin-pp" min="0" inputmode="numeric"></label>
+      </div>
+      <div class="coin-total" id="coin-total"></div>
+    </div>
+    <div id="items-group">
+      <div id="inv-items" class="inv-list"></div>
+      <button id="add-item" type="button">+ Add Item</button>
+    </div>
+  </section>
+
   <div class="lock-overlay" id="lock-overlay">
     <div class="lock-overlay-box">
       <div class="lock-overlay-icon">🔒</div>
@@ -1154,6 +1190,18 @@
   var SENSE_KEYS = [["perception","Perception"],["investigation","Investigation"],["insight","Insight"]];
   var SPEED_KINDS = ["fly","swim","climb","burrow"];
   var SPEED_AUTO = ["swim","climb"];
+  var COIN_KEYS = ["cp","sp","ep","gp","pp"];
+  var COIN_GP = {cp:0.01, sp:0.1, ep:0.5, gp:1, pp:10};   // 2014 PHB exchange rates
+  function backfillInventory(c){
+    if(!c.coins || typeof c.coins !== "object") c.coins = {};
+    COIN_KEYS.forEach(function(k){ if(typeof c.coins[k] !== "number" || isNaN(c.coins[k]) || c.coins[k] < 0) c.coins[k] = 0; });
+    if(!Array.isArray(c.items)) c.items = [];
+    c.items.forEach(function(it){
+      if(typeof it.name !== "string") it.name = "";
+      if(typeof it.qty !== "number" || isNaN(it.qty) || it.qty < 0) it.qty = 1;
+      if(typeof it.note !== "string") it.note = "";
+    });
+  }
   function backfillSenses(c){
     if(typeof c.speed !== "number" || isNaN(c.speed) || c.speed < 0) c.speed = 30;
     if(!c.speedExtra || typeof c.speedExtra !== "object") c.speedExtra = {};
@@ -1261,6 +1309,8 @@
     speedExtra: {fly:0, swim:15, climb:15, burrow:0},
     speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
+    coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
+    items: [],
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1330,6 +1380,8 @@
     speedExtra: {fly:0, swim:15, climb:15, burrow:0},
     speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
+    coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
+    items: [],
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1427,6 +1479,7 @@
     if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
     backfillAbilities(c);
     backfillSenses(c);
+    backfillInventory(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -1887,6 +1940,7 @@
     renderSpells();
     renderLog();
     renderProficiencies();
+    renderInventory();
     updateLockOverlay();
     renderCombat();  // Join Combat is only clickable while you're on your own tab
   }
@@ -3990,6 +4044,50 @@
     });
   }
 
+  // ---------- Money and inventory ----------
+  var invItemsEl = document.getElementById("inv-items");
+  function renderInventory(){
+    if(!invItemsEl) return;
+    COIN_KEYS.forEach(function(k){
+      var el = document.getElementById("coin-" + k);
+      if(document.activeElement !== el) el.value = state.coins[k];
+    });
+    renderCoinTotal();
+    // Rebuilding the list would drop focus while typing, so rebuild only when the row count changed or nothing inside is focused.
+    if(invItemsEl.contains(document.activeElement) && invItemsEl.children.length === state.items.length) return;
+    invItemsEl.innerHTML = "";
+    state.items.forEach(function(it, idx){
+      var row = document.createElement("div"); row.className = "inv-row";
+      var name = document.createElement("input"); name.type = "text"; name.className = "inv-name"; name.placeholder = "Item"; name.maxLength = 80; name.value = it.name;
+      name.addEventListener("input", function(){ state.items[idx].name = name.value; saveState(); });
+      var qty = document.createElement("input"); qty.type = "number"; qty.className = "inv-qty"; qty.min = "0"; qty.inputMode = "numeric"; qty.title = "Quantity"; qty.value = it.qty;
+      qty.addEventListener("input", function(){ state.items[idx].qty = Math.max(0, Math.min(9999, parseInt(qty.value, 10) || 0)); saveState(); });
+      var note = document.createElement("input"); note.type = "text"; note.className = "inv-note"; note.placeholder = "Note (optional)"; note.maxLength = 120; note.value = it.note;
+      note.addEventListener("input", function(){ state.items[idx].note = note.value; saveState(); });
+      var del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "✕"; del.title = "Remove item";
+      del.addEventListener("click", function(){ state.items.splice(idx, 1); saveState(); renderInventory(); });
+      row.appendChild(name); row.appendChild(qty); row.appendChild(note); row.appendChild(del);
+      invItemsEl.appendChild(row);
+    });
+  }
+  function renderCoinTotal(){
+    var total = 0;
+    COIN_KEYS.forEach(function(k){ total += (state.coins[k] || 0) * COIN_GP[k]; });
+    document.getElementById("coin-total").textContent = "Total: " + (Math.round(total * 100) / 100) + " gp";
+  }
+  COIN_KEYS.forEach(function(k){
+    document.getElementById("coin-" + k).addEventListener("input", function(){
+      state.coins[k] = Math.max(0, Math.min(99999999, parseInt(this.value, 10) || 0));
+      saveState(); renderCoinTotal();
+    });
+  });
+  document.getElementById("add-item").addEventListener("click", function(){
+    state.items.push({name:"", qty:1, note:""});
+    saveState(); renderInventory();
+    var inputs = invItemsEl.querySelectorAll(".inv-name");
+    if(inputs.length) inputs[inputs.length - 1].focus();
+  });
+
   document.getElementById("add-prof").addEventListener("click", function(){
     state.proficiencies.push("");
     saveState();
@@ -4264,6 +4362,16 @@
       targetSelector: ".prof-bulk-details",
       title: "Paste a List Instead",
       text: "Expand this to paste in a whole list at once, one per line, then click \"Add all lines\" to add them all in one go — handy if you're copying proficiencies over from somewhere else instead of typing them one at a time."
+    },
+    {
+      targetSelector: "#coins-group",
+      title: "Money",
+      text: "Type how many copper, silver, electrum, gold and platinum pieces you have. The total underneath is worked out in gold using the standard exchange rates: 10 copper = 1 silver, 10 silver = 1 gold, 2 electrum = 1 gold, and 1 platinum = 10 gold. Nothing is spent or added automatically, so change the boxes yourself when you buy or loot something."
+    },
+    {
+      targetSelector: "#items-group",
+      title: "Items",
+      text: "A simple list of what you're carrying. Each line has a name, a quantity and an optional note. Click \"+ Add Item\" for a new line and ✕ to remove one. It's just a list for you to keep, and nothing else on the sheet reads from it, so your weapon and ammo counts are still tracked where they were."
     }
   ];
 
@@ -4652,6 +4760,7 @@
   renderSpells();
   renderLog();
   renderProficiencies();
+  renderInventory();
   updateLockOverlay();
 
   // ---------- Initiative / combat tracker ----------
@@ -5117,6 +5226,7 @@
     renderSpells();
     renderLog();
     renderProficiencies();
+    renderInventory();
     updateLockOverlay();
   }
 
@@ -5179,6 +5289,7 @@
       if(!c.abilities) c.abilities = JSON.parse(JSON.stringify(blankAbilities));
       backfillAbilities(c);
       backfillSenses(c);
+      backfillInventory(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
