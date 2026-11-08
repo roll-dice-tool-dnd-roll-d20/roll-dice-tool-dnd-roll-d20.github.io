@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.77.2</title>
+<title>Roll Tracker V1.78.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -686,30 +686,52 @@
   #add-prof.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
   /* Inventory side tab: a bookmark-style tab on the right edge that slides a drawer out. Right edge, not left,
      because iOS Safari treats a swipe from the left edge as "go back". */
-  #inv-tab{
-    position:fixed;right:0;top:34%;z-index:9984;
+  #inv-tab{top:34%;}
+  #notes-tab{top:calc(34% + 124px);}
+  .side-tab{
+    position:fixed;right:0;z-index:9984;
     writing-mode:vertical-rl;padding:12px 6px max(12px,0px) 6px;padding-right:calc(6px + env(safe-area-inset-right));
     font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;
     background:var(--bg-card);color:var(--ink-soft);border:1px solid var(--border);border-right:none;
     border-radius:8px 0 0 8px;cursor:pointer;box-shadow:-2px 2px 6px rgba(0,0,0,0.12);
   }
-  #inv-tab:hover{color:var(--ink);border-color:var(--moss);}
-  #inv-tab.tutorial-highlight{position:fixed;z-index:9995;padding:12px 6px;color:var(--ink);box-shadow:0 0 0 4px var(--tutorial-ring), 0 0 16px 5px rgba(57,255,110,0.45);}
-  #inv-tab.hidden{display:none;}
+  .side-tab:hover{color:var(--ink);border-color:var(--moss);}
+  .side-tab.tutorial-highlight{position:fixed;z-index:9995;padding:12px 6px;color:var(--ink);box-shadow:0 0 0 4px var(--tutorial-ring), 0 0 16px 5px rgba(57,255,110,0.45);}
+  .side-tab.hidden{display:none;}
   #inv-backdrop{position:fixed;inset:0;z-index:9986;background:rgba(0,0,0,0.45);display:none;}
   #inv-backdrop.open{display:block;}
-  #inv-drawer{
+  .side-drawer{
     position:fixed;top:0;right:0;bottom:0;width:min(360px,88vw);z-index:9991;box-sizing:border-box;
     background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) 14px;
     box-shadow:-6px 0 20px rgba(0,0,0,0.3);
     transform:translateX(105%);visibility:hidden;transition:transform 0.25s ease, visibility 0s linear 0.25s;
   }
-  #inv-drawer.open{transform:translateX(0);visibility:visible;transition:transform 0.25s ease, visibility 0s;}
-  #inv-drawer.instant{transition:none;}
+  .side-drawer.open{transform:translateX(0);visibility:visible;transition:transform 0.25s ease, visibility 0s;}
+  .side-drawer.instant{transition:none;}
   .inv-drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
   .inv-drawer-head h2{font-family:Georgia,serif;margin:0;}
   #inv-close{background:none;border:none;color:var(--ink-soft);font-size:1.3rem;cursor:pointer;padding:4px 8px;}
+  /* Notebook */
+  .nb-seg{display:flex;gap:6px;margin-bottom:10px;}
+  .nb-seg button{flex:1 1 0;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.82rem;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .nb-seg button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .nb-tools{display:flex;gap:6px;margin-bottom:10px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .nb-tools input{flex:1 1 0;min-width:0;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:0.85rem;}
+  .nb-tools button{padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--ink);cursor:pointer;font:inherit;font-size:0.82rem;white-space:nowrap;}
+  .nb-tools button:hover{border-color:var(--moss);}
+  .nb-note{border:1px solid var(--border);border-radius:8px;background:var(--bg-card);padding:8px;margin-bottom:8px;font-family:-apple-system,"Segoe UI",sans-serif;}
+  .nb-head{display:flex;align-items:flex-start;gap:4px;}
+  .nb-fold,.nb-del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:0.95rem;padding:6px 6px;flex:0 0 auto;}
+  .nb-del{color:var(--berry);font-size:0.85rem;}
+  .nb-del.confirm{background:var(--berry);color:#fff;border-radius:4px;}
+  .nb-note textarea{width:100%;box-sizing:border-box;min-width:0;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font:inherit;font-size:0.88rem;line-height:1.35;padding:6px 8px;resize:none;overflow:hidden;display:block;}
+  .nb-title{flex:1 1 0;font-weight:600;}
+  .nb-meta{font-size:0.68rem;color:var(--ink-soft);margin:4px 0 6px 30px;}
+  .nb-body{min-height:90px;}
+  .nb-note.collapsed .nb-body,.nb-note.collapsed .nb-meta{display:none;}
+  .nb-empty,.nb-foot{font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.76rem;color:var(--ink-soft);margin:8px 2px;}
+  .nb-foot.warn{color:var(--berry);}
   .inv-panel{margin:0;font-family:-apple-system,"Segoe UI",sans-serif;}
   .coin-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
   .coin-row label{display:flex;flex-direction:column;gap:2px;flex:1 1 44px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
@@ -848,7 +870,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.77.2</div>
+      <div class="version-tag" id="version-tag">Version 1.78.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1045,9 +1067,17 @@
     </details>
   </section>
 
-  <button type="button" id="inv-tab" aria-expanded="false" aria-controls="inv-drawer" title="Open your money and items">Inventory</button>
+  <button type="button" id="inv-tab" class="side-tab" aria-expanded="false" aria-controls="inv-drawer" title="Open your money and items">Inventory</button>
+  <button type="button" id="notes-tab" class="side-tab" aria-expanded="false" aria-controls="notes-drawer" title="Open your notebook">Notes</button>
   <div id="inv-backdrop"></div>
-  <aside id="inv-drawer" role="dialog" aria-modal="true" aria-label="Inventory" aria-hidden="true">
+  <aside id="notes-drawer" class="side-drawer" role="dialog" aria-modal="true" aria-label="Notebook" aria-hidden="true">
+    <div class="inv-drawer-head"><h2>Notebook</h2><button type="button" id="notes-close" aria-label="Close notebook" title="Close">✕</button></div>
+    <div class="nb-seg" id="nb-seg"><button type="button" id="nb-seg-mine">My Notes</button><button type="button" id="nb-seg-party">Party Notes</button></div>
+    <div class="nb-tools" id="nb-tools"><input type="search" id="nb-search" placeholder="Search notes" autocomplete="off"><button type="button" id="nb-new">+ New Note</button></div>
+    <div id="nb-list"></div>
+    <div class="nb-foot" id="nb-foot"></div>
+  </aside>
+  <aside id="inv-drawer" class="side-drawer" role="dialog" aria-modal="true" aria-label="Inventory" aria-hidden="true">
     <div class="inv-drawer-head"><h2>Inventory</h2><button type="button" id="inv-close" aria-label="Close inventory" title="Close">✕</button></div>
   <section class="panel inv-panel" id="inv-panel">
     <div id="coins-group">
@@ -1232,6 +1262,17 @@
       if(typeof it.note !== "string") it.note = "";
     });
   }
+  function backfillNotes(c){
+    if(!Array.isArray(c.notes)) c.notes = [];
+    var seen = {};
+    c.notes = c.notes.map(function(n){
+      var x = (n && typeof n === "object") ? n : null;
+      if(x && (typeof x.id !== "string" || !x.id)) x.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      if(x){ x.title = typeof x.title === "string" ? x.title : ""; x.body = typeof x.body === "string" ? x.body : "";
+             x.t = typeof x.t === "number" ? x.t : Date.now(); x.u = typeof x.u === "number" ? x.u : x.t; }
+      return x;
+    }).filter(function(x){ if(!x || seen[x.id]) return false; seen[x.id] = true; return true; });
+  }
   function backfillSenses(c){
     if(typeof c.speed !== "number" || isNaN(c.speed) || c.speed < 0) c.speed = 30;
     if(!c.speedExtra || typeof c.speedExtra !== "object") c.speedExtra = {};
@@ -1341,6 +1382,7 @@
     passiveAdv: {perception:0, investigation:0, insight:0},
     coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
     items: [],
+    notes: [],
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1412,6 +1454,7 @@
     passiveAdv: {perception:0, investigation:0, insight:0},
     coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
     items: [],
+    notes: [],
     acOther: 0,
     acCustomBase: 10,
     acCustomDex: "full",
@@ -1510,6 +1553,7 @@
     backfillAbilities(c);
     backfillSenses(c);
     backfillInventory(c);
+    backfillNotes(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -1606,9 +1650,8 @@
     var overlay = document.getElementById("lock-overlay");
     if(overlay) overlay.style.display = locked ? "flex" : "none";
     // The side tab floats above the sheet, so it would slip past the lock banner — hide it (and close the drawer) while locked.
-    var invTab = document.getElementById("inv-tab");
-    if(invTab) invTab.classList.toggle("hidden", !!locked);
-    if(locked && typeof closeInvDrawer === "function") closeInvDrawer();
+    Array.prototype.forEach.call(document.querySelectorAll(".side-tab"), function(t){ t.classList.toggle("hidden", !!locked); });
+    if(locked && typeof closeAllDrawers === "function") closeAllDrawers(false);
     // The bulk/quick-roll dice box lives in the header, outside the sheet-content area the
     // banner overlay covers, so it needs its own grey-out-and-disable when the tab is locked.
     var qrBox = document.getElementById("quickroll");
@@ -1975,6 +2018,7 @@
     renderLog();
     renderProficiencies();
     renderInventory();
+    renderNotes();
     updateLockOverlay();
     renderCombat();  // Join Combat is only clickable while you're on your own tab
   }
@@ -4078,37 +4122,212 @@
     });
   }
 
-  // ---------- Inventory side drawer ----------
-  var invDrawerOpen = false, invOpenedByTutorial = false;
-  var invTabEl = document.getElementById("inv-tab"), invDrawerEl = document.getElementById("inv-drawer"), invBackdropEl = document.getElementById("inv-backdrop");
-  // fromTutorial: the tutorial already pins the page and dims it, so skip our own lock/backdrop and open with no slide
-  // animation (the tutorial measures the highlighted element right away and would catch it mid-slide).
-  function openInvDrawer(fromTutorial){
-    if(invDrawerOpen) return;
-    invDrawerOpen = true; invOpenedByTutorial = !!fromTutorial;
-    invDrawerEl.classList.toggle("instant", !!fromTutorial);
-    invDrawerEl.classList.add("open");
-    invDrawerEl.setAttribute("aria-hidden", "false");
-    invTabEl.setAttribute("aria-expanded", "true");
-    if(!fromTutorial){ invBackdropEl.classList.add("open"); lockPageScroll(); }
-    renderInventory(); sizeInvBoxes();
+  // ---------- Side drawers (Inventory, Notes) ----------
+  // Only one is open at a time. A drawer opened by the tutorial skips the page lock and backdrop (the tutorial
+  // already pins and dims the page) and opens with no slide animation (the tutorial measures the highlighted element
+  // right away and would catch it mid-slide).
+  var DRAWERS = {
+    inv:   {tab: document.getElementById("inv-tab"),   el: document.getElementById("inv-drawer"),   open: false, byTut: false, onOpen: function(){ renderInventory(); sizeInvBoxes(); }},
+    notes: {tab: document.getElementById("notes-tab"), el: document.getElementById("notes-drawer"), open: false, byTut: false, onOpen: function(){ renderNotes(); }}
+  };
+  var drawerBackdropEl = document.getElementById("inv-backdrop");
+  function openDrawer(name, fromTutorial){
+    var d = DRAWERS[name];
+    if(!d || d.open) return;
+    Object.keys(DRAWERS).forEach(function(k){ if(k !== name && DRAWERS[k].open) closeDrawer(k); });
+    d.open = true; d.byTut = !!fromTutorial;
+    d.el.classList.toggle("instant", !!fromTutorial);
+    d.el.classList.add("open");
+    d.el.setAttribute("aria-hidden", "false");
+    d.tab.setAttribute("aria-expanded", "true");
+    if(!fromTutorial){ drawerBackdropEl.classList.add("open"); lockPageScroll(); }
+    d.onOpen();
   }
-  function closeInvDrawer(){
-    if(!invDrawerOpen) return;
-    var hadLock = !invOpenedByTutorial;
-    invDrawerOpen = false; invOpenedByTutorial = false;
-    invDrawerEl.classList.remove("open");
-    invDrawerEl.setAttribute("aria-hidden", "true");
-    invTabEl.setAttribute("aria-expanded", "false");
-    invBackdropEl.classList.remove("open");
+  function closeDrawer(name){
+    var d = DRAWERS[name];
+    if(!d || !d.open) return;
+    var hadLock = !d.byTut;
+    d.open = false; d.byTut = false;
+    d.el.classList.remove("open");
+    d.el.setAttribute("aria-hidden", "true");
+    d.tab.setAttribute("aria-expanded", "false");
+    drawerBackdropEl.classList.remove("open");
     if(hadLock) unlockPageScroll();
-    if(document.activeElement && invDrawerEl.contains(document.activeElement)) document.activeElement.blur();
+    if(document.activeElement && d.el.contains(document.activeElement)) document.activeElement.blur();
   }
-  invTabEl.addEventListener("click", function(){ if(invDrawerOpen) closeInvDrawer(); else openInvDrawer(false); });
-  document.getElementById("inv-close").addEventListener("click", closeInvDrawer);
-  invBackdropEl.addEventListener("click", closeInvDrawer);
+  function closeAllDrawers(onlyTutorialOnes){
+    if(!DRAWERS) return;   // can be reached from the lock banner before this block has run
+    Object.keys(DRAWERS).forEach(function(k){ if(!onlyTutorialOnes || DRAWERS[k].byTut) closeDrawer(k); });
+  }
+  function anyDrawerOpenByPlayer(){ return Object.keys(DRAWERS).some(function(k){ return DRAWERS[k].open && !DRAWERS[k].byTut; }); }
+  Object.keys(DRAWERS).forEach(function(k){
+    DRAWERS[k].tab.addEventListener("click", function(){ if(DRAWERS[k].open) closeDrawer(k); else openDrawer(k, false); });
+  });
+  document.getElementById("inv-close").addEventListener("click", function(){ closeDrawer("inv"); });
+  document.getElementById("notes-close").addEventListener("click", function(){ closeDrawer("notes"); });
+  drawerBackdropEl.addEventListener("click", function(){ closeAllDrawers(false); });
   document.addEventListener("keydown", function(e){
-    if(e.key === "Escape" && invDrawerOpen && !invOpenedByTutorial) closeInvDrawer();
+    if(e.key === "Escape" && anyDrawerOpenByPlayer()) closeAllDrawers(false);
+  });
+
+  // ---------- Notebook ----------
+  // "My Notes" is stored on the character (state.notes) and syncs with the sheet, so it follows the tab lock and the DM
+  // can read it. "Party Notes" is one shared list in the database (rollTracker/partyNotes), one small entry per note so
+  // two people writing different notes never overwrite each other. The DM tab's notes are hidden from players inside
+  // the app only: every device receives the data, the same as Hide Rolls.
+  var NOTE_MAX = 5000, NOTES_TOTAL_MAX = 60000, NOTES_COUNT_MAX = 100;
+  var partyNotes = {}, partyNotesError = "", partyTimers = {};
+  var nbSection = "mine", nbQuery = "", nbCollapsed = {}, nbConfirmTimer = null;
+  var nbListEl = document.getElementById("nb-list");
+  function newNoteId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function noteDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"}); }catch(e){ return ""; } }
+  function myNotesTotal(){ return (state.notes || []).reduce(function(n, x){ return n + x.title.length + x.body.length; }, 0); }
+  function notesBlockedForViewer(){ return !!(state.isDM && !viewerIsDM()); }   // DM notes: players never see them
+  function cleanNote(n){
+    if(!n || typeof n !== "object") return null;
+    var id = typeof n.id === "string" ? n.id.replace(/[^a-z0-9]/gi, "").slice(0, 24) : "";
+    if(!id) return null;
+    return {id: id, title: typeof n.title === "string" ? n.title.slice(0, 100) : "", body: typeof n.body === "string" ? n.body.slice(0, NOTE_MAX) : "",
+            t: typeof n.t === "number" ? n.t : Date.now(), u: typeof n.u === "number" ? n.u : (typeof n.t === "number" ? n.t : Date.now()),
+            by: typeof n.by === "string" ? n.by.slice(0, 40) : ""};
+  }
+  function pushPartyNote(note, now){
+    clearTimeout(partyTimers[note.id]);
+    var go = function(){ delete partyTimers[note.id]; if(window.rtPartyIO) window.rtPartyIO.write(note.id, JSON.stringify(note)); };
+    if(now) go(); else partyTimers[note.id] = setTimeout(go, 700);
+  }
+  function noteFindFor(sec, id){
+    if(sec === "party") return partyNotes[id] || null;
+    return (state.notes || []).filter(function(n){ return n.id === id; })[0] || null;
+  }
+  function noteCommit(sec, note){
+    note.u = Date.now();
+    if(sec === "party") pushPartyNote(note, false); else saveState();
+  }
+  function noteFooter(){
+    var foot = document.getElementById("nb-foot");
+    if(!foot) return;
+    var msg = "", warn = false;
+    if(nbSection === "party"){
+      if(partyNotesError){ msg = partyNotesError; warn = true; }
+      else if(!window.rtPartyIO){ msg = "Party notes sync once you're signed in and online."; }
+      else msg = "Shared with everyone in the group. Anyone can edit or delete these.";
+    } else {
+      var total = myNotesTotal();
+      msg = (state.isDM ? "Hidden from players in the app. " : "") + total.toLocaleString() + " / " + NOTES_TOTAL_MAX.toLocaleString() + " characters used.";
+      if(total > NOTES_TOTAL_MAX * 0.9) warn = true;
+    }
+    foot.textContent = msg; foot.classList.toggle("warn", warn);
+  }
+  function renderNotes(){
+    if(!nbListEl) return;
+    var segMine = document.getElementById("nb-seg-mine"), segParty = document.getElementById("nb-seg-party");
+    var hideMine = notesBlockedForViewer();
+    if(hideMine) nbSection = "party";
+    segMine.style.display = hideMine ? "none" : "";
+    segMine.textContent = state.isDM ? "DM Notes" : (currentAccount === app.activeIndex ? "My Notes" : ((state.name || "Player") + "'s Notes"));
+    segMine.classList.toggle("active", nbSection === "mine");
+    segParty.classList.toggle("active", nbSection === "party");
+    var sec = nbSection;
+    var all = sec === "party" ? Object.keys(partyNotes).map(function(k){ return partyNotes[k]; }) : (state.notes || []);
+    var q = nbQuery.trim().toLowerCase();
+    var shown = all.slice().sort(function(a, b){ return b.t - a.t; }).filter(function(n){ return !q || (n.title + "\n" + n.body).toLowerCase().indexOf(q) !== -1; });
+    var ids = shown.map(function(n){ return n.id; }).join(",");
+    if(nbListEl.contains(document.activeElement) && nbListEl.getAttribute("data-ids") === ids && nbListEl.getAttribute("data-sec") === sec){
+      // Someone is typing and nothing was added or removed: refresh only the boxes they aren't in.
+      shown.forEach(function(n){
+        var row = nbListEl.querySelector('[data-id="' + n.id + '"]'); if(!row) return;
+        var t = row.querySelector(".nb-title"), b = row.querySelector(".nb-body");
+        if(document.activeElement !== t && t.value !== n.title){ t.value = n.title; autoGrow(t); }
+        if(document.activeElement !== b && b.value !== n.body){ b.value = n.body; autoGrow(b); }
+      });
+    } else {
+      nbListEl.innerHTML = "";
+      nbListEl.setAttribute("data-ids", ids); nbListEl.setAttribute("data-sec", sec);
+      if(!shown.length){
+        var empty = document.createElement("div"); empty.className = "nb-empty";
+        empty.textContent = q ? "No notes match your search." : "No notes yet. Tap + New Note to start one.";
+        nbListEl.appendChild(empty);
+      }
+      shown.forEach(function(n){ nbListEl.appendChild(buildNote(sec, n, !!q)); });
+      Array.prototype.forEach.call(nbListEl.querySelectorAll("textarea"), autoGrow);
+    }
+    noteFooter();
+  }
+  function buildNote(sec, n, searching){
+    var row = document.createElement("div");
+    row.className = "nb-note"; row.setAttribute("data-id", n.id);
+    var folded = !!nbCollapsed[n.id] && !searching;
+    row.classList.toggle("collapsed", folded);
+    var head = document.createElement("div"); head.className = "nb-head";
+    var fold = document.createElement("button"); fold.type = "button"; fold.className = "nb-fold"; fold.textContent = folded ? "▸" : "▾"; fold.title = "Collapse or expand";
+    var title = document.createElement("textarea"); title.className = "nb-title"; title.rows = 1; title.maxLength = 100; title.placeholder = "Title"; title.value = n.title;
+    var del = document.createElement("button"); del.type = "button"; del.className = "nb-del"; del.textContent = "✕"; del.title = "Delete this note";
+    var meta = document.createElement("div"); meta.className = "nb-meta";
+    meta.textContent = noteDate(n.t) + (n.by ? " · " + n.by : "") + (n.u - n.t > 60000 ? " · edited " + noteDate(n.u) : "");
+    var body = document.createElement("textarea"); body.className = "nb-body"; body.rows = 3; body.maxLength = NOTE_MAX; body.placeholder = "Write here…"; body.value = n.body;
+    fold.addEventListener("click", function(){
+      nbCollapsed[n.id] = !row.classList.contains("collapsed");
+      row.classList.toggle("collapsed", nbCollapsed[n.id]);
+      fold.textContent = nbCollapsed[n.id] ? "▸" : "▾";
+      if(!nbCollapsed[n.id]) autoGrow(body);
+    });
+    title.addEventListener("keydown", function(e){ if(e.key === "Enter") e.preventDefault(); });
+    title.addEventListener("input", function(){
+      var note = noteFindFor(sec, n.id); if(!note) return;
+      if(/[\r\n]/.test(title.value)) title.value = title.value.replace(/[\r\n]+/g, " ");
+      note.title = title.value; noteCommit(sec, note); autoGrow(title); noteFooter();
+    });
+    body.addEventListener("input", function(){
+      var note = noteFindFor(sec, n.id); if(!note) return;
+      var v = body.value;
+      if(sec === "mine"){
+        var others = myNotesTotal() - note.body.length;
+        if(others + v.length > NOTES_TOTAL_MAX){ v = v.slice(0, Math.max(0, NOTES_TOTAL_MAX - others)); body.value = v; }
+      }
+      note.body = v; noteCommit(sec, note); autoGrow(body); noteFooter();
+    });
+    del.addEventListener("click", function(){
+      // Two taps, no popup: the first turns the button into "Delete?", the second (within 3 seconds) deletes.
+      if(!del.classList.contains("confirm")){
+        clearTimeout(nbConfirmTimer);
+        Array.prototype.forEach.call(nbListEl.querySelectorAll(".nb-del.confirm"), function(b){ b.classList.remove("confirm"); b.textContent = "✕"; });
+        del.classList.add("confirm"); del.textContent = "Delete?";
+        nbConfirmTimer = setTimeout(function(){ del.classList.remove("confirm"); del.textContent = "✕"; }, 3000);
+        return;
+      }
+      clearTimeout(nbConfirmTimer);
+      if(sec === "party"){
+        clearTimeout(partyTimers[n.id]); delete partyTimers[n.id];
+        delete partyNotes[n.id];
+        if(window.rtPartyIO) window.rtPartyIO.write(n.id, null);
+      } else {
+        state.notes = state.notes.filter(function(x){ return x.id !== n.id; });
+        saveState();
+      }
+      renderNotes();
+    });
+    head.appendChild(fold); head.appendChild(title); head.appendChild(del);
+    row.appendChild(head); row.appendChild(meta); row.appendChild(body);
+    return row;
+  }
+  document.getElementById("nb-seg-mine").addEventListener("click", function(){ nbSection = "mine"; renderNotes(); });
+  document.getElementById("nb-seg-party").addEventListener("click", function(){ nbSection = "party"; renderNotes(); });
+  document.getElementById("nb-search").addEventListener("input", function(){ nbQuery = this.value; renderNotes(); });
+  document.getElementById("nb-new").addEventListener("click", function(){
+    var now = Date.now(), sec = nbSection;
+    var count = sec === "party" ? Object.keys(partyNotes).length : state.notes.length;
+    var foot = document.getElementById("nb-foot");
+    if(count >= NOTES_COUNT_MAX){ foot.textContent = "That's the limit of " + NOTES_COUNT_MAX + " notes. Delete an old one to add another."; foot.classList.add("warn"); return; }
+    if(sec === "mine" && myNotesTotal() >= NOTES_TOTAL_MAX){ foot.textContent = "Your notebook is full. Shorten or delete a note to add another."; foot.classList.add("warn"); return; }
+    var note = {id: newNoteId(), title: "Session " + (count + 1), body: "", t: now, u: now,
+                by: sec === "party" ? ((currentAccount !== null && app.characters[currentAccount]) ? app.characters[currentAccount].name : "") : ""};
+    if(sec === "party"){ partyNotes[note.id] = note; pushPartyNote(note, true); }
+    else { state.notes.unshift(note); saveState(); }
+    nbQuery = ""; document.getElementById("nb-search").value = "";
+    renderNotes();
+    var row = nbListEl.querySelector('[data-id="' + note.id + '"] .nb-body');
+    if(row) row.focus();
   });
 
   // ---------- Money and inventory ----------
@@ -4458,6 +4677,30 @@
       openDrawer: true,
       title: "Items",
       text: "A simple list of what you're carrying. Each line has a name, a quantity and an optional note. Click \"+ Add Item\" for a new line and ✕ to remove one. It's just a list for you to keep, and nothing else on the sheet reads from it, so your weapon and ammo counts are still tracked where they were."
+    },
+    {
+      targetSelector: "#notes-tab",
+      title: "Notes Tab",
+      text: "The Notes tab, just under Inventory, opens your notebook in a drawer. Every good table has a note-taker, so jot down names, places, clues and loot as you go."
+    },
+    {
+      targetSelector: "#nb-seg",
+      openDrawer: "notes",
+      title: "My Notes and Party Notes",
+      text: "My Notes belongs to your character, so it goes wherever your sheet goes and follows your tab's lock. The DM can read it. Party Notes is one shared list for the whole group: everyone sees the same notes, and anyone can add, edit or delete them, so it is good for things like the quest log or a list of NPCs."
+    },
+    {
+      targetSelector: "#nb-tools",
+      openDrawer: "notes",
+      title: "New Notes and Search",
+      text: "Tap + New Note to start one. Each note has a title, the date it was started and a body that grows as you type. Tap the arrow to fold a note up, and tap the ✕ twice to delete it. The search box filters by title and text, which is handy once the notebook gets long."
+    },
+    {
+      targetSelector: "#nb-seg",
+      openDrawer: "notes",
+      showIf: function(){ return !!state.isDM && viewerIsDM(); },
+      title: "DM Notes",
+      text: "On the DM tab your notes section is called DM Notes. Players can't open it in the app. It's hidden the same way Hide Rolls is, so it keeps your notes out of sight at the table, but it isn't locked away from someone digging through their browser."
     }
   ];
 
@@ -4545,7 +4788,7 @@
   }
 
   function closeTutorial(){
-    if(invDrawerOpen && invOpenedByTutorial) closeInvDrawer();
+    closeAllDrawers(true);
     if(tutorialBackdropEl){ tutorialBackdropEl.remove(); tutorialBackdropEl = null; }
     if(tutorialPopupEl){ tutorialPopupEl.remove(); tutorialPopupEl = null; }
     if(tutorialSpacerEl){ tutorialSpacerEl.remove(); tutorialSpacerEl = null; }
@@ -4559,9 +4802,10 @@
     var step = activeTutorialSteps[idx];
     // The drawer is the only thing that can be open behind a tutorial step. Close one the player opened before the
     // tutorial pins the page, and open/close it for the steps that point inside it.
-    if(!tutorialBackdropEl && invDrawerOpen && !invOpenedByTutorial) closeInvDrawer();
-    if(step && step.openDrawer){ if(!invDrawerOpen) openInvDrawer(true); }
-    else if(invDrawerOpen && invOpenedByTutorial) closeInvDrawer();
+    if(!tutorialBackdropEl && anyDrawerOpenByPlayer()) closeAllDrawers(false);
+    var wantDrawer = step && step.openDrawer ? (step.openDrawer === true ? "inv" : step.openDrawer) : null;
+    Object.keys(DRAWERS).forEach(function(k){ if(DRAWERS[k].open && DRAWERS[k].byTut && k !== wantDrawer) closeDrawer(k); });
+    if(wantDrawer && !DRAWERS[wantDrawer].open) openDrawer(wantDrawer, true);
     if(!step){
       // Ran off either end while auto-skipping (see below) — close gracefully instead of
       // leaving the popup frozen on its last real step with Next/Back doing nothing.
@@ -4853,6 +5097,7 @@
   renderLog();
   renderProficiencies();
   renderInventory();
+  renderNotes();
   updateLockOverlay();
 
   // ---------- Initiative / combat tracker ----------
@@ -5319,6 +5564,7 @@
     renderLog();
     renderProficiencies();
     renderInventory();
+    renderNotes();
     updateLockOverlay();
   }
 
@@ -5341,7 +5587,24 @@
       renderLog();  // hidden-roll visibility depends on who's now signed in
       renderCombat();  // the initiative bar looks different per account (and hides when signed out)
       renderSettingsBar();  // Hide Rolls button's clickability depends on who's now signed in
+      renderNotes();  // the DM Notes section only shows for the signed-in DM
     },
+    setPartyNotes: function(raw){
+      var next = {};
+      if(raw && typeof raw === "object"){
+        Object.keys(raw).forEach(function(k){
+          var v = raw[k];
+          if(typeof v === "string"){ try{ v = JSON.parse(v); }catch(e){ return; } }
+          var n = cleanNote(v);
+          if(n) next[n.id] = n;
+        });
+      }
+      // A note this device is still waiting to save keeps its local text until the save goes out.
+      Object.keys(partyTimers).forEach(function(id){ if(partyNotes[id]) next[id] = partyNotes[id]; });
+      partyNotes = next;
+      renderNotes();
+    },
+    setPartyNotesError: function(msg){ partyNotesError = msg || ""; noteFooter(); },
     setCombatData: function(raw){
       lastRawCombat = raw;
       combatData = normalizeCombat(raw);
@@ -5382,6 +5645,7 @@
       backfillAbilities(c);
       backfillSenses(c);
       backfillInventory(c);
+      backfillNotes(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
@@ -5811,6 +6075,29 @@
       locksReady = true;
       if(!dbConnected){ dbConnected = true; refreshSyncStatus(); }
     });
+
+    // Party notes: one small string per note, so people writing different notes never overwrite each other.
+    window.rtPartyIO = {
+      write: function(id, json){
+        set(ref(db, "rollTracker/partyNotes/" + id), json).catch(function(e){
+          console.error("Party note sync failed", e);
+          bridge.setPartyNotesError("Couldn't save shared notes (" + ((e && (e.code || e.message)) || "unknown") + ")");
+        });
+      }
+    };
+    var partyRetryMs = 2000;
+    function listenParty(){
+      onValue(ref(db, "rollTracker/partyNotes"), function(snap){
+        partyRetryMs = 2000;
+        bridge.setPartyNotesError("");
+        bridge.setPartyNotes(snap.val());
+      }, function(err){
+        bridge.setPartyNotesError("Shared notes unavailable (" + ((err && (err.code || err.message)) || "unknown") + ")");
+        setTimeout(listenParty, partyRetryMs);
+        partyRetryMs = Math.min(partyRetryMs * 2, 30000);
+      });
+    }
+    listenParty();
 
     setInterval(pushChanges, 1000);
   }
