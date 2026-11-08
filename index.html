@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.77.0</title>
+<title>Roll Tracker V1.77.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -714,13 +714,12 @@
   .coin-row input[type=number]{width:100%;min-width:0;box-sizing:border-box;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.85rem;}
   .coin-total{font-size:0.76rem;color:var(--ink-soft);margin:4px 0 12px;}
   .inv-list{display:flex;flex-direction:column;}
-  .inv-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border-soft);}
+  .inv-row{display:grid;grid-template-columns:minmax(0,1fr) 56px auto;gap:4px 6px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border-soft);}
   .inv-row:last-child{border-bottom:none;}
-  .inv-row input{padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.88rem;min-width:0;box-sizing:border-box;}
-  .inv-row .inv-name{flex:3 1 90px;}
-  .inv-row .inv-qty{flex:0 0 56px;width:56px;}
-  .inv-row .inv-note{flex:3 1 90px;}
-  .inv-row button.del{background:none;border:none;color:var(--berry);font-size:1rem;cursor:pointer;padding:2px 6px;}
+  .inv-row input,.inv-row textarea{padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font:inherit;font-size:0.88rem;min-width:0;width:100%;box-sizing:border-box;}
+  .inv-row textarea{resize:none;overflow:hidden;line-height:1.3;display:block;}
+  .inv-row .inv-note{grid-column:1 / -1;font-size:0.8rem;color:var(--ink-soft);}
+  .inv-row button.del{background:none;border:none;color:var(--berry);font-size:1rem;cursor:pointer;padding:6px 6px;}
   #add-item{width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:8px;}
   #add-item:hover{border-color:var(--moss);color:var(--moss-dark);}
   #add-item.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
@@ -847,7 +846,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.77.0</div>
+      <div class="version-tag" id="version-tag">Version 1.77.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -4090,7 +4089,7 @@
     invDrawerEl.setAttribute("aria-hidden", "false");
     invTabEl.setAttribute("aria-expanded", "true");
     if(!fromTutorial){ invBackdropEl.classList.add("open"); lockPageScroll(); }
-    renderInventory();
+    renderInventory(); sizeInvBoxes();
   }
   function closeInvDrawer(){
     if(!invDrawerOpen) return;
@@ -4112,6 +4111,18 @@
 
   // ---------- Money and inventory ----------
   var invItemsEl = document.getElementById("inv-items");
+  function autoGrow(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
+  function sizeInvBoxes(){ Array.prototype.forEach.call(invItemsEl.querySelectorAll("textarea"), autoGrow); }
+  function growBox(cls, placeholder, max, value, onChange){
+    var t = document.createElement("textarea");
+    t.className = cls; t.rows = 1; t.placeholder = placeholder; t.maxLength = max; t.value = value;
+    t.addEventListener("keydown", function(e){ if(e.key === "Enter") e.preventDefault(); });   // wraps visually, but stays one line of text
+    t.addEventListener("input", function(){
+      if(/[\r\n]/.test(t.value)) t.value = t.value.replace(/[\r\n]+/g, " ");
+      onChange(t.value); saveState(); autoGrow(t);
+    });
+    return t;
+  }
   function renderInventory(){
     if(!invItemsEl) return;
     COIN_KEYS.forEach(function(k){
@@ -4124,17 +4135,17 @@
     invItemsEl.innerHTML = "";
     state.items.forEach(function(it, idx){
       var row = document.createElement("div"); row.className = "inv-row";
-      var name = document.createElement("input"); name.type = "text"; name.className = "inv-name"; name.placeholder = "Item"; name.maxLength = 80; name.value = it.name;
-      name.addEventListener("input", function(){ state.items[idx].name = name.value; saveState(); });
+      // Name and note are small text areas that grow with their text, so long entries wrap instead of scrolling sideways.
+      var name = growBox("inv-name", "Item", 120, it.name, function(v){ state.items[idx].name = v; });
       var qty = document.createElement("input"); qty.type = "number"; qty.className = "inv-qty"; qty.min = "0"; qty.inputMode = "numeric"; qty.title = "Quantity"; qty.value = it.qty;
       qty.addEventListener("input", function(){ state.items[idx].qty = Math.max(0, Math.min(9999, parseInt(qty.value, 10) || 0)); saveState(); });
-      var note = document.createElement("input"); note.type = "text"; note.className = "inv-note"; note.placeholder = "Note (optional)"; note.maxLength = 120; note.value = it.note;
-      note.addEventListener("input", function(){ state.items[idx].note = note.value; saveState(); });
+      var note = growBox("inv-note", "Note (optional)", 200, it.note, function(v){ state.items[idx].note = v; });
       var del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "✕"; del.title = "Remove item";
       del.addEventListener("click", function(){ state.items.splice(idx, 1); saveState(); renderInventory(); });
-      row.appendChild(name); row.appendChild(qty); row.appendChild(note); row.appendChild(del);
+      row.appendChild(name); row.appendChild(qty); row.appendChild(del); row.appendChild(note);
       invItemsEl.appendChild(row);
     });
+    sizeInvBoxes();
   }
   function renderCoinTotal(){
     var total = 0;
