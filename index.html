@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.76.0</title>
+<title>Roll Tracker V1.77.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -682,10 +682,35 @@
      Account, Hide Rolls, Clear Log) — without this it stays looking greyed-out under the
      highlight. */
   #add-prof.tutorial-highlight{background:var(--bg-card);color:var(--ink);}
-  .inv-panel{margin-top:22px;font-family:-apple-system,"Segoe UI",sans-serif;}
-  .inv-panel h2{font-family:Georgia,serif;}
+  /* Inventory side tab: a bookmark-style tab on the right edge that slides a drawer out. Right edge, not left,
+     because iOS Safari treats a swipe from the left edge as "go back". */
+  #inv-tab{
+    position:fixed;right:0;top:34%;z-index:9984;
+    writing-mode:vertical-rl;padding:12px 6px max(12px,0px) 6px;padding-right:calc(6px + env(safe-area-inset-right));
+    font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;
+    background:var(--bg-card);color:var(--ink-soft);border:1px solid var(--border);border-right:none;
+    border-radius:8px 0 0 8px;cursor:pointer;box-shadow:-2px 2px 6px rgba(0,0,0,0.12);
+  }
+  #inv-tab:hover{color:var(--ink);border-color:var(--moss);}
+  #inv-tab.tutorial-highlight{position:fixed;z-index:9995;padding:12px 6px;color:var(--ink);box-shadow:0 0 0 4px var(--tutorial-ring), 0 0 16px 5px rgba(57,255,110,0.45);}
+  #inv-tab.hidden{display:none;}
+  #inv-backdrop{position:fixed;inset:0;z-index:9986;background:rgba(0,0,0,0.45);display:none;}
+  #inv-backdrop.open{display:block;}
+  #inv-drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(360px,88vw);z-index:9991;box-sizing:border-box;
+    background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) 14px;
+    box-shadow:-6px 0 20px rgba(0,0,0,0.3);
+    transform:translateX(105%);visibility:hidden;transition:transform 0.25s ease, visibility 0s linear 0.25s;
+  }
+  #inv-drawer.open{transform:translateX(0);visibility:visible;transition:transform 0.25s ease, visibility 0s;}
+  #inv-drawer.instant{transition:none;}
+  .inv-drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .inv-drawer-head h2{font-family:Georgia,serif;margin:0;}
+  #inv-close{background:none;border:none;color:var(--ink-soft);font-size:1.3rem;cursor:pointer;padding:4px 8px;}
+  .inv-panel{margin:0;font-family:-apple-system,"Segoe UI",sans-serif;}
   .coin-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
-  .coin-row label{display:flex;flex-direction:column;gap:2px;flex:1 1 56px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
+  .coin-row label{display:flex;flex-direction:column;gap:2px;flex:1 1 44px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
   .coin-row input[type=number]{width:100%;min-width:0;box-sizing:border-box;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-size:0.85rem;}
   .coin-total{font-size:0.76rem;color:var(--ink-soft);margin:4px 0 12px;}
   .inv-list{display:flex;flex-direction:column;}
@@ -822,7 +847,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.76.0</div>
+      <div class="version-tag" id="version-tag">Version 1.77.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1019,8 +1044,11 @@
     </details>
   </section>
 
+  <button type="button" id="inv-tab" aria-expanded="false" aria-controls="inv-drawer" title="Open your money and items">Inventory</button>
+  <div id="inv-backdrop"></div>
+  <aside id="inv-drawer" role="dialog" aria-modal="true" aria-label="Inventory" aria-hidden="true">
+    <div class="inv-drawer-head"><h2>Inventory</h2><button type="button" id="inv-close" aria-label="Close inventory" title="Close">✕</button></div>
   <section class="panel inv-panel" id="inv-panel">
-    <h2>Inventory</h2>
     <div id="coins-group">
       <div class="coin-row">
         <label>CP<input type="number" id="coin-cp" min="0" inputmode="numeric"></label>
@@ -1036,6 +1064,7 @@
       <button id="add-item" type="button">+ Add Item</button>
     </div>
   </section>
+  </aside>
 
   <div class="lock-overlay" id="lock-overlay">
     <div class="lock-overlay-box">
@@ -1575,6 +1604,10 @@
     var locked = isLocked(currentAccount, app.activeIndex);
     var overlay = document.getElementById("lock-overlay");
     if(overlay) overlay.style.display = locked ? "flex" : "none";
+    // The side tab floats above the sheet, so it would slip past the lock banner — hide it (and close the drawer) while locked.
+    var invTab = document.getElementById("inv-tab");
+    if(invTab) invTab.classList.toggle("hidden", !!locked);
+    if(locked && typeof closeInvDrawer === "function") closeInvDrawer();
     // The bulk/quick-roll dice box lives in the header, outside the sheet-content area the
     // banner overlay covers, so it needs its own grey-out-and-disable when the tab is locked.
     var qrBox = document.getElementById("quickroll");
@@ -4044,6 +4077,39 @@
     });
   }
 
+  // ---------- Inventory side drawer ----------
+  var invDrawerOpen = false, invOpenedByTutorial = false;
+  var invTabEl = document.getElementById("inv-tab"), invDrawerEl = document.getElementById("inv-drawer"), invBackdropEl = document.getElementById("inv-backdrop");
+  // fromTutorial: the tutorial already pins the page and dims it, so skip our own lock/backdrop and open with no slide
+  // animation (the tutorial measures the highlighted element right away and would catch it mid-slide).
+  function openInvDrawer(fromTutorial){
+    if(invDrawerOpen) return;
+    invDrawerOpen = true; invOpenedByTutorial = !!fromTutorial;
+    invDrawerEl.classList.toggle("instant", !!fromTutorial);
+    invDrawerEl.classList.add("open");
+    invDrawerEl.setAttribute("aria-hidden", "false");
+    invTabEl.setAttribute("aria-expanded", "true");
+    if(!fromTutorial){ invBackdropEl.classList.add("open"); lockPageScroll(); }
+    renderInventory();
+  }
+  function closeInvDrawer(){
+    if(!invDrawerOpen) return;
+    var hadLock = !invOpenedByTutorial;
+    invDrawerOpen = false; invOpenedByTutorial = false;
+    invDrawerEl.classList.remove("open");
+    invDrawerEl.setAttribute("aria-hidden", "true");
+    invTabEl.setAttribute("aria-expanded", "false");
+    invBackdropEl.classList.remove("open");
+    if(hadLock) unlockPageScroll();
+    if(document.activeElement && invDrawerEl.contains(document.activeElement)) document.activeElement.blur();
+  }
+  invTabEl.addEventListener("click", function(){ if(invDrawerOpen) closeInvDrawer(); else openInvDrawer(false); });
+  document.getElementById("inv-close").addEventListener("click", closeInvDrawer);
+  invBackdropEl.addEventListener("click", closeInvDrawer);
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && invDrawerOpen && !invOpenedByTutorial) closeInvDrawer();
+  });
+
   // ---------- Money and inventory ----------
   var invItemsEl = document.getElementById("inv-items");
   function renderInventory(){
@@ -4364,12 +4430,19 @@
       text: "Expand this to paste in a whole list at once, one per line, then click \"Add all lines\" to add them all in one go — handy if you're copying proficiencies over from somewhere else instead of typing them one at a time."
     },
     {
+      targetSelector: "#inv-tab",
+      title: "Inventory Tab",
+      text: "This small tab on the edge of the screen opens your Inventory — your money and a list of items — in a drawer that slides out over the sheet. Click the tab to open it, then click the ✕, tap the dimmed area, or press Escape to close it. The page behind stays put while it's open."
+    },
+    {
       targetSelector: "#coins-group",
+      openDrawer: true,
       title: "Money",
       text: "Type how many copper, silver, electrum, gold and platinum pieces you have. The total underneath is worked out in gold using the standard exchange rates: 10 copper = 1 silver, 10 silver = 1 gold, 2 electrum = 1 gold, and 1 platinum = 10 gold. Nothing is spent or added automatically, so change the boxes yourself when you buy or loot something."
     },
     {
       targetSelector: "#items-group",
+      openDrawer: true,
       title: "Items",
       text: "A simple list of what you're carrying. Each line has a name, a quantity and an optional note. Click \"+ Add Item\" for a new line and ✕ to remove one. It's just a list for you to keep, and nothing else on the sheet reads from it, so your weapon and ammo counts are still tracked where they were."
     }
@@ -4459,6 +4532,7 @@
   }
 
   function closeTutorial(){
+    if(invDrawerOpen && invOpenedByTutorial) closeInvDrawer();
     if(tutorialBackdropEl){ tutorialBackdropEl.remove(); tutorialBackdropEl = null; }
     if(tutorialPopupEl){ tutorialPopupEl.remove(); tutorialPopupEl = null; }
     if(tutorialSpacerEl){ tutorialSpacerEl.remove(); tutorialSpacerEl = null; }
@@ -4470,6 +4544,11 @@
   function showTutorialStep(idx, direction){
     direction = direction || 1;
     var step = activeTutorialSteps[idx];
+    // The drawer is the only thing that can be open behind a tutorial step. Close one the player opened before the
+    // tutorial pins the page, and open/close it for the steps that point inside it.
+    if(!tutorialBackdropEl && invDrawerOpen && !invOpenedByTutorial) closeInvDrawer();
+    if(step && step.openDrawer){ if(!invDrawerOpen) openInvDrawer(true); }
+    else if(invDrawerOpen && invOpenedByTutorial) closeInvDrawer();
     if(!step){
       // Ran off either end while auto-skipping (see below) — close gracefully instead of
       // leaving the popup frozen on its last real step with Next/Back doing nothing.
