@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.77.1</title>
+<title>Roll Tracker V1.77.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -643,7 +643,9 @@
   .buff-row input[type=text].buff-name{flex:1 1 140px;min-width:0;}
   .buff-row input[type=text].buff-dice{width:90px;}
   .buff-row.off input[type=text]{opacity:.55;}
-  #add-buff{background:none;border:1px dashed var(--border, #bbb);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;color:inherit;}
+  .buff-row input[type=text]{padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.88rem;}
+  .buff-row button.del{background:none;border:none;color:var(--berry);font-size:1rem;cursor:pointer;padding:2px 6px;}
+  #add-buff{font-family:-apple-system,"Segoe UI",sans-serif;width:100%;padding:9px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.85rem;margin-top:4px;}
   #add-buff:hover{border-color:var(--moss);color:var(--moss-dark);}
   #add-attack{
     font-family:-apple-system,"Segoe UI",sans-serif;
@@ -846,7 +848,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.77.1</div>
+      <div class="version-tag" id="version-tag">Version 1.77.2</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
