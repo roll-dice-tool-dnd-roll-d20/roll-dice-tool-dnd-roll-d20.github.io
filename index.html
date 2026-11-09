@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.79.1</title>
+<title>Roll Tracker V1.80.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -19,7 +19,7 @@
     --border-soft:#dcd5bd;
   }
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#1d2019;
       --bg-card:#262a20;
       --ink:#e9e4d4;
@@ -31,6 +31,18 @@
       --border:#3a3f30;
       --border-soft:#2e321f;
     }
+  }
+  :root[data-theme="dark"]{
+      --bg:#1d2019;
+      --bg-card:#262a20;
+      --ink:#e9e4d4;
+      --ink-soft:#a9a58f;
+      --moss:#7fa06f;
+      --moss-dark:#5c7a4f;
+      --ochre:#c99457;
+      --berry:#d17a7a;
+      --border:#3a3f30;
+      --border-soft:#2e321f;
   }
   *{box-sizing:border-box;}
   html{overflow-x:hidden;}
@@ -301,16 +313,25 @@
   .mode-group button.active[data-mode="normal"]{background:#8a8672;color:#fff;}
   .mode-group button.active[data-mode="adv"]{background:#5e9c4d;color:#fff;}
   @media (prefers-color-scheme: dark){
-    .mode-group button[data-mode="dis"]{background:#4a2a27;color:#f0b5ae;}
-    .mode-group button[data-mode="normal"]{background:#3a3d33;color:#cfcbb6;}
-    .mode-group button[data-mode="adv"]{background:#2c4326;color:#b9d9a9;}
-    .mode-group button[data-mode="dis"]:hover{background:#5a3330;}
-    .mode-group button[data-mode="normal"]:hover{background:#464a3d;}
-    .mode-group button[data-mode="adv"]:hover{background:#365431;}
-    .mode-group button.active[data-mode="dis"]{background:#c0615a;color:#fff;}
-    .mode-group button.active[data-mode="normal"]{background:#77745f;color:#fff;}
-    .mode-group button.active[data-mode="adv"]{background:#5f9a52;color:#fff;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="dis"]{background:#4a2a27;color:#f0b5ae;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="normal"]{background:#3a3d33;color:#cfcbb6;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="adv"]{background:#2c4326;color:#b9d9a9;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="dis"]:hover{background:#5a3330;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="normal"]:hover{background:#464a3d;}
+    :root:not([data-theme="light"]) .mode-group button[data-mode="adv"]:hover{background:#365431;}
+    :root:not([data-theme="light"]) .mode-group button.active[data-mode="dis"]{background:#c0615a;color:#fff;}
+    :root:not([data-theme="light"]) .mode-group button.active[data-mode="normal"]{background:#77745f;color:#fff;}
+    :root:not([data-theme="light"]) .mode-group button.active[data-mode="adv"]{background:#5f9a52;color:#fff;}
   }
+  :root[data-theme="dark"] .mode-group button[data-mode="dis"]{background:#4a2a27;color:#f0b5ae;}
+  :root[data-theme="dark"] .mode-group button[data-mode="normal"]{background:#3a3d33;color:#cfcbb6;}
+  :root[data-theme="dark"] .mode-group button[data-mode="adv"]{background:#2c4326;color:#b9d9a9;}
+  :root[data-theme="dark"] .mode-group button[data-mode="dis"]:hover{background:#5a3330;}
+  :root[data-theme="dark"] .mode-group button[data-mode="normal"]:hover{background:#464a3d;}
+  :root[data-theme="dark"] .mode-group button[data-mode="adv"]:hover{background:#365431;}
+  :root[data-theme="dark"] .mode-group button.active[data-mode="dis"]{background:#c0615a;color:#fff;}
+  :root[data-theme="dark"] .mode-group button.active[data-mode="normal"]{background:#77745f;color:#fff;}
+  :root[data-theme="dark"] .mode-group button.active[data-mode="adv"]{background:#5f9a52;color:#fff;}
   .crit-toggle{
     font-family:-apple-system,"Segoe UI",sans-serif;
     font-size:0.8rem;padding:6px 12px;border:1px solid var(--berry);border-radius:6px;
@@ -718,6 +739,7 @@
   .nb-seg button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
   /* Themed tooltip: replaces the browser's own white hint box for anything with a title */
   #rt-tooltip{position:fixed;left:0;top:0;z-index:10001;max-width:260px;padding:6px 9px;border-radius:6px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.78rem;line-height:1.35;box-shadow:0 3px 10px rgba(0,0,0,0.25);pointer-events:none;opacity:0;visibility:hidden;transition:opacity 0.12s ease;}
+  [title],[data-tip]{-webkit-touch-callout:none;}
   #rt-tooltip.show{opacity:1;visibility:visible;}
   .nb-view{margin-bottom:8px;}
   .nb-view button{padding:5px 6px;font-size:0.74rem;}
@@ -867,6 +889,7 @@
   }
   #combat-banner.on{opacity:1;transition:opacity 0.25s ease;}
 </style>
+<script>try{var __t=localStorage.getItem("rtTheme");if(__t==="light"||__t==="dark")document.documentElement.setAttribute("data-theme",__t);}catch(e){}</script>
 </head>
 <body>
 <div id="turn-outline"></div>
@@ -881,7 +904,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.79.1</div>
+      <div class="version-tag" id="version-tag">Version 1.80.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -4677,6 +4700,12 @@
       text: "Pick your class here, and your subclass once your level is high enough to have one (Cleric, Sorcerer and Warlock at level 1, Druid and Wizard at level 2, everyone else at level 3). Subclasses are grouped by the official book they come from, and Custom… lets you type in anything homebrew. Apply class defaults ticks your class's saving-throw proficiencies and sets your spellcasting ability — it only ever adds, so it won't undo anything you've set. Your class also decides your hit die, shown in the Hit Points card."
     },
     {
+      targetSelector: "#short-rest-btn",
+      title: "Hold for Hints",
+      showIf: function(){ return !!(window.matchMedia && window.matchMedia("(hover: none)").matches); },
+      text: "Most buttons and boxes have a short hint saying what they do. On a computer you see it by hovering. On a phone or tablet, press and hold a button for about a second without moving your finger, and the hint pops up above it. Let go and it disappears, and the button won't be pressed."
+    },
+    {
       targetSelector: "#hp-main",
       title: "Hit Points",
       text: "Type your Max HP in by hand (the second box), then use the Amount box with Damage, Heal and Temp HP. Damage burns through temp HP first, healing stops at your max, and temp HP doesn't stack — you keep the higher number. Drop to 0 and a Death Saves box appears: Death Save rolls a d20 (10 or more succeeds, a 1 is two failures, a 20 puts you back up at 1 HP), taking damage while down adds a failure, and you can click any pip to correct it. Once you've picked a class, a Hit Dice row appears: Spend Hit Die rolls your class's die, adds your Constitution modifier and heals you, and the Left box tracks how many you have. Damage taken, healing, hit dice and every death save land in your roll log."
@@ -5696,15 +5725,34 @@
 
   // ---------- Combat diagnostics (tap the version label 5 times to show/hide) ----------
   (function(){
-    var panel = document.createElement("pre");
+    var panel = document.createElement("div");
     panel.id = "combat-debug";
-    panel.style.cssText = "display:none;position:fixed;left:8px;right:8px;bottom:8px;max-height:45vh;overflow:auto;margin:0;padding:10px;z-index:10050;background:#000d;color:#9f9;font:11px/1.35 monospace;white-space:pre-wrap;word-break:break-all;border:1px solid #9f9;border-radius:6px;";
+    panel.style.cssText = "display:none;position:fixed;left:8px;right:8px;bottom:8px;max-height:45vh;overflow:auto;margin:0;padding:10px;z-index:10050;background:#000d;color:#9f9;font:11px/1.35 monospace;border:1px solid #9f9;border-radius:6px;";
+    var bar = document.createElement("div");
+    bar.style.cssText = "margin-bottom:8px;";
+    var themeBtn = document.createElement("button");
+    themeBtn.type = "button"; themeBtn.id = "debug-theme-btn";
+    themeBtn.style.cssText = "font:12px monospace;padding:6px 10px;background:#000;color:#9f9;border:1px solid #9f9;border-radius:5px;cursor:pointer;";
+    function themeNow(){ var t = document.documentElement.getAttribute("data-theme"); return t === "light" || t === "dark" ? t : "auto"; }
+    function themeLabel(){ themeBtn.textContent = "Theme: " + ({auto:"Auto (follows device)", light:"Light", dark:"Dark"})[themeNow()] + "  (tap to change)"; }
+    themeBtn.addEventListener("click", function(){
+      var next = ({auto:"light", light:"dark", dark:"auto"})[themeNow()];
+      if(next === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", next);
+      try{ if(next === "auto") localStorage.removeItem("rtTheme"); else localStorage.setItem("rtTheme", next); }catch(e){}
+      themeLabel();
+    });
+    themeLabel();
+    bar.appendChild(themeBtn);
+    var out = document.createElement("pre");
+    out.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-all;font:inherit;";
+    panel.appendChild(bar); panel.appendChild(out);
     document.body.appendChild(panel);
     function fmt(t){ return t ? new Date(t).toLocaleTimeString() : "never"; }
     window.rtRenderCombatDebug = function(){
       if(panel.style.display === "none") return;
       var d = window.rtCombatDebug;
-      if(!d){ panel.textContent = "Combat diagnostics\nDatabase module not loaded (offline?)."; return; }
+      themeLabel();
+      if(!d){ out.textContent = "Combat diagnostics\nDatabase module not loaded (offline?)."; return; }
       var lines = ["Combat diagnostics (tap version x5 to close)",
         "account: " + (currentAccount === null ? "none" : app.characters[currentAccount].name) + "  viewing: " + app.characters[app.activeIndex].name,
         "listener: " + (d.listenerError ? "CANCELLED " + d.listenerError + " (retrying)" : "ok") + "  re-attaches: " + (d.reattaches || 0) + "  snapshots: " + d.snaps + "  last: " + fmt(d.lastSnapAt),
@@ -5712,7 +5760,7 @@
         "local view: " + JSON.stringify(combatData),
         "recent writes:"];
       d.writes.forEach(function(w){ lines.push("  " + fmt(w.at) + " " + w.result + " " + JSON.stringify(w.map)); });
-      panel.textContent = lines.join("\n");
+      out.textContent = lines.join("\n");
     };
     var taps = 0, tapTimer = null;
     var vt = document.getElementById("version-tag");
@@ -5766,21 +5814,28 @@
       if(current && current.getAttribute("aria-describedby") === "rt-tooltip") current.removeAttribute("aria-describedby");
       current = null;
     }
-    function place(el){
+    function place(el, preferAbove){
       var r = el.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
       tip.style.left = "0px"; tip.style.top = "0px";
       var w = tip.offsetWidth, h = tip.offsetHeight;
       var left = Math.max(6, Math.min(vw - w - 6, r.left + r.width / 2 - w / 2));
-      var top = r.bottom + 8;
-      if(top + h > vh - 6) top = Math.max(6, r.top - h - 8);   // no room below: go above
+      var top;
+      if(preferAbove){   // a finger covers what's below it, so touch tips go above the control when they fit
+        top = r.top - h - 10;
+        if(top < 6) top = Math.min(vh - h - 6, r.bottom + 8);
+      } else {
+        top = r.bottom + 8;
+        if(top + h > vh - 6) top = Math.max(6, r.top - h - 8);   // no room below: go above
+      }
       tip.style.left = Math.round(left) + "px"; tip.style.top = Math.round(top) + "px";
     }
-    function show(el){
+    function show(el, preferAbove){
       var text = tipText(el);
-      if(!text){ hide(); return; }
+      if(!text){ hide(); return false; }
       current = el; tip.textContent = text;
       el.setAttribute("aria-describedby", "rt-tooltip");
-      place(el); tip.classList.add("show");
+      place(el, preferAbove); tip.classList.add("show");
+      return true;
     }
     function target(e){ return e.target && e.target.closest ? e.target.closest("[title],[data-tip]") : null; }
     document.addEventListener("mouseover", function(e){
@@ -5808,6 +5863,41 @@
     });
     document.addEventListener("focusout", hide);
     document.addEventListener("pointerdown", hide, true);
+    // Touch: press and hold (0.75 s) shows the tip. Moving the finger more than 10px (a scroll) cancels it.
+    var HOLD_MS = 750, MOVE_PX = 10, holdTimer = null, hideTimer = null, startX = 0, startY = 0, justHeld = 0;
+    function cancelHold(){ clearTimeout(holdTimer); holdTimer = null; }
+    function isTextBox(el){ return el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && /text|search|number/.test(el.type)); }
+    document.addEventListener("touchstart", function(e){
+      cancelHold(); clearTimeout(hideTimer);
+      if(e.touches.length !== 1) return;
+      var t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+      // Look at what is under the finger instead of e.target: some browsers send no events for disabled buttons.
+      var under = document.elementFromPoint(startX, startY);
+      var el = under && under.closest ? under.closest("[title],[data-tip]") : null;
+      if(!el || isTextBox(el)) return;
+      holdTimer = setTimeout(function(){
+        holdTimer = null;
+        if(show(el, true)){
+          justHeld = Date.now();
+          hideTimer = setTimeout(hide, 2500);
+        }
+      }, HOLD_MS);
+    }, {passive:true});
+    document.addEventListener("touchmove", function(e){
+      if(!holdTimer || !e.touches.length) return;
+      var t = e.touches[0];
+      if(Math.abs(t.clientX - startX) > MOVE_PX || Math.abs(t.clientY - startY) > MOVE_PX) cancelHold();
+    }, {passive:true});
+    function touchDone(){ cancelHold(); if(current && justHeld && Date.now() - justHeld < 3000){ clearTimeout(hideTimer); hide(); } }
+    document.addEventListener("touchend", touchDone, true);
+    document.addEventListener("touchcancel", touchDone, true);
+    // Lifting the finger after a hold must not press the button, and the phone's own menu must stay away.
+    document.addEventListener("click", function(e){
+      if(justHeld && Date.now() - justHeld < 700){ e.preventDefault(); e.stopPropagation(); justHeld = 0; }
+    }, true);
+    document.addEventListener("contextmenu", function(e){
+      if((holdTimer || (justHeld && Date.now() - justHeld < 3000)) && e.target.closest && e.target.closest("[title],[data-tip]") && !isTextBox(e.target)) e.preventDefault();
+    }, true);
     document.addEventListener("scroll", hide, true);
     document.addEventListener("keydown", function(e){ if(e.key === "Escape") hide(); }, true);
     window.addEventListener("resize", hide);
