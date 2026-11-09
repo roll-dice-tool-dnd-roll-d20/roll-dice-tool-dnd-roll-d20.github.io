@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.80.0</title>
+<title>Roll Tracker V1.80.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -739,7 +739,8 @@
   .nb-seg button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
   /* Themed tooltip: replaces the browser's own white hint box for anything with a title */
   #rt-tooltip{position:fixed;left:0;top:0;z-index:10001;max-width:260px;padding:6px 9px;border-radius:6px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);font-family:-apple-system,"Segoe UI",sans-serif;font-size:0.78rem;line-height:1.35;box-shadow:0 3px 10px rgba(0,0,0,0.25);pointer-events:none;opacity:0;visibility:hidden;transition:opacity 0.12s ease;}
-  [title],[data-tip]{-webkit-touch-callout:none;}
+  [title],[data-tip]{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
+  .rt-nosel,.rt-nosel *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important;}
   #rt-tooltip.show{opacity:1;visibility:visible;}
   .nb-view{margin-bottom:8px;}
   .nb-view button{padding:5px 6px;font-size:0.74rem;}
@@ -904,7 +905,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.80.0</div>
+      <div class="version-tag" id="version-tag">Version 1.80.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -5864,23 +5865,26 @@
     document.addEventListener("focusout", hide);
     document.addEventListener("pointerdown", hide, true);
     // Touch: press and hold (0.75 s) shows the tip. Moving the finger more than 10px (a scroll) cancels it.
-    var HOLD_MS = 750, MOVE_PX = 10, holdTimer = null, hideTimer = null, startX = 0, startY = 0, justHeld = 0;
+    var HOLD_MS = 750, MOVE_PX = 10, LINGER_MS = 500, holdTimer = null, hideTimer = null, startX = 0, startY = 0, justHeld = 0, touchShown = false, noSelEl = null;
+    function allowSelect(){ if(noSelEl){ noSelEl.classList.remove("rt-nosel"); noSelEl = null; } }
     function cancelHold(){ clearTimeout(holdTimer); holdTimer = null; }
+    // iOS starts selecting text (highlight + magnifier) on a long press, which would cover the hint, so clear any selection while a hold is in progress.
+    document.addEventListener("selectionchange", function(){
+      if(holdTimer || touchShown){ try{ var sel = window.getSelection(); if(sel && !sel.isCollapsed) sel.removeAllRanges(); }catch(e){} }
+    });
     function isTextBox(el){ return el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && /text|search|number/.test(el.type)); }
     document.addEventListener("touchstart", function(e){
-      cancelHold(); clearTimeout(hideTimer);
+      cancelHold(); clearTimeout(hideTimer); allowSelect();
       if(e.touches.length !== 1) return;
       var t = e.touches[0]; startX = t.clientX; startY = t.clientY;
       // Look at what is under the finger instead of e.target: some browsers send no events for disabled buttons.
       var under = document.elementFromPoint(startX, startY);
       var el = under && under.closest ? under.closest("[title],[data-tip]") : null;
       if(!el || isTextBox(el)) return;
+      noSelEl = el; el.classList.add("rt-nosel");
       holdTimer = setTimeout(function(){
         holdTimer = null;
-        if(show(el, true)){
-          justHeld = Date.now();
-          hideTimer = setTimeout(hide, 2500);
-        }
+        if(show(el, true)){ justHeld = Date.now(); touchShown = true; }
       }, HOLD_MS);
     }, {passive:true});
     document.addEventListener("touchmove", function(e){
@@ -5888,7 +5892,13 @@
       var t = e.touches[0];
       if(Math.abs(t.clientX - startX) > MOVE_PX || Math.abs(t.clientY - startY) > MOVE_PX) cancelHold();
     }, {passive:true});
-    function touchDone(){ cancelHold(); if(current && justHeld && Date.now() - justHeld < 3000){ clearTimeout(hideTimer); hide(); } }
+    function touchDone(){
+      cancelHold();
+      var wasShown = touchShown;
+      touchShown = false;
+      if(wasShown){ clearTimeout(hideTimer); hideTimer = setTimeout(function(){ hide(); allowSelect(); }, LINGER_MS); }
+      else allowSelect();
+    }
     document.addEventListener("touchend", touchDone, true);
     document.addEventListener("touchcancel", touchDone, true);
     // Lifting the finger after a hold must not press the button, and the phone's own menu must stay away.
