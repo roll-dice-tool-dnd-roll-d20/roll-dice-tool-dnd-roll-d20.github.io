@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.80.1</title>
+<title>Roll Tracker V1.81.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -905,7 +905,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.80.1</div>
+      <div class="version-tag" id="version-tag">Version 1.81.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -4220,7 +4220,9 @@
   function newNoteId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function noteDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"}); }catch(e){ return ""; } }
   function myNotesTotal(){ return (state.notes || []).reduce(function(n, x){ return n + x.title.length + x.body.length; }, 0); }
-  function notesBlockedForViewer(){ return !!(state.isDM && !viewerIsDM()); }   // DM notes: players never see them
+  var nbForced = false;   // true while the notes drawer was switched to Party Notes only because the other section is off limits
+  // Private notes: a character's own notes show only to that signed-in account and to the DM (DM notes: DM only).
+  function notesBlockedForViewer(){ return !viewerIsDM() && currentAccount !== app.activeIndex; }
   function cleanNote(n){
     if(!n || typeof n !== "object") return null;
     var id = typeof n.id === "string" ? n.id.replace(/[^a-z0-9]/gi, "").slice(0, 24) : "";
@@ -4298,7 +4300,7 @@
       else msg = "Shared with everyone in the group. Anyone can edit or delete these.";
     } else {
       var total = myNotesTotal();
-      msg = (state.isDM ? "Hidden from players in the app. " : "") + total.toLocaleString() + " / " + NOTES_TOTAL_MAX.toLocaleString() + " characters used.";
+      msg = (state.isDM ? "Hidden from players in the app. " : "Private to you and the DM. ") + total.toLocaleString() + " / " + NOTES_TOTAL_MAX.toLocaleString() + " characters used.";
       if(total > NOTES_TOTAL_MAX * 0.9){ msg += " Nearly full: tap 📦 on older notes to move them to the Archive."; warn = true; }
     }
     foot.textContent = msg; foot.classList.toggle("warn", warn);
@@ -4307,7 +4309,8 @@
     if(!nbListEl) return;
     var segMine = document.getElementById("nb-seg-mine"), segParty = document.getElementById("nb-seg-party");
     var hideMine = notesBlockedForViewer();
-    if(hideMine) nbSection = "party";
+    if(hideMine){ if(nbSection === "mine"){ nbSection = "party"; nbForced = true; } }
+    else if(nbForced){ nbSection = "mine"; nbForced = false; }
     segMine.style.display = hideMine ? "none" : "";
     segMine.textContent = state.isDM ? "DM Notes" : (currentAccount === app.activeIndex ? "My Notes" : ((state.name || "Player") + "'s Notes"));
     segMine.classList.toggle("active", nbSection === "mine");
@@ -4502,8 +4505,8 @@
   document.getElementById("nb-view-active").addEventListener("click", function(){ nbView = "active"; renderNotes(); });
   document.getElementById("nb-view-archive").addEventListener("click", function(){ nbView = "archive"; renderNotes(); });
   document.getElementById("nb-download").addEventListener("click", downloadNotes);
-  document.getElementById("nb-seg-mine").addEventListener("click", function(){ nbSection = "mine"; renderNotes(); });
-  document.getElementById("nb-seg-party").addEventListener("click", function(){ nbSection = "party"; renderNotes(); });
+  document.getElementById("nb-seg-mine").addEventListener("click", function(){ nbSection = "mine"; nbForced = false; renderNotes(); });
+  document.getElementById("nb-seg-party").addEventListener("click", function(){ nbSection = "party"; nbForced = false; renderNotes(); });
   document.getElementById("nb-search").addEventListener("input", function(){ nbQuery = this.value; renderNotes(); });
   document.getElementById("nb-new").addEventListener("click", function(){
     var now = Date.now(), sec = nbSection;
@@ -4884,7 +4887,7 @@
       targetSelector: "#nb-seg",
       openDrawer: "notes",
       title: "My Notes and Party Notes",
-      text: "My Notes belongs to your character, so it goes wherever your sheet goes and follows your tab's lock. The DM can read it. Party Notes is one shared list for the whole group: everyone sees the same notes, and anyone can add, edit or delete them, so it is good for things like the quest log or a list of NPCs."
+      text: "My Notes belongs to your character and is private: only you (signed in as that character) and the DM can read it, and another player who opens your tab just sees Party Notes. If you switch accounts on one device, the notebook switches with you. It follows your tab's lock. Party Notes is one shared list for the whole group: everyone sees the same notes, and anyone can add, edit or delete them, so it is good for things like the quest log or a list of NPCs."
     },
     {
       targetSelector: "#nb-tools",
@@ -4903,7 +4906,7 @@
       openDrawer: "notes",
       showIf: function(){ return !!state.isDM && viewerIsDM(); },
       title: "DM Notes",
-      text: "On the DM tab your notes section is called DM Notes. Players can't open it in the app. It's hidden the same way Hide Rolls is, so it keeps your notes out of sight at the table, but it isn't locked away from someone digging through their browser."
+      text: "On the DM tab your notes section is called DM Notes. Players can't open it in the app. It's hidden the same way Hide Rolls is, so it keeps your notes out of sight at the table, but it isn't locked away from someone digging through their browser. The same goes for every player's private notes."
     }
   ];
 
