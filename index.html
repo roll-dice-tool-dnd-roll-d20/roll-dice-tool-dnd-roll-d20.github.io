@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.82.1</title>
+<title>Roll Tracker V1.83.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -426,6 +426,12 @@
   .insp-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:60;min-width:160px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.25);padding:4px;display:flex;flex-direction:column;}
   .insp-menu button{font:inherit;font-size:0.85rem;text-align:left;padding:7px 10px;background:transparent;color:inherit;border:0;border-radius:5px;cursor:pointer;}
   .insp-menu button:hover,.insp-menu button:focus-visible{background:var(--bg);}
+  .cond-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;}
+  .cond-chip{font:inherit;font-size:0.76rem;padding:4px 10px;border-radius:999px;cursor:pointer;background:transparent;border:1px solid var(--ink-soft);color:var(--ink);}
+  .cond-chip.on{background:var(--berry);border-color:var(--berry);color:#fff;}
+  .cond-effects-item{margin:0 0 4px;}
+  .cond-effects-item b{color:var(--ink);}
+  .party-cond{margin-top:4px;font-size:0.74rem;color:var(--berry);}
   .rest-food{display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:0.85rem;color:var(--ink);}
   .conc-mode{font-size:0.72rem;}
   .conc-mode button{padding:3px 8px !important;font-size:0.72rem !important;}
@@ -918,7 +924,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.82.1</div>
+      <div class="version-tag" id="version-tag">Version 1.83.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1042,6 +1048,11 @@
         <button type="button" class="hp-btn exh-step" id="exh-plus" title="Raise exhaustion by 1.">+</button>
       </div>
       <div class="exh-effects" id="exh-effects"></div>
+    </div>
+    <div class="hp-row insp-row" id="cond-row">
+      <span class="conc-mode-label">Conditions:</span>
+      <div class="cond-chips" id="cond-chips"></div>
+      <div class="exh-effects" id="cond-effects"></div>
     </div>
   </section>
 
@@ -1330,6 +1341,41 @@
       if(typeof it.note !== "string") it.note = "";
     });
   }
+  // The 2014 conditions (Exhaustion has its own control). Wording follows the 2014 rules text.
+  var CONDITIONS = [
+    {k:"blinded", n:"Blinded", t:"Can't see and automatically fails any ability check that requires sight. Attack rolls against you have advantage, and your attack rolls have disadvantage."},
+    {k:"charmed", n:"Charmed", t:"Can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has advantage on any ability check to interact socially with you."},
+    {k:"deafened", n:"Deafened", t:"Can't hear and automatically fails any ability check that requires hearing."},
+    {k:"frightened", n:"Frightened", t:"Disadvantage on ability checks and attack rolls while the source of your fear is within line of sight. Can't willingly move closer to the source of your fear."},
+    {k:"grappled", n:"Grappled", t:"Speed becomes 0 and can't benefit from any bonus to speed. Ends if the grappler is incapacitated, or if an effect removes you from the grappler's reach."},
+    {k:"incapacitated", n:"Incapacitated", t:"Can't take actions or reactions."},
+    {k:"invisible", n:"Invisible", t:"Impossible to see without the aid of magic or a special sense. For hiding, heavily obscured. Your location can be detected by any noise you make or tracks you leave. Attack rolls against you have disadvantage, and your attack rolls have advantage."},
+    {k:"paralyzed", n:"Paralyzed", t:"Incapacitated, and can't move or speak. Automatically fails Strength and Dexterity saving throws. Attack rolls against you have advantage. Any attack that hits is a critical hit if the attacker is within 5 feet."},
+    {k:"petrified", n:"Petrified", t:"Transformed, along with any nonmagical object worn or carried, into a solid inanimate substance (usually stone). Weight increases tenfold and you cease aging. Incapacitated, can't move or speak, and unaware of your surroundings. Attack rolls against you have advantage. Automatically fails Strength and Dexterity saving throws. Resistance to all damage. Immune to poison and disease, though any already in your system is suspended, not neutralized."},
+    {k:"poisoned", n:"Poisoned", t:"Disadvantage on attack rolls and ability checks."},
+    {k:"prone", n:"Prone", t:"Only movement option is to crawl, unless you stand up and thereby end the condition. Disadvantage on attack rolls. An attack roll against you has advantage if the attacker is within 5 feet, otherwise it has disadvantage."},
+    {k:"restrained", n:"Restrained", t:"Speed becomes 0 and can't benefit from any bonus to speed. Attack rolls against you have advantage, and your attack rolls have disadvantage. Disadvantage on Dexterity saving throws."},
+    {k:"stunned", n:"Stunned", t:"Incapacitated, can't move, and can speak only falteringly. Automatically fails Strength and Dexterity saving throws. Attack rolls against you have advantage."},
+    {k:"unconscious", n:"Unconscious", t:"Incapacitated, can't move or speak, and unaware of your surroundings. Drops whatever it's holding and falls prone. Automatically fails Strength and Dexterity saving throws. Attack rolls against you have advantage. Any attack that hits is a critical hit if the attacker is within 5 feet."}
+  ];
+  var COND_IMPLIES = {paralyzed:["incapacitated"], petrified:["incapacitated"], stunned:["incapacitated"], unconscious:["incapacitated","prone"]};
+  var COND_INCAP = ["incapacitated","paralyzed","petrified","stunned","unconscious"];
+  var COND_AUTOFAIL = ["paralyzed","petrified","stunned","unconscious"];   // automatically fail Strength and Dexterity saves
+  function condName(k){ var r = CONDITIONS.filter(function(x){ return x.k === k; })[0]; return r ? r.n : k; }
+  // What the character has ticked, plus the conditions those carry with them (paralyzed includes incapacitated, and so on).
+  function effectiveConds(c){
+    var set = {};
+    (c && Array.isArray(c.conditions) ? c.conditions : []).forEach(function(k){
+      set[k] = true;
+      (COND_IMPLIES[k] || []).forEach(function(i){ set[i] = true; });
+    });
+    return set;
+  }
+  function backfillConditions(c){
+    var known = CONDITIONS.map(function(x){ return x.k; });
+    var have = Array.isArray(c.conditions) ? c.conditions : [];
+    c.conditions = known.filter(function(k){ return have.indexOf(k) !== -1; });
+  }
   function backfillExhaustion(c){
     c.inspired = c.inspired === true;
     c.inspArmed = c.inspArmed === true;
@@ -1458,6 +1504,7 @@
     inspired: false,
     inspArmed: false,
     exhaustion: 0,
+    conditions: [],
     items: [],
     notes: [],
     acOther: 0,
@@ -1533,6 +1580,7 @@
     inspired: false,
     inspArmed: false,
     exhaustion: 0,
+    conditions: [],
     items: [],
     notes: [],
     acOther: 0,
@@ -1635,6 +1683,7 @@
     backfillInventory(c);
     backfillNotes(c);
     backfillExhaustion(c);
+    backfillConditions(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -1754,12 +1803,28 @@
   // kind is "check", "attack" or "save". base is the setting the player picked ("normal", "adv" or "dis").
   // Inspiration (once used) adds advantage and Exhaustion adds disadvantage; any advantage plus any disadvantage cancel out.
   // useInsp is false for rolls that shouldn't spend an armed Inspiration (initiative).
-  function rollWithMode(kind, base, useInsp){
+  function rollWithMode(kind, base, useInsp, ability){
     var adv = base === "adv" ? 1 : 0, dis = base === "dis" ? 1 : 0, tags = [];
     var insp = useInsp && state.inspArmed;
     if(insp){ adv++; tags.push("Inspiration: advantage"); }
     var ex = exhaustionLevel(state);
     if((kind === "check" && ex >= 1) || ((kind === "attack" || kind === "save") && ex >= 3)){ dis++; tags.push("Exhaustion: disadvantage"); }
+    // Conditions (2014): which ones change this kind of roll, and how.
+    var cs = effectiveConds(state);
+    CONDITIONS.forEach(function(cd){
+      if(!cs[cd.k]) return;
+      var d = 0;
+      if(kind === "attack"){
+        if(["blinded","frightened","poisoned","prone","restrained"].indexOf(cd.k) !== -1) d = -1;
+        else if(cd.k === "invisible") d = 1;
+      } else if(kind === "check"){
+        if(cd.k === "frightened" || cd.k === "poisoned") d = -1;
+      } else if(kind === "save"){
+        if(cd.k === "restrained" && ability === "DEX") d = -1;
+      }
+      if(d < 0){ dis++; tags.push(cd.n + ": disadvantage"); }
+      else if(d > 0){ adv++; tags.push(cd.n + ": advantage"); }
+    });
     var mode = (adv && dis) ? "normal" : adv ? "adv" : dis ? "dis" : "normal";
     if(adv && dis && tags.length) tags.push("cancel out");
     var out;
@@ -1772,7 +1837,13 @@
     if(insp){ state.inspArmed = false; saveState(); if(window.rtRenderInspExh) window.rtRenderInspExh(); }
     return out;
   }
-  function rollD20(kind){ return rollWithMode(kind || "check", state.mode, true); }
+  function rollD20(kind, ability){ return rollWithMode(kind || "check", state.mode, true, ability); }
+  // Paralyzed, petrified, stunned and unconscious characters automatically fail Strength and Dexterity saves: returns the reason, or "".
+  function autoFailSave(abilityName){
+    if(abilityName !== "STR" && abilityName !== "DEX") return "";
+    var cs = effectiveConds(state), why = COND_AUTOFAIL.filter(function(k){ return cs[k]; });
+    return why.length ? why.map(condName).join(", ") : "";
+  }
 
   function parseDice(str){
     var m = /^\s*(\d+)\s*d\s*(\d+)\s*$/i.exec(str || "");
@@ -2757,7 +2828,7 @@
     var con = null;
     (state.abilities || []).forEach(function(a){ if(a.name === "CON") con = a; });
     var bonus = con ? (con.mod || 0) + (con.save ? (state.profBonus || 0) : 0) : 0;
-    var cd = rollWithMode("save", state.concMode || "normal", true), v = cd.value, rolls = cd.rolls;
+    var cd = rollWithMode("save", state.concMode || "normal", true, "CON"), v = cd.value, rolls = cd.rolls;
     var total = v + bonus, ok = total >= dc, spell = (state.concSpell || "").trim();
     addLog("Concentration Save vs DC " + dc + (spell ? " (" + spell + ")" : "") + (ok ? " — Success" : " — Failed"),
       "d20(" + rolls.join("/") + ") + " + bonus + cd.tag, total, true, v === 20 ? "crit" : v === 1 ? "fumble" : null);
@@ -2884,7 +2955,7 @@
     var shown = 0, unset = [];
     app.characters.forEach(function(c, i){
       if(c.isDM) return;
-      if(!charHpReady(c) && !c.concOn && !classLabel(c) && !(c.armor && c.armor !== "none") && !c.shield){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
+      if(!charHpReady(c) && !c.concOn && !classLabel(c) && !(c.armor && c.armor !== "none") && !c.shield && !(c.conditions || []).length && !exhaustionLevel(c)){ unset.push(c.name); return; }   // keep the list to people who are tracking HP
       shown++;
       var row = document.createElement("div"); row.className = "party-row";
       row.title = "Open " + c.name + "'s sheet";
@@ -2919,6 +2990,11 @@
         var cc = document.createElement("div"); cc.className = "party-conc";
         cc.textContent = "✦ Concentrating" + ((c.concSpell || "").trim() ? ": " + c.concSpell.trim() : "");
         row.appendChild(cc);
+      }
+      var cl2 = (c.conditions || []).map(condName); if(exhaustionLevel(c)) cl2.push("Exhaustion " + exhaustionLevel(c));
+      if(cl2.length){
+        var cd2 = document.createElement("div"); cd2.className = "party-cond"; cd2.textContent = "⚠ " + cl2.join(", ");
+        row.appendChild(cd2);
       }
       partyEl.appendChild(row);
     });
@@ -3007,6 +3083,7 @@
   function renderInspExh(){
     var row = document.getElementById("insp-row");
     if(!row) return;
+    renderConditions();
     var dmTab = !!state.isDM, dmViewer = viewerIsDM();
     document.getElementById("insp-block").style.display = dmTab ? "none" : "";
     document.getElementById("exh-block").style.display = dmTab ? "none" : "";
@@ -3033,9 +3110,61 @@
     if(se){
       var sp = [["Walk", state.speed], ["Fly", state.speedExtra.fly], ["Swim", state.speedExtra.swim], ["Climb", state.speedExtra.climb], ["Burrow", state.speedExtra.burrow]]
         .filter(function(x){ return x[1] > 0; }).map(function(x){ return x[0] + " " + (ex >= 5 ? 0 : Math.floor(x[1] / 2)); });
-      se.textContent = ex >= 2 && sp.length ? "Exhaustion: " + (ex >= 5 ? "speed reduced to 0" : "speed halved") + " (" + sp.join(" · ") + " ft)" : "";
+      var cs = effectiveConds(state), zero = [];
+      if(ex >= 5) zero.push("Exhaustion");
+      ["grappled", "restrained"].forEach(function(k){ if(cs[k]) zero.push(condName(k)); });
+      sp = [["Walk", state.speed], ["Fly", state.speedExtra.fly], ["Swim", state.speedExtra.swim], ["Climb", state.speedExtra.climb], ["Burrow", state.speedExtra.burrow]]
+        .filter(function(x){ return x[1] > 0; }).map(function(x){ return x[0] + " " + (zero.length ? 0 : Math.floor(x[1] / 2)); });
+      if(zero.length) se.textContent = sp.length ? zero.join(", ") + ": speed reduced to 0 (" + sp.join(" · ") + " ft)" : "";
+      else se.textContent = ex >= 2 && sp.length ? "Exhaustion: speed halved (" + sp.join(" · ") + " ft)" : "";
       se.style.display = se.textContent ? "" : "none";
     }
+  }
+  function renderConditions(){
+    var row = document.getElementById("cond-row");
+    if(!row) return;
+    row.style.display = state.isDM ? "none" : "";
+    if(state.isDM) return;
+    var chips = document.getElementById("cond-chips");
+    if(!chips.children.length){
+      CONDITIONS.forEach(function(cd){
+        var b = document.createElement("button"); b.type = "button"; b.className = "cond-chip"; b.setAttribute("data-k", cd.k);
+        b.textContent = cd.n;
+        b.addEventListener("click", function(){ toggleCondition(cd.k); });
+        chips.appendChild(b);
+      });
+    }
+    var mine = state.conditions || [], eff = effectiveConds(state);
+    Array.prototype.forEach.call(chips.children, function(b){
+      var k = b.getAttribute("data-k"), on = mine.indexOf(k) !== -1;
+      b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.title = on ? "Tap to remove this condition." : "Tap to add this condition.";
+    });
+    var box = document.getElementById("cond-effects");
+    box.innerHTML = "";
+    CONDITIONS.forEach(function(cd){
+      if(!eff[cd.k]) return;
+      var fromWhom = mine.indexOf(cd.k) === -1 ? mine.filter(function(m){ return (COND_IMPLIES[m] || []).indexOf(cd.k) !== -1; }).map(condName) : [];
+      var item = document.createElement("div"); item.className = "cond-effects-item";
+      var b = document.createElement("b"); b.textContent = cd.n + (fromWhom.length ? " (from " + fromWhom.join(", ") + ")" : "") + ": ";
+      item.appendChild(b); item.appendChild(document.createTextNode(cd.t));
+      box.appendChild(item);
+    });
+    box.style.display = box.children.length ? "" : "none";
+  }
+  function toggleCondition(k){
+    var list = (state.conditions || []).slice(), at = list.indexOf(k);
+    if(at === -1) list.push(k); else list.splice(at, 1);
+    state.conditions = CONDITIONS.map(function(x){ return x.k; }).filter(function(x){ return list.indexOf(x) !== -1; });
+    addLog("Condition", condName(k) + (at === -1 ? " added" : " removed"), "—", false, null);
+    // Being incapacitated (or anything that includes it) ends concentration.
+    if(at === -1 && COND_INCAP.indexOf(k) !== -1 && state.concOn){
+      var spell = (state.concSpell || "").trim();
+      state.concOn = false;
+      addLog("Concentration ended", condName(k), "—", false, null);
+      showCombatBanner(state.name + " lost concentration" + (spell ? " on " + spell : "") + "!");
+    }
+    saveState(); renderHp(); renderSenses(); renderParty();
   }
   window.rtRenderInspExh = renderInspExh;
   function closeInspMenu(){ var m = document.getElementById("insp-menu"); if(m) m.style.display = "none"; }
@@ -3222,7 +3351,9 @@
       saveBtn.className = "roll-btn save";
       saveBtn.textContent = "Save";
       saveBtn.addEventListener("click", function(){
-        var d = rollD20("save");
+        var fail = autoFailSave(ab.name);
+        if(fail){ addLog(ab.name + " Save", "Automatic failure (" + fail + ")", "Fail", false, null); return; }
+        var d = rollD20("save", ab.name);
         var bonus = (state.abilities[idx].mod || 0) + (state.abilities[idx].save ? (state.profBonus||0) : 0);
         var total = d.value + bonus;
         var partsStr = "d20(" + d.rolls.join("/") + ") + " + bonus + d.tag;
@@ -4867,6 +4998,12 @@
       text: "The DM can give you Inspiration for great roleplay, and you'll see a message when it arrives (you can also tap the star yourself). Tap Use to spend it: your next d20 roll, whether a check, save or attack, gets advantage, and the log says so. Undo puts it back if you change your mind. Exhaustion goes from 0 to 6 with the − and + buttons, and the sheet applies it for you: disadvantage on ability checks from level 1 and on attacks and saves from level 3, plus speed and max HP notes. Advantage and disadvantage cancel each other out like the rules say. When you join combat with Inspiration ticked, you're asked whether to spend it on your initiative roll. A long rest asks whether you had food and drink, and if so takes one level off. On the DM tab this row is a Grant Inspiration button that lists the players."
     },
     {
+      targetSelector: "#cond-row",
+      title: "Conditions",
+      showIf: function(){ return !state.isDM; },
+      text: "Tap a condition to add it, and tap again to remove it. Each active one shows what it does in the rules' own words. The sheet applies the roll effects for you: poisoned, frightened, blinded, prone and restrained give disadvantage on your attacks (poisoned and frightened also on ability checks), invisible gives advantage, and restrained gives disadvantage on Dexterity saves. Paralyzed, petrified, stunned and unconscious automatically fail Strength and Dexterity saves, so the Save button just logs the failure. Grappled and restrained show your speed as 0. Conditions that include others, like paralyzed, show those too. Anything incapacitated ends your concentration. The DM sees each player's conditions in the Party Status list. Frightened only counts while you can see what scares you, so remove it when that stops."
+    },
+    {
       targetSelector: "#rest-row",
       title: "Short & Long Rest",
       text: "Short Rest opens a small box where you can spend hit dice to heal (each rolls the die plus your Constitution modifier), then Finish Short Rest to bring back short-rest resources like superiority dice. Long Rest asks you to confirm first, since it should only happen after 6 hours of sleep (4 hours of trance for an elf). It restores your HP, clears temp HP and death saves, gives back half your hit dice (minimum 1), regains superiority dice, ends concentration, and switches off your Bonus Damage buffs.",
@@ -6184,6 +6321,7 @@
       backfillInventory(c);
       backfillNotes(c);
       backfillExhaustion(c);
+      backfillConditions(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
