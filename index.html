@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.82.0</title>
+<title>Roll Tracker V1.82.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -918,7 +918,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.82.0</div>
+      <div class="version-tag" id="version-tag">Version 1.82.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -4864,7 +4864,7 @@
     {
       targetSelector: "#insp-row",
       title: "Inspiration & Exhaustion",
-      text: "The DM can give you Inspiration for great roleplay, and you'll see a message when it arrives (you can also tap the star yourself). Tap Use to spend it: your next d20 roll, whether a check, save or attack, gets advantage, and the log says so. Undo puts it back if you change your mind. Exhaustion goes from 0 to 6 with the − and + buttons, and the sheet applies it for you: disadvantage on ability checks from level 1 and on attacks and saves from level 3, plus speed and max HP notes. Advantage and disadvantage cancel each other out like the rules say. A long rest asks whether you had food and drink, and if so takes one level off. On the DM tab this row is a Grant Inspiration button that lists the players."
+      text: "The DM can give you Inspiration for great roleplay, and you'll see a message when it arrives (you can also tap the star yourself). Tap Use to spend it: your next d20 roll, whether a check, save or attack, gets advantage, and the log says so. Undo puts it back if you change your mind. Exhaustion goes from 0 to 6 with the − and + buttons, and the sheet applies it for you: disadvantage on ability checks from level 1 and on attacks and saves from level 3, plus speed and max HP notes. Advantage and disadvantage cancel each other out like the rules say. When you join combat with Inspiration ticked, you're asked whether to spend it on your initiative roll. A long rest asks whether you had food and drink, and if so takes one level off. On the DM tab this row is a Grant Inspiration button that lists the players."
     },
     {
       targetSelector: "#rest-row",
@@ -5624,14 +5624,55 @@
   }
 
   // --- player actions ---
+  function canJoinNow(){
+    if(currentAccount === null || viewerIsDM() || !window.rtCombatIO) return false;  // needs the live connection
+    if(app.activeIndex !== currentAccount) return false;  // only from the tab you're signed in as
+    if(!Object.keys(combatData.groups).length) return false;  // greyed out until the DM starts combat
+    var key = acctKey(currentAccount);
+    return !(combatData.join[key] || groupOfKey(combatData, key));
+  }
+  // Inspiration is declared before the roll (2014 rules): a ticked Inspiration asks whether to spend it on initiative.
+  function askSpendInspiration(onChoice){
+    var ex = exhaustionLevel(state);
+    var back = document.createElement("div"); back.className = "tutorial-backdrop";
+    var card = document.createElement("div"); card.className = "tutorial-popup rest-confirm";
+    card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true");
+    card.innerHTML =
+      '<div class="tutorial-step-count">Initiative</div>' +
+      '<h3>Spend Inspiration on this initiative roll?</h3>' +
+      '<p>Initiative is a Dexterity check, so spending Inspiration gives you advantage on it.' +
+      (ex >= 1 ? ' Your Exhaustion gives disadvantage on it, so the two would cancel out into a normal roll.' : '') + '</p>' +
+      '<div class="tutorial-popup-actions">' +
+        '<button type="button" class="tutorial-btn-ghost" id="insp-ask-cancel">Cancel</button>' +
+        '<button type="button" class="tutorial-btn-ghost" id="insp-ask-no" style="margin-left:auto;">Roll normally</button>' +
+        '<button type="button" id="insp-ask-yes">Spend Inspiration</button>' +
+      '</div>';
+    function close(){ document.removeEventListener("keydown", onKey); back.remove(); card.remove(); }
+    function onKey(e){ if(e.key === "Escape") close(); }
+    document.addEventListener("keydown", onKey);
+    back.addEventListener("click", close);
+    document.body.appendChild(back); document.body.appendChild(card);
+    card.querySelector("#insp-ask-cancel").addEventListener("click", close);
+    card.querySelector("#insp-ask-no").addEventListener("click", function(){ close(); onChoice(false); });
+    card.querySelector("#insp-ask-yes").addEventListener("click", function(){ close(); onChoice(true); });
+    card.querySelector("#insp-ask-no").focus();   // the safe choice is the default
+  }
   function joinCombat(){
-    if(currentAccount === null || viewerIsDM() || !window.rtCombatIO) return;  // needs the live connection
-    if(app.activeIndex !== currentAccount) return;  // only from the tab you're signed in as
-    if(!Object.keys(combatData.groups).length) return;  // greyed out until the DM starts combat
+    if(!canJoinNow()) return;
+    if(state.inspired && !state.inspArmed){
+      askSpendInspiration(function(spend){
+        if(!canJoinNow()) return;   // the situation may have changed while the question was open
+        if(spend){ state.inspired = false; state.inspArmed = true; saveState(); }
+        doJoinCombat();
+      });
+      return;
+    }
+    doJoinCombat();
+  }
+  function doJoinCombat(){
     var me = currentAccount, key = acctKey(me);
-    if(combatData.join[key] || groupOfKey(combatData, key)) return;
     var bonus = parseInt(app.characters[me].initBonus, 10) || 0;
-    var id = rollWithMode("check", "normal", false), r = id.value, total = r + bonus;
+    var id = rollWithMode("check", "normal", true), r = id.value, total = r + bonus;
     addLog("Initiative", "d20(" + id.rolls.join("/") + ") + " + bonus + id.tag, total, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
     combatCommit(function(d){ opJoin(d, key, total, Date.now()); });
   }
