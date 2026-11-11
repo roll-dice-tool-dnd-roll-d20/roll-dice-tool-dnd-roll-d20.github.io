@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.81.0</title>
+<title>Roll Tracker V1.82.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -414,6 +414,19 @@
   .pip.succ.on{background:var(--moss);border-color:var(--moss);}
   .pip.fail.on{background:var(--berry);border-color:var(--berry);}
   .conc-row{border-top:1px solid var(--border-soft);padding-top:12px;margin-bottom:0;}
+  .insp-row{border-top:1px solid var(--border-soft);padding-top:12px;margin-bottom:0;align-items:center;}
+  .insp-block{display:inline-flex;align-items:center;gap:6px;position:relative;}
+  .insp-btn.on{background:var(--ochre);border-color:var(--ochre);color:#fff;}
+  .insp-btn.armed{background:var(--moss);border-color:var(--moss);color:#fff;}
+  .exh-block{display:inline-flex;align-items:center;gap:6px;}
+  .exh-step{padding:3px 10px !important;line-height:1.1;}
+  .exh-level{min-width:1.4em;text-align:center;font-weight:700;}
+  .exh-effects{flex-basis:100%;font-size:0.76rem;color:var(--ink-soft);line-height:1.4;}
+  .exh-effects.dead{color:var(--berry);font-weight:700;}
+  .insp-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:60;min-width:160px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.25);padding:4px;display:flex;flex-direction:column;}
+  .insp-menu button{font:inherit;font-size:0.85rem;text-align:left;padding:7px 10px;background:transparent;color:inherit;border:0;border-radius:5px;cursor:pointer;}
+  .insp-menu button:hover,.insp-menu button:focus-visible{background:var(--bg);}
+  .rest-food{display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:0.85rem;color:var(--ink);}
   .conc-mode{font-size:0.72rem;}
   .conc-mode button{padding:3px 8px !important;font-size:0.72rem !important;}
   .conc-mode-label{color:var(--ink-soft);font-size:0.76rem;}
@@ -905,7 +918,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.81.0</div>
+      <div class="version-tag" id="version-tag">Version 1.82.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1013,6 +1026,23 @@
         <button type="button" data-mode="adv">Adv</button>
       </div>
     </div>
+    <div class="hp-row insp-row" id="insp-row">
+      <div class="insp-block" id="insp-block">
+        <button type="button" class="hp-btn insp-btn" id="insp-btn" title="Inspiration: the DM gives it for great roleplay. Tap to turn it on or off yourself if you were given it in person.">☆ Inspiration</button>
+        <button type="button" class="hp-btn" id="insp-use" title="Spend Inspiration: your next d20 roll (check, save or attack) gets advantage.">Use</button>
+      </div>
+      <div class="insp-block" id="insp-grant-wrap" style="display:none;">
+        <button type="button" class="hp-btn" id="insp-grant" title="Pick a player to give Inspiration to.">Grant Inspiration</button>
+        <div class="insp-menu" id="insp-menu" style="display:none;"></div>
+      </div>
+      <div class="exh-block" id="exh-block">
+        <span class="conc-mode-label">Exhaustion:</span>
+        <button type="button" class="hp-btn exh-step" id="exh-minus" title="Lower exhaustion by 1.">−</button>
+        <span class="exh-level" id="exh-level">0</span>
+        <button type="button" class="hp-btn exh-step" id="exh-plus" title="Raise exhaustion by 1.">+</button>
+      </div>
+      <div class="exh-effects" id="exh-effects"></div>
+    </div>
   </section>
 
   <section class="panel ac-panel" id="ac-panel">
@@ -1051,6 +1081,7 @@
         <label class="small">Climb<input type="number" id="speed-climb" min="0" max="999" inputmode="numeric"></label>
         <label class="small">Burrow<input type="number" id="speed-burrow" min="0" max="999" inputmode="numeric"></label>
       </div>
+      <div class="exh-effects" id="speed-eff" style="display:none;"></div>
     </div>
   </section>
 
@@ -1299,6 +1330,12 @@
       if(typeof it.note !== "string") it.note = "";
     });
   }
+  function backfillExhaustion(c){
+    c.inspired = c.inspired === true;
+    c.inspArmed = c.inspArmed === true;
+    var e = parseInt(c.exhaustion, 10);
+    c.exhaustion = (isNaN(e) || e < 0) ? 0 : Math.min(6, e);
+  }
   function backfillNotes(c){
     if(!Array.isArray(c.notes)) c.notes = [];
     var seen = {};
@@ -1418,6 +1455,9 @@
     speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
     coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
+    inspired: false,
+    inspArmed: false,
+    exhaustion: 0,
     items: [],
     notes: [],
     acOther: 0,
@@ -1490,6 +1530,9 @@
     speedAuto: {swim:true, climb:true},
     passiveAdv: {perception:0, investigation:0, insight:0},
     coins: {cp:0, sp:0, ep:0, gp:0, pp:0},
+    inspired: false,
+    inspArmed: false,
+    exhaustion: 0,
     items: [],
     notes: [],
     acOther: 0,
@@ -1591,6 +1634,7 @@
     backfillSenses(c);
     backfillInventory(c);
     backfillNotes(c);
+    backfillExhaustion(c);
     if(!c.attacks) c.attacks = [];
     c.attacks.forEach(function(a){
       if(typeof a.prof === "undefined") a.prof = false;
@@ -1705,15 +1749,30 @@
     return Math.floor(Math.random()*sides)+1;
   }
 
-  function rollD20(){
-    if(state.mode === "normal"){
-      var r = rollDie(20);
-      return {value:r, rolls:[r]};
+  // Exhaustion (2014): level 1+ gives disadvantage on ability checks; level 3+ on attack rolls and saving throws.
+  function exhaustionLevel(c){ var e = parseInt(c && c.exhaustion, 10); return isNaN(e) ? 0 : Math.max(0, Math.min(6, e)); }
+  // kind is "check", "attack" or "save". base is the setting the player picked ("normal", "adv" or "dis").
+  // Inspiration (once used) adds advantage and Exhaustion adds disadvantage; any advantage plus any disadvantage cancel out.
+  // useInsp is false for rolls that shouldn't spend an armed Inspiration (initiative).
+  function rollWithMode(kind, base, useInsp){
+    var adv = base === "adv" ? 1 : 0, dis = base === "dis" ? 1 : 0, tags = [];
+    var insp = useInsp && state.inspArmed;
+    if(insp){ adv++; tags.push("Inspiration: advantage"); }
+    var ex = exhaustionLevel(state);
+    if((kind === "check" && ex >= 1) || ((kind === "attack" || kind === "save") && ex >= 3)){ dis++; tags.push("Exhaustion: disadvantage"); }
+    var mode = (adv && dis) ? "normal" : adv ? "adv" : dis ? "dis" : "normal";
+    if(adv && dis && tags.length) tags.push("cancel out");
+    var out;
+    if(mode === "normal"){ var r = rollDie(20); out = {value:r, rolls:[r]}; }
+    else {
+      var a = rollDie(20), b = rollDie(20);
+      out = {value: mode === "adv" ? Math.max(a,b) : Math.min(a,b), rolls:[a,b]};
     }
-    var a = rollDie(20), b = rollDie(20);
-    var value = state.mode === "adv" ? Math.max(a,b) : Math.min(a,b);
-    return {value:value, rolls:[a,b]};
+    out.tag = tags.length ? " · " + tags.join(", ") : "";
+    if(insp){ state.inspArmed = false; saveState(); if(window.rtRenderInspExh) window.rtRenderInspExh(); }
+    return out;
   }
+  function rollD20(kind){ return rollWithMode(kind || "check", state.mode, true); }
 
   function parseDice(str){
     var m = /^\s*(\d+)\s*d\s*(\d+)\s*$/i.exec(str || "");
@@ -2524,6 +2583,7 @@
   });
   // Styled like the tutorial popups: dimmed backdrop and a centred card.
   function showLongRestConfirm(gain, onYes){
+    var exh = exhaustionLevel(state);
     var back = document.createElement("div"); back.className = "tutorial-backdrop";
     var card = document.createElement("div"); card.className = "tutorial-popup rest-confirm";
     card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true");
@@ -2539,6 +2599,7 @@
         '<li>End concentration</li>' +
         '<li>Switch off Bonus Damage buffs</li>' +
       '</ul>' +
+      (exh > 0 ? '<label class="rest-food"><input type="checkbox" id="rest-food" checked> <span>Had some food and drink: Exhaustion goes down by 1 (level ' + exh + ' to ' + (exh - 1) + ')</span></label>' : '') +
       '<div class="tutorial-popup-actions">' +
         '<button type="button" class="tutorial-btn-ghost" id="rest-confirm-no">Cancel</button>' +
         '<button type="button" id="rest-confirm-yes" style="margin-left:auto;">Take Long Rest</button>' +
@@ -2549,14 +2610,14 @@
     back.addEventListener("click", close);
     document.body.appendChild(back); document.body.appendChild(card);
     card.querySelector("#rest-confirm-no").addEventListener("click", close);
-    card.querySelector("#rest-confirm-yes").addEventListener("click", function(){ close(); onYes(); });
+    card.querySelector("#rest-confirm-yes").addEventListener("click", function(){ var f = card.querySelector("#rest-food"); var food = !!(f && f.checked); close(); onYes(food); });
     card.querySelector("#rest-confirm-yes").focus();
   }
   document.getElementById("long-rest-btn").addEventListener("click", function(){
     var gain = Math.max(1, Math.floor((state.level || 1) / 2));
     showLongRestConfirm(gain, doLongRest);
   });
-  function doLongRest(){
+  function doLongRest(food){
     var gain = Math.max(1, Math.floor((state.level || 1) / 2));
     var parts = [];
     if(charHpReady(state)){ parts.push("HP " + (state.hpCur || 0) + " → " + state.hpMax); state.hpCur = state.hpMax; }
@@ -2564,13 +2625,14 @@
     var back = Math.min(state.hitDiceSpent || 0, gain);
     if(back > 0){ state.hitDiceSpent -= back; parts.push("+" + back + " hit dice"); }
     if(sdMax() > 0 && (state.sdSpent || 0) > 0){ state.sdSpent = 0; parts.push("superiority dice regained"); }
+    if(food && exhaustionLevel(state) > 0){ var exBefore = exhaustionLevel(state); state.exhaustion = exBefore - 1; parts.push("exhaustion " + exBefore + " → " + state.exhaustion); }
     if(state.concOn){ parts.push("concentration ended"); }
     state.concOn = false; state.concSpell = "";
     var anyBuff = (state.buffs || []).some(function(b){ return b.on; });
     if(anyBuff){ state.buffs.forEach(function(b){ b.on = false; }); parts.push("bonus damage buffs off"); }
     addLog("Long Rest", parts.length ? parts.join(" · ") : "rested", "—", false, null);
     document.getElementById("rest-box").style.display = "none";
-    saveState(); renderHp(); renderBuffs(); renderSd(); renderParty();
+    saveState(); renderHp(); renderBuffs(); renderSd(); renderParty(); renderSenses();
   }
 
   hitDiceLeftEl.addEventListener("change", function(){
@@ -2634,6 +2696,7 @@
     hpStatusEl.style.display = (ready && !st) ? "none" : "";
     hpStatusEl.className = "hp-status" + (st ? " " + st : "");
     fillBar(hpBarFill, hpBarTemp, state);
+    if(window.rtRenderInspExh) window.rtRenderInspExh();
     var dead = charDead(state);
     hpDamageBtn.disabled = hpTempBtn.disabled = !ready;
     hpHealBtn.disabled = !ready || dead;
@@ -2694,13 +2757,10 @@
     var con = null;
     (state.abilities || []).forEach(function(a){ if(a.name === "CON") con = a; });
     var bonus = con ? (con.mod || 0) + (con.save ? (state.profBonus || 0) : 0) : 0;
-    var mode = state.concMode || "normal", a1 = rollDie(20), a2 = rollDie(20), v, rolls;
-    if(mode === "adv"){ v = Math.max(a1, a2); rolls = [a1, a2]; }
-    else if(mode === "dis"){ v = Math.min(a1, a2); rolls = [a1, a2]; }
-    else { v = a1; rolls = [a1]; }
+    var cd = rollWithMode("save", state.concMode || "normal", true), v = cd.value, rolls = cd.rolls;
     var total = v + bonus, ok = total >= dc, spell = (state.concSpell || "").trim();
     addLog("Concentration Save vs DC " + dc + (spell ? " (" + spell + ")" : "") + (ok ? " — Success" : " — Failed"),
-      "d20(" + rolls.join("/") + ") + " + bonus, total, true, v === 20 ? "crit" : v === 1 ? "fumble" : null);
+      "d20(" + rolls.join("/") + ") + " + bonus + cd.tag, total, true, v === 20 ? "crit" : v === 1 ? "fumble" : null);
     if(!ok){
       state.concOn = false;
       showCombatBanner(state.name + " lost concentration" + (spell ? " on " + spell : "") + "!");
@@ -2942,6 +3002,87 @@
   var abilitiesEl = document.getElementById("abilities");
 
   // ---------- Passive scores and speed ----------
+  // ---------- Inspiration & Exhaustion ----------
+  var EXH_EFFECTS = ["Disadvantage on ability checks", "Speed halved", "Disadvantage on attack rolls and saving throws", "Hit point maximum halved", "Speed reduced to 0", "Death"];
+  function renderInspExh(){
+    var row = document.getElementById("insp-row");
+    if(!row) return;
+    var dmTab = !!state.isDM, dmViewer = viewerIsDM();
+    document.getElementById("insp-block").style.display = dmTab ? "none" : "";
+    document.getElementById("exh-block").style.display = dmTab ? "none" : "";
+    document.getElementById("insp-grant-wrap").style.display = (dmTab && dmViewer) ? "" : "none";
+    row.style.display = (dmTab && !dmViewer) ? "none" : "";
+    var eff = document.getElementById("exh-effects");
+    if(dmTab){ eff.style.display = "none"; closeInspMenu(); return; }
+    var btn = document.getElementById("insp-btn"), use = document.getElementById("insp-use");
+    var armed = !!state.inspArmed, on = !!state.inspired;
+    btn.classList.toggle("on", on && !armed); btn.classList.toggle("armed", armed);
+    btn.textContent = armed ? "★ Inspired: next roll has advantage" : (on ? "★ Inspiration" : "☆ Inspiration");
+    use.textContent = armed ? "Undo" : "Use";
+    use.disabled = !(on || armed);
+    var ex = exhaustionLevel(state);
+    document.getElementById("exh-level").textContent = ex;
+    document.getElementById("exh-minus").disabled = ex <= 0;
+    document.getElementById("exh-plus").disabled = ex >= 6;
+    var parts = [];
+    for(var n = 0; n < ex; n++){ if(!(ex >= 5 && n === 1)) parts.push(EXH_EFFECTS[n]); }
+    var text = ex ? "Level " + ex + ": " + parts.join(" · ") : "";
+    if(ex >= 4 && ex < 6 && (state.hpMax || 0) > 0) text += " · Effective max HP: " + Math.floor(state.hpMax / 2);
+    eff.textContent = text; eff.style.display = ex ? "" : "none"; eff.classList.toggle("dead", ex >= 6);
+    var se = document.getElementById("speed-eff");
+    if(se){
+      var sp = [["Walk", state.speed], ["Fly", state.speedExtra.fly], ["Swim", state.speedExtra.swim], ["Climb", state.speedExtra.climb], ["Burrow", state.speedExtra.burrow]]
+        .filter(function(x){ return x[1] > 0; }).map(function(x){ return x[0] + " " + (ex >= 5 ? 0 : Math.floor(x[1] / 2)); });
+      se.textContent = ex >= 2 && sp.length ? "Exhaustion: " + (ex >= 5 ? "speed reduced to 0" : "speed halved") + " (" + sp.join(" · ") + " ft)" : "";
+      se.style.display = se.textContent ? "" : "none";
+    }
+  }
+  window.rtRenderInspExh = renderInspExh;
+  function closeInspMenu(){ var m = document.getElementById("insp-menu"); if(m) m.style.display = "none"; }
+  document.getElementById("insp-btn").addEventListener("click", function(){
+    if(state.inspArmed) return;
+    state.inspired = !state.inspired;
+    saveState(); renderInspExh();
+  });
+  document.getElementById("insp-use").addEventListener("click", function(){
+    if(state.inspArmed){ state.inspArmed = false; state.inspired = true; saveState(); renderInspExh(); return; }
+    if(!state.inspired) return;
+    state.inspired = false; state.inspArmed = true;
+    addLog("Inspiration used", "next d20 roll has advantage", "—", false, null);
+    saveState(); renderInspExh();
+  });
+  function stepExhaustion(delta){
+    var before = exhaustionLevel(state), after = Math.max(0, Math.min(6, before + delta));
+    if(after === before) return;
+    state.exhaustion = after;
+    addLog("Exhaustion", "level " + before + " → " + after + (after >= 6 ? " — Death" : ""), "—", false, null);
+    saveState(); renderInspExh(); renderParty();
+  }
+  document.getElementById("exh-minus").addEventListener("click", function(){ stepExhaustion(-1); });
+  document.getElementById("exh-plus").addEventListener("click", function(){ stepExhaustion(1); });
+  // DM: Grant Inspiration opens a small menu of every player character; picking one gives it and closes the menu.
+  document.getElementById("insp-grant").addEventListener("click", function(e){
+    e.stopPropagation();
+    var menu = document.getElementById("insp-menu");
+    if(menu.style.display !== "none"){ closeInspMenu(); return; }
+    menu.innerHTML = "";
+    app.characters.forEach(function(c, i){
+      if(c.isDM) return;
+      var b = document.createElement("button"); b.type = "button";
+      b.textContent = (c.name || ("Player " + (i + 1))) + (c.inspired || c.inspArmed ? " ★" : "");
+      b.addEventListener("click", function(ev){
+        ev.stopPropagation();
+        c.inspired = true; saveState(); closeInspMenu(); renderInspExh();
+        showCombatBanner("Inspiration granted to " + (c.name || "a player") + "!");
+        if(typeof renderParty === "function") renderParty();
+      });
+      menu.appendChild(b);
+    });
+    menu.style.display = "";
+  });
+  document.addEventListener("click", function(e){ var w = document.getElementById("insp-grant-wrap"); if(w && !w.contains(e.target)) closeInspMenu(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeInspMenu(); });
+
   function renderSenses(){
     var box = document.getElementById("senses");
     if(!box) return;
@@ -2960,6 +3101,7 @@
       el.classList.toggle("auto", !!auto);
       el.title = SPEED_AUTO.indexOf(k) === -1 ? "" : (auto ? "Automatic: half your walking speed. Type a number to override." : "Set by hand. Clear the box to go back to half your walking speed.");
     });
+    renderInspExh();
     renderParty();
   }
   Array.prototype.forEach.call(document.querySelectorAll("#senses .passive"), function(cell){
@@ -3070,9 +3212,9 @@
       checkBtn.className = "roll-btn";
       checkBtn.textContent = "Check";
       checkBtn.addEventListener("click", function(){
-        var d = rollD20();
+        var d = rollD20("check");
         var total = d.value + (state.abilities[idx].mod || 0);
-        var partsStr = "d20(" + d.rolls.join("/") + ") + " + (state.abilities[idx].mod||0);
+        var partsStr = "d20(" + d.rolls.join("/") + ") + " + (state.abilities[idx].mod||0) + d.tag;
         addLog(ab.name + " Check", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
       });
 
@@ -3080,10 +3222,10 @@
       saveBtn.className = "roll-btn save";
       saveBtn.textContent = "Save";
       saveBtn.addEventListener("click", function(){
-        var d = rollD20();
+        var d = rollD20("save");
         var bonus = (state.abilities[idx].mod || 0) + (state.abilities[idx].save ? (state.profBonus||0) : 0);
         var total = d.value + bonus;
-        var partsStr = "d20(" + d.rolls.join("/") + ") + " + bonus;
+        var partsStr = "d20(" + d.rolls.join("/") + ") + " + bonus + d.tag;
         addLog(ab.name + " Save", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
       });
 
@@ -3155,12 +3297,12 @@
           sRollBtn.className = "roll-btn";
           sRollBtn.textContent = "Roll";
           sRollBtn.addEventListener("click", function(){
-            var d = rollD20();
+            var d = rollD20("check");
             var sk = state.skills[skillIdx];
             var profPart = sk.prof ? (state.profBonus||0) * (sk.expertise ? 2 : 1) : 0;
             var bonus = (state.abilities[idx].mod || 0) + profPart;
             var total = d.value + bonus;
-            var partsStr = "d20(" + d.rolls.join("/") + ") + " + bonus;
+            var partsStr = "d20(" + d.rolls.join("/") + ") + " + bonus + d.tag;
             addLog(skill.name, partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
           });
 
@@ -3502,7 +3644,7 @@
       }
       atkBtn.addEventListener("click", function(){
         if(noAttackRoll || outOfAmmo) return;
-        var d = rollD20();
+        var d = rollD20("attack");
         var a = state.attacks[idx];
         var baseBonus = isAuto ? computeAbilityBonus(a.preset || "custom") : (a.atk || 0);
         var profAdd;
@@ -3515,7 +3657,7 @@
         var freshStalkerBonus = lycanScaling ? computeLycanBonuses(a.lycanLevel||0).stalker : 0;
         var liveBonus = baseBonus + profAdd + freshStalkerBonus + styleAtkBonus(a);
         var total = d.value + liveBonus;
-        var partsStr = "d20(" + d.rolls.join("/") + ") + " + liveBonus;
+        var partsStr = "d20(" + d.rolls.join("/") + ") + " + liveBonus + d.tag;
         var logLabel = (currentPreset && currentPreset.attackLabel) ? (a.name + " Check") : (a.name + " Attack");
         addLog(logLabel, partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
 
@@ -4041,10 +4183,10 @@
       }
       atkBtn.addEventListener("click", function(){
         if(noAttackRollField) return;
-        var d = rollD20();
+        var d = rollD20("attack");
         var freshBonus = computeSpellAttackBonus(state.spells[idx]);
         var total = d.value + freshBonus;
-        var partsStr = "d20(" + d.rolls.join("/") + ") + " + freshBonus;
+        var partsStr = "d20(" + d.rolls.join("/") + ") + " + freshBonus + d.tag;
         addLog(state.spells[idx].name + " Attack", partsStr, total, true, d.value===20?"crit":d.value===1?"fumble":null);
         var wasArmed = !!state.spells[idx].critArmed;
         var nowArmed = d.value === 20;
@@ -4718,6 +4860,11 @@
       targetSelector: "#conc-row",
       title: "Concentration",
       text: "Tick Concentrating (and name the spell if you like). From then on, every time you take damage with the Damage button the sheet rolls your Constitution save for you against DC 10 or half the damage, whichever is higher — adding your CON modifier and save proficiency. Fail and concentration drops with a banner; dropping to 0 HP also ends it. The small Dis / Normal / Adv buttons beside it only affect these concentration saves, so an Advantage you turned on for something else won't leak into them."
+    },
+    {
+      targetSelector: "#insp-row",
+      title: "Inspiration & Exhaustion",
+      text: "The DM can give you Inspiration for great roleplay, and you'll see a message when it arrives (you can also tap the star yourself). Tap Use to spend it: your next d20 roll, whether a check, save or attack, gets advantage, and the log says so. Undo puts it back if you change your mind. Exhaustion goes from 0 to 6 with the − and + buttons, and the sheet applies it for you: disadvantage on ability checks from level 1 and on attacks and saves from level 3, plus speed and max HP notes. Advantage and disadvantage cancel each other out like the rules say. A long rest asks whether you had food and drink, and if so takes one level off. On the DM tab this row is a Grant Inspiration button that lists the players."
     },
     {
       targetSelector: "#rest-row",
@@ -5484,8 +5631,8 @@
     var me = currentAccount, key = acctKey(me);
     if(combatData.join[key] || groupOfKey(combatData, key)) return;
     var bonus = parseInt(app.characters[me].initBonus, 10) || 0;
-    var r = rollDie(20), total = r + bonus;
-    addLog("Initiative", "d20(" + r + ") + " + bonus, total, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
+    var id = rollWithMode("check", "normal", false), r = id.value, total = r + bonus;
+    addLog("Initiative", "d20(" + id.rolls.join("/") + ") + " + bonus + id.tag, total, true, r === 20 ? "crit" : r === 1 ? "fumble" : null);
     combatCommit(function(d){ opJoin(d, key, total, Date.now()); });
   }
   function leaveCombat(key){
@@ -5936,6 +6083,7 @@
       renderCombat();  // the initiative bar looks different per account (and hides when signed out)
       renderSettingsBar();  // Hide Rolls button's clickability depends on who's now signed in
       renderNotes();  // the DM Notes section only shows for the signed-in DM
+      renderInspExh();  // the DM sees Grant Inspiration; players see their own Inspiration and Exhaustion
     },
     setPartyNotes: function(raw){
       var next = {};
@@ -5994,6 +6142,7 @@
       backfillSenses(c);
       backfillInventory(c);
       backfillNotes(c);
+      backfillExhaustion(c);
       // Synced data from a device running an older version won't have these fields yet —
       // without this backfill, a sync right after load wipes out the DM tab's Hide Rolls button.
       if(typeof c.isDM === "undefined") c.isDM = (i === 8);
@@ -6015,7 +6164,9 @@
       ["charClass","charClassCustom","charSubclass","charSubclassCustom"].forEach(function(k){ if(typeof c[k] !== "string") c[k] = ""; });
       if(["d6","d8","d10","d12"].indexOf(c.hitDieCustom) === -1) c.hitDieCustom = "d8";
       if(typeof c.hitDiceSpent !== "number" || isNaN(c.hitDiceSpent) || c.hitDiceSpent < 0) c.hitDiceSpent = 0;
+      var grantedNow = !!(app.characters[i] && !app.characters[i].inspired && c.inspired && i === currentAccount && !c.isDM);
       app.characters[i] = c;
+      if(grantedNow) showCombatBanner("You were given Inspiration!");
       if(i === app.activeIndex){
         state = c;
         renderAll();
