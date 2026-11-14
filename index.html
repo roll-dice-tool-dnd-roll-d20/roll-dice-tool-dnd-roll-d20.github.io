@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.84.0</title>
+<title>Roll Tracker V1.85.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -924,7 +924,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.84.0</div>
+      <div class="version-tag" id="version-tag">Version 1.85.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1312,6 +1312,16 @@
       damageType:"Thunder",
       description:"You create a burst of thunder that can be heard up to 100 feet away. Each creature other than you within 5 feet of you must succeed on a Constitution saving throw or take thunder damage. (Xanathar's Guide to Everything)"
     },
+    wordofradiance: {
+      label:"Word of Radiance", name:"Word of Radiance", dice:"1d6", ability:null, noAttackRoll:true, category:"Area Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"5 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, M", material:"a holy symbol",
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Cleric",
+      saveAbility:"CON",
+      damageType:"Radiant",
+      description:"You utter a divine word, and burning radiance erupts from you. Each creature of your choice that you can see within range must succeed on a Constitution saving throw or take radiant damage. (Xanathar's Guide to Everything)"
+    },
     viciousmockery: {
       label:"Vicious Mockery", name:"Vicious Mockery", dice:"1d4", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
       school:"Enchantment", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
@@ -1323,7 +1333,7 @@
       description:"You target a creature you can see within range. If it can hear you (it doesn't need to understand you), it must succeed on a Wisdom saving throw or take psychic damage and have disadvantage on the next attack roll it makes before the end of its next turn."
     }
   };
-  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery"];
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance"];
   var SPELL_CATEGORY_ORDER = [
     "Melee Cantrip","Ranged Cantrip","Area Cantrip",
     "Melee 1st-Level Spell","Ranged 1st-Level Spell",
