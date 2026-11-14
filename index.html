@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.86.0</title>
+<title>Roll Tracker V1.87.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -432,6 +432,15 @@
   .cond-effects-item{margin:0 0 4px;}
   .cond-effects-item b{color:var(--ink);}
   .party-cond{margin-top:4px;font-size:0.74rem;color:var(--berry);}
+  .attack.shillelagh-on{position:relative;border-color:#4f7d3a;box-shadow:inset 0 0 0 1px #4f7d3a,0 0 8px rgba(79,125,58,0.45);}
+  .attack.shillelagh-on::before,.attack.shillelagh-on::after{content:"";position:absolute;left:8px;right:8px;height:12px;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='12' viewBox='0 0 60 12'%3E%3Cpath d='M0 6 Q15 0 30 6 T60 6' fill='none' stroke='%234f7d3a' stroke-width='1.6'/%3E%3Cellipse cx='15' cy='2.6' rx='4.5' ry='2' fill='%236fa14b' transform='rotate(-25 15 2.6)'/%3E%3Cellipse cx='45' cy='9.4' rx='4.5' ry='2' fill='%236fa14b' transform='rotate(-25 45 9.4)'/%3E%3C/svg%3E") repeat-x;}
+  .attack.shillelagh-on::before{top:-7px;}
+  .attack.shillelagh-on::after{bottom:-7px;transform:scaleY(-1);}
+  .shill-tag{display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:0.76rem;color:#4f7d3a;font-weight:600;margin-bottom:6px;}
+  .shill-end{font:inherit;font-size:0.74rem;padding:2px 10px;border-radius:999px;cursor:pointer;background:transparent;color:#4f7d3a;border:1px solid #4f7d3a;}
+  .shill-ctl{display:flex;flex-direction:column;gap:8px;margin-top:10px;align-items:flex-start;}
+  .shill-pick{display:flex;gap:8px;align-items:center;}
+  .shill-msg{font-size:0.8rem;color:var(--ink-soft);line-height:1.4;}
   .rest-food{display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:0.85rem;color:var(--ink);}
   .conc-mode{font-size:0.72rem;}
   .conc-mode button{padding:3px 8px !important;font-size:0.72rem !important;}
@@ -924,7 +933,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.86.0</div>
+      <div class="version-tag" id="version-tag">Version 1.87.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1353,7 +1362,7 @@
       description:"You cause a cloud of mites, fleas and other parasites to appear momentarily on one creature you can see within range. The target must succeed on a Constitution saving throw or take poison damage and move 5 feet in a random direction if it can move and its speed is at least 5 feet. Roll a d4 for the direction: 1 north, 2 south, 3 east, 4 west. This movement doesn't provoke opportunity attacks, and if the direction rolled is blocked, the target doesn't move. (Xanathar's Guide to Everything)"
     },
     magicstone: {
-      label:"Magic Stone", name:"Magic Stone", dice:"1d6", ability:"WIS", noAttackRoll:false, addSpellMod:true, category:"Ranged Cantrip",
+      label:"Magic Stone", name:"Magic Stone", dice:"1d6", ability:"WIS", noAttackRoll:false, addSpellMod:true, noScale:true, category:"Ranged Cantrip",
       school:"Transmutation", castingTime:"1 bonus action", range:"Touch", concentration:false, duration:"1 minute",
       ritual:false, components:"V, S", material:null,
       scaling:"None. This cantrip's damage doesn't increase with level.",
@@ -1379,6 +1388,15 @@
       damageType:"Fire",
       description:"A flickering flame appears in your hand and stays for the duration, harming neither you nor your equipment. It sheds bright light in a 10-foot radius and dim light for an additional 10 feet. The spell ends if you dismiss it as an action or cast it again. You can also attack with the flame, which ends the spell: when you cast it, or as an action on a later turn, you can hurl the flame at a creature within 30 feet. Make a ranged spell attack. On a hit, the target takes fire damage."
     },
+    shillelagh: {
+      label:"Shillelagh", name:"Shillelagh", dice:"1d8", ability:null, noAttackRoll:true, noDamage:true, shillelagh:true, category:"Melee Cantrip",
+      school:"Transmutation", castingTime:"1 bonus action", range:"Touch", concentration:false, duration:"1 minute",
+      ritual:false, components:"V, S, M", material:"mistletoe, a shamrock leaf, and a club or quarterstaff",
+      scaling:"None. This cantrip's effect doesn't increase with level.",
+      spellLists:"Druid",
+      damageType:null,
+      description:"The wood of a club or quarterstaff you are holding is imbued with nature's power. For the duration, you can use your spellcasting ability instead of Strength for the attack and damage rolls of melee attacks using that weapon, and the weapon's damage die becomes a d8. The weapon also becomes magical, if it isn't already. The spell ends if you cast it again or if you let go of the weapon. Use Transform Weapon below to apply it to a club or quarterstaff in your weapon list; the sheet then handles the rolls until you end it, or take a short or long rest."
+    },
     viciousmockery: {
       label:"Vicious Mockery", name:"Vicious Mockery", dice:"1d4", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
       school:"Enchantment", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
@@ -1390,7 +1408,7 @@
       description:"You target a creature you can see within range. If it can hear you (it doesn't need to understand you), it must succeed on a Wisdom saving throw or take psychic damage and have disadvantage on the next attack roll it makes before the end of its next turn."
     }
   };
-  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance","createbonfire","frostbite","infestation","magicstone","primalsavagery","produceflame"];
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance","createbonfire","frostbite","infestation","magicstone","primalsavagery","produceflame","shillelagh"];
   var SPELL_CATEGORY_ORDER = [
     "Melee Cantrip","Ranged Cantrip","Area Cantrip",
     "Melee 1st-Level Spell","Ranged 1st-Level Spell",
@@ -2063,7 +2081,16 @@
 
   // Returns null if this preset has no ability-driven bonus (custom, or no attack roll at all).
   // Returns just the ability modifier — proficiency bonus is added separately based on the prof checkbox.
-  function computeAbilityBonus(presetKey){
+  // Shillelagh (2014): a club or quarterstaff uses the spellcasting ability, a d8 die and counts as magical.
+  // The weapon's own saved dice and bonus are never changed, so ending the spell restores it exactly.
+  var SHILL_VALID = {club:true, quarterstaff:true};
+  function shillOn(a){ return !!(a && a.shillelagh && SHILL_VALID[a.preset]); }
+  function shillSpell(){ return (state.spells || []).filter(function(sp){ return sp.preset === "shillelagh"; })[0] || null; }
+  function shillMod(){ return getAbilityMod(resolveSpellAbility(shillSpell())); }
+  function shillActiveIndex(){ for(var i = 0; i < state.attacks.length; i++){ if(shillOn(state.attacks[i])) return i; } return -1; }
+  function endShillelagh(){ state.attacks.forEach(function(a){ if(a.shillelagh) delete a.shillelagh; }); }
+  function computeAbilityBonus(presetKey, a){
+    if(a && shillOn(a)) return shillMod();
     var preset = PRESETS[presetKey];
     if(!preset || !preset.ability) return null;
     return preset.ability === "finesse"
@@ -2735,9 +2762,10 @@
   document.getElementById("rest-finish").addEventListener("click", function(){
     var parts = [];
     if(sdMax() > 0 && (state.sdSpent || 0) > 0){ state.sdSpent = 0; parts.push("superiority dice regained"); }
+    if(shillActiveIndex() !== -1){ endShillelagh(); parts.push("Shillelagh ended"); }
     addLog("Short Rest", parts.length ? "finished · " + parts.join(" · ") : "finished", "—", false, null);
     document.getElementById("rest-box").style.display = "none";
-    saveState(); renderSd(); renderHp(); renderParty();
+    saveState(); renderSd(); renderHp(); renderParty(); renderAttacks(); renderSpells();
   });
   // Styled like the tutorial popups: dimmed backdrop and a centred card.
   function showLongRestConfirm(gain, onYes){
@@ -2783,6 +2811,7 @@
     var back = Math.min(state.hitDiceSpent || 0, gain);
     if(back > 0){ state.hitDiceSpent -= back; parts.push("+" + back + " hit dice"); }
     if(sdMax() > 0 && (state.sdSpent || 0) > 0){ state.sdSpent = 0; parts.push("superiority dice regained"); }
+    if(shillActiveIndex() !== -1){ endShillelagh(); parts.push("Shillelagh ended"); }
     if(food && exhaustionLevel(state) > 0){ var exBefore = exhaustionLevel(state); state.exhaustion = exBefore - 1; parts.push("exhaustion " + exBefore + " → " + state.exhaustion); }
     if(state.concOn){ parts.push("concentration ended"); }
     state.concOn = false; state.concSpell = "";
@@ -2790,7 +2819,7 @@
     if(anyBuff){ state.buffs.forEach(function(b){ b.on = false; }); parts.push("bonus damage buffs off"); }
     addLog("Long Rest", parts.length ? parts.join(" · ") : "rested", "—", false, null);
     document.getElementById("rest-box").style.display = "none";
-    saveState(); renderHp(); renderBuffs(); renderSd(); renderParty(); renderSenses();
+    saveState(); renderHp(); renderBuffs(); renderSd(); renderParty(); renderSenses(); renderAttacks(); renderSpells();
   }
 
   hitDiceLeftEl.addEventListener("change", function(){
@@ -3547,6 +3576,16 @@
     state.attacks.forEach(function(atk, idx){
       var box = document.createElement("div");
       box.className = "attack";
+      if(atk.shillelagh && !shillOn(atk)){ delete atk.shillelagh; saveState(); }   // switched away from a club or quarterstaff
+      if(shillOn(atk)){
+        box.classList.add("shillelagh-on");
+        var vine = document.createElement("div"); vine.className = "shill-tag";
+        var vt = document.createElement("span"); vt.textContent = "🌿 Shillelagh: " + resolveSpellAbility(shillSpell()) + " for attack and damage, d8 damage, magical";
+        var ve = document.createElement("button"); ve.type = "button"; ve.className = "shill-end"; ve.textContent = "End";
+        ve.title = "End Shillelagh on this weapon.";
+        ve.addEventListener("click", function(){ endShillelagh(); addLog("Shillelagh ended", atk.name, "—", false, null); saveState(); renderAttacks(); renderSpells(); });
+        vine.appendChild(vt); vine.appendChild(ve); box.appendChild(vine);
+      }
 
       var presetSelect = document.createElement("select");
       presetSelect.className = "attack-preset";
@@ -3665,7 +3704,7 @@
 
       var atkLabel = document.createElement("label");
       var noAttackRollField = currentPreset && currentPreset.noAttackRoll;
-      var abilityBonus = computeAbilityBonus(atk.preset || "custom");
+      var abilityBonus = computeAbilityBonus(atk.preset || "custom", atk);
       var isAuto = abilityBonus !== null && !noAttackRollField;
       var athleticsLinked = currentPreset && currentPreset.athleticsLinked;
 
@@ -3693,7 +3732,7 @@
           ? (signStr(abilityBonus) + " " + signStr(totalAtkAutoPart))
           : signStr(abilityBonus);
         atkInput.readOnly = true;
-        var abilityUsed = currentPreset.ability === "finesse"
+        var abilityUsed = shillOn(atk) ? resolveSpellAbility(shillSpell()) + " (Shillelagh: spellcasting ability)" : currentPreset.ability === "finesse"
           ? (getAbilityMod("STR") >= getAbilityMod("DEX") ? "STR" : "DEX") + " (Finesse: best of STR/DEX)"
           : currentPreset.ability;
         var profNote = athleticsLinked
@@ -3776,7 +3815,10 @@
         diceInput.value = atk[activeDiceField] || "";
         diceInput.placeholder = twoHandedOn ? "e.g. 1d8" : "1d6";
         diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4 for a shortbow plus a Hunter's Mark bonus.";
-        if(dicelocked){
+        if(shillOn(atk)){
+          diceInput.value = "1d8"; diceInput.readOnly = true;
+          diceInput.title = "Shillelagh makes this weapon's damage die a d8, in either grip. End Shillelagh to get your own dice back.";
+        } else if(dicelocked){
           diceInput.readOnly = true;
           diceInput.title = "Set by your Unarmed Fighting style. Remove the style to edit this by hand.";
         }
@@ -3821,6 +3863,10 @@
       } else {
         dmgBonusInput.value = atk.dmgBonus;
         dmgBonusInput.title = "Editable — switching this row's weapon will refresh it to that weapon's ability modifier.";
+        if(shillOn(atk)){
+          dmgBonusInput.value = (atk.shillelagh.extra || 0) + shillMod(); dmgBonusInput.disabled = true;
+          dmgBonusInput.title = "Shillelagh: your spellcasting modifier (" + shillMod() + ") plus any extra bonus the weapon already had. Your saved bonus comes back when it ends.";
+        }
         if(squeezeOn){
           dmgBonusInput.value = 0; dmgBonusInput.disabled = true;
           dmgBonusInput.title = "The squeeze deals a flat 1d4 — no ability modifier.";
@@ -3864,7 +3910,7 @@
         if(noAttackRoll || outOfAmmo) return;
         var d = rollD20("attack");
         var a = state.attacks[idx];
-        var baseBonus = isAuto ? computeAbilityBonus(a.preset || "custom") : (a.atk || 0);
+        var baseBonus = isAuto ? computeAbilityBonus(a.preset || "custom", a) : (a.atk || 0);
         var profAdd;
         if(athleticsLinked){
           var freshAthletics = getSkillByName("Athletics");
@@ -3910,7 +3956,7 @@
         if(noDamageField) return;
         var a = state.attacks[idx];
         var diceField = (versatileCapable && a.twoHanded) ? "dice2h" : "dice";
-        var parsed = parseDiceGroups(a[diceField]);
+        var parsed = parseDiceGroups(shillOn(a) ? "1d8" : a[diceField]);
         if(!parsed){
           addLog(a.name + " Damage", "invalid dice — use format like 1d6 or 1d8+1d4", 0, false, null);
           return;
@@ -3919,13 +3965,13 @@
         var wasArmed = !!a.critArmed;
         var isCrit = !!state.critMode || wasArmed;
         var rolled = rollDiceGroups(parsed, isCrit, gwfApplies(a));
-        var freshDmgBonus = (a.preset === "grapple" && hasStyle("unarmed")) ? 0 : (a.dmgBonus || 0);
+        var freshDmgBonus = (a.preset === "grapple" && hasStyle("unarmed")) ? 0 : (shillOn(a) ? ((a.shillelagh.extra || 0) + shillMod()) : (a.dmgBonus || 0));
         var offNote = "";
         if(a.offhand){
           if(hasStyle("twf")){ offNote = " (Off-hand, TWF)"; }
           else {
             // Without the style, the off-hand attack drops a positive ability modifier from damage.
-            var offMod = computeAbilityBonus(a.preset || "custom");
+            var offMod = computeAbilityBonus(a.preset || "custom", a);
             if(offMod !== null && offMod > 0) freshDmgBonus -= offMod;
             offNote = " (Off-hand)";
           }
@@ -4150,10 +4196,52 @@
   function cantripDice(pr, sp){
     var base = (pr.hpToggle && sp.notFullHp && pr.altDice) ? pr.altDice : pr.dice;
     var m = /^\d+d(\d+)$/.exec(base);
-    if(!m) return base;
+    if(!m || pr.noScale) return base;
     var lvl = state.level || 1;
     var n = 1 + (lvl >= 5 ? 1 : 0) + (lvl >= 11 ? 1 : 0) + (lvl >= 17 ? 1 : 0);
     return n + "d" + m[1];
+  }
+  // Shillelagh controls on the spell card: Transform Weapon (with a picker when there are several), or End Shillelagh.
+  function buildShillelagh(){
+    var wrap = document.createElement("div"); wrap.className = "shill-ctl";
+    var msg = document.createElement("div"); msg.className = "shill-msg"; msg.style.display = "none";
+    var active = shillActiveIndex();
+    function refresh(){ saveState(); renderAttacks(); renderSpells(); }
+    if(active !== -1){
+      var info = document.createElement("div"); info.className = "shill-msg";
+      info.textContent = "Active on " + state.attacks[active].name + ". It uses " + resolveSpellAbility(shillSpell()) + " for attack and damage with a d8, and it's magical. It ends on a short or long rest.";
+      var endBtn = document.createElement("button"); endBtn.type = "button"; endBtn.className = "roll-btn"; endBtn.textContent = "End Shillelagh";
+      endBtn.addEventListener("click", function(){ var nm = state.attacks[active].name; endShillelagh(); addLog("Shillelagh ended", nm, "—", false, null); refresh(); });
+      wrap.appendChild(info); wrap.appendChild(endBtn);
+      return wrap;
+    }
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "roll-btn"; btn.textContent = "Transform Weapon";
+    var pick = document.createElement("div"); pick.className = "shill-pick"; pick.style.display = "none";
+    var sel = document.createElement("select");
+    var go = document.createElement("button"); go.type = "button"; go.className = "roll-btn"; go.textContent = "Confirm";
+    function apply(i){
+      var a = state.attacks[i];
+      a.shillelagh = {extra: (a.dmgBonus || 0) - getAbilityMod("STR")};   // keeps any bonus beyond the Strength modifier
+      addLog("Shillelagh", a.name + " is now magical, uses " + resolveSpellAbility(shillSpell()) + " and a d8", "—", false, null);
+      refresh();
+    }
+    btn.addEventListener("click", function(){
+      var valid = [];
+      state.attacks.forEach(function(a, i){ if(SHILL_VALID[a.preset]) valid.push({i:i, name:a.name || "Weapon"}); });
+      if(!valid.length){
+        msg.textContent = "No valid weapon. Shillelagh needs a club or quarterstaff in your weapon list: add one and pick Club or Quarterstaff in its dropdown.";
+        msg.style.display = ""; pick.style.display = "none"; return;
+      }
+      msg.style.display = "none";
+      if(valid.length === 1){ apply(valid[0].i); return; }
+      sel.innerHTML = "";
+      valid.forEach(function(v){ var o = document.createElement("option"); o.value = String(v.i); o.textContent = v.name; sel.appendChild(o); });
+      pick.style.display = "";
+    });
+    go.addEventListener("click", function(){ apply(parseInt(sel.value, 10)); });
+    pick.appendChild(sel); pick.appendChild(go);
+    wrap.appendChild(btn); wrap.appendChild(pick); wrap.appendChild(msg);
+    return wrap;
   }
   function renderSpells(){
     spellsEl.innerHTML = "";
@@ -4335,7 +4423,7 @@
         atkInput.title = "Proficiency (" + signStr(state.profBonus||0) + ") + " + resolvedAbility + " modifier" + (sp.abilityOverride ? " (overridden for this spell below)" : "") + ", auto-calculated.";
       }
       atkLabel.appendChild(atkInput);
-      if(noAttackRollField){
+      if(noAttackRollField && !currentSpell.noDamage){
         var dcBadge = document.createElement("span");
         dcBadge.className = "save-dc-badge";
         dcBadge.textContent = "Save DC " + computeSpellSaveDC(sp) + (currentSpell.saveAbility ? " (" + currentSpell.saveAbility + ")" : "");
@@ -4351,7 +4439,10 @@
       diceInput.value = sp.dice || "";
       diceInput.placeholder = "1d6";
       diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4.";
-      if(isCantripPreset(currentSpell)){
+      if(currentSpell.noDamage){
+        diceInput.value = "N/A"; diceInput.disabled = true; diceLabel.classList.add("disabled-field");
+        diceInput.title = "This cantrip deals no damage of its own.";
+      } else if(isCantripPreset(currentSpell)){
         diceInput.readOnly = true;
         diceInput.title = "Cantrip damage follows your Level (1 die, 2 at 5th, 3 at 11th, 4 at 17th). Switch the spell to Custom to type your own dice.";
       }
@@ -4386,6 +4477,7 @@
       dmgBonusInput.className = "dmg-bonus";
       dmgBonusInput.value = sp.dmgBonus || 0;
       dmgBonusInput.title = (currentSpell.addSpellMod ? "Extra bonus on top of the spellcasting modifier, which this spell already adds for you." : "Most cantrips/spells don't add your spellcasting modifier to damage — check the spell's own rules before changing this.");
+      if(currentSpell.noDamage){ dmgBonusInput.type = "text"; dmgBonusInput.value = "N/A"; dmgBonusInput.disabled = true; dmgBonusLabel.classList.add("disabled-field"); }
       dmgBonusInput.addEventListener("input", function(){
         state.spells[idx].dmgBonus = parseInt(dmgBonusInput.value,10) || 0;
         saveState();
@@ -4419,6 +4511,7 @@
       var critArmedSp = !!sp.critArmed;
       dmgBtn.className = "roll-btn save" + (critArmedSp ? " crit-armed" : "");
       dmgBtn.textContent = critArmedSp ? "Damage (Crit!)" : "Damage";
+      if(currentSpell.noDamage){ dmgBtn.textContent = "No damage"; dmgBtn.disabled = true; dmgBtn.title = "This cantrip deals no damage of its own."; }
       if(critArmedSp){
         dmgBtn.title = "Natural 20! The next Damage roll for this spell will double its dice.";
       }
@@ -4466,6 +4559,8 @@
       rollButtons.appendChild(atkBtn);
       rollButtons.appendChild(dmgBtn);
       fields.appendChild(rollButtons);
+
+      if(currentSpell.shillelagh) fields.appendChild(buildShillelagh());
 
       box.appendChild(fields);
       spellsEl.appendChild(box);
@@ -5191,6 +5286,12 @@
       targetSelector: "#spells .attack-roll-buttons",
       title: "Rolling Attacks & Damage",
       text: "Works the same as weapons — a natural 20 on the attack roll arms the Damage button to double its dice next time. Save-based spells skip straight to Damage, since there's no attack roll to make for them."
+    },
+    {
+      targetSelector: "#spells .attack-top",
+      title: "Shillelagh",
+      showIf: function(){ return !!shillSpell(); },
+      text: "If you have the Shillelagh cantrip, its card has a Transform Weapon button. It turns a club or quarterstaff from your weapon list into a Shillelagh weapon: it uses your spellcasting ability for attack and damage, deals a d8 whichever way you hold it, and gets a green vine border. If you have more than one valid weapon you pick which. The card's button becomes End Shillelagh, and you can't start another until it ends. A short or long rest ends it for you."
     },
     {
       targetSelector: "#log-list",
