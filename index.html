@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.85.0</title>
+<title>Roll Tracker V1.86.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -924,7 +924,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.85.0</div>
+      <div class="version-tag" id="version-tag">Version 1.86.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1322,6 +1322,63 @@
       damageType:"Radiant",
       description:"You utter a divine word, and burning radiance erupts from you. Each creature of your choice that you can see within range must succeed on a Constitution saving throw or take radiant damage. (Xanathar's Guide to Everything)"
     },
+    createbonfire: {
+      label:"Create Bonfire", name:"Create Bonfire", dice:"1d8", ability:null, noAttackRoll:true, category:"Area Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"60 feet", concentration:true, duration:"Concentration, up to 1 minute",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Artificer, Druid, Sorcerer, Warlock, Wizard",
+      saveAbility:"DEX",
+      damageType:"Fire",
+      description:"You create a bonfire on ground you can see within range, filling a 5-foot cube. A creature in the bonfire's space when you cast the spell must succeed on a Dexterity saving throw or take fire damage. A creature must also make the save when it enters the bonfire's space for the first time on a turn or ends its turn there. The bonfire ignites flammable objects in its area that aren't being worn or carried. (Xanathar's Guide to Everything)"
+    },
+    frostbite: {
+      label:"Frostbite", name:"Frostbite", dice:"1d6", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Artificer, Druid, Sorcerer, Warlock, Wizard",
+      saveAbility:"CON",
+      damageType:"Cold",
+      description:"You cause numbing frost to form on one creature you can see within range. The target must succeed on a Constitution saving throw or take cold damage and have disadvantage on the next weapon attack roll it makes before the end of its next turn. (Xanathar's Guide to Everything)"
+    },
+    infestation: {
+      label:"Infestation", name:"Infestation", dice:"1d6", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"30 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S, M", material:"a living flea",
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Druid, Sorcerer, Warlock, Wizard",
+      saveAbility:"CON",
+      damageType:"Poison",
+      description:"You cause a cloud of mites, fleas and other parasites to appear momentarily on one creature you can see within range. The target must succeed on a Constitution saving throw or take poison damage and move 5 feet in a random direction if it can move and its speed is at least 5 feet. Roll a d4 for the direction: 1 north, 2 south, 3 east, 4 west. This movement doesn't provoke opportunity attacks, and if the direction rolled is blocked, the target doesn't move. (Xanathar's Guide to Everything)"
+    },
+    magicstone: {
+      label:"Magic Stone", name:"Magic Stone", dice:"1d6", ability:"WIS", noAttackRoll:false, addSpellMod:true, category:"Ranged Cantrip",
+      school:"Transmutation", castingTime:"1 bonus action", range:"Touch", concentration:false, duration:"1 minute",
+      ritual:false, components:"V, S", material:null,
+      scaling:"None. This cantrip's damage doesn't increase with level.",
+      spellLists:"Artificer, Druid, Warlock",
+      damageType:"Bludgeoning",
+      description:"You touch one to three pebbles and imbue them with magic. You or someone else can make a ranged spell attack with one of the pebbles by throwing it (range 60 feet) or hurling it with a sling. If someone else attacks with a pebble, they use your spellcasting ability modifier for the attack roll, not theirs. On a hit, the target takes bludgeoning damage equal to 1d6 + your spellcasting ability modifier (added automatically here). Hit or miss, the spell then ends on that stone. Casting the spell again ends it early on any pebbles still affected. (Xanathar's Guide to Everything / Elemental Evil Player's Companion)"
+    },
+    primalsavagery: {
+      label:"Primal Savagery", name:"Primal Savagery", dice:"1d10", ability:"WIS", noAttackRoll:false, category:"Melee Cantrip",
+      school:"Transmutation", castingTime:"1 action", range:"Self", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"S", material:null,
+      scaling:"Damage increases by 1d10 at 5th level (2d10), 11th level (3d10), and 17th level (4d10).",
+      spellLists:"Druid",
+      damageType:"Acid",
+      description:"You channel primal magic to cause your teeth or fingernails to sharpen, ready to deliver a corrosive attack. Make a melee spell attack against one creature within 5 feet of you. On a hit, the target takes acid damage, and then your teeth or fingernails return to normal. (Xanathar's Guide to Everything)"
+    },
+    produceflame: {
+      label:"Produce Flame", name:"Produce Flame", dice:"1d8", ability:"WIS", noAttackRoll:false, category:"Ranged Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"Self (hurl: 30 feet)", concentration:false, duration:"10 minutes",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Druid",
+      damageType:"Fire",
+      description:"A flickering flame appears in your hand and stays for the duration, harming neither you nor your equipment. It sheds bright light in a 10-foot radius and dim light for an additional 10 feet. The spell ends if you dismiss it as an action or cast it again. You can also attack with the flame, which ends the spell: when you cast it, or as an action on a later turn, you can hurl the flame at a creature within 30 feet. Make a ranged spell attack. On a hit, the target takes fire damage."
+    },
     viciousmockery: {
       label:"Vicious Mockery", name:"Vicious Mockery", dice:"1d4", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
       school:"Enchantment", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
@@ -1333,7 +1390,7 @@
       description:"You target a creature you can see within range. If it can hear you (it doesn't need to understand you), it must succeed on a Wisdom saving throw or take psychic damage and have disadvantage on the next attack roll it makes before the end of its next turn."
     }
   };
-  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance"];
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance","createbonfire","frostbite","infestation","magicstone","primalsavagery","produceflame"];
   var SPELL_CATEGORY_ORDER = [
     "Melee Cantrip","Ranged Cantrip","Area Cantrip",
     "Melee 1st-Level Spell","Ranged 1st-Level Spell",
@@ -4328,7 +4385,7 @@
       dmgBonusInput.type = "number";
       dmgBonusInput.className = "dmg-bonus";
       dmgBonusInput.value = sp.dmgBonus || 0;
-      dmgBonusInput.title = "Most cantrips/spells don't add your spellcasting modifier to damage — check the spell's own rules before changing this.";
+      dmgBonusInput.title = (currentSpell.addSpellMod ? "Extra bonus on top of the spellcasting modifier, which this spell already adds for you." : "Most cantrips/spells don't add your spellcasting modifier to damage — check the spell's own rules before changing this.");
       dmgBonusInput.addEventListener("input", function(){
         state.spells[idx].dmgBonus = parseInt(dmgBonusInput.value,10) || 0;
         saveState();
@@ -4376,8 +4433,9 @@
         var wasArmed = !!s.critArmed;
         var isCrit = !!state.critMode || wasArmed;
         var rolled = rollDiceGroups(parsed, isCrit);
-        var total = rolled.total + (s.dmgBonus || 0);
-        var partsStr = rolled.partsStr + " + " + (s.dmgBonus||0);
+        var autoMod = (SPELL_PRESETS[s.preset] && SPELL_PRESETS[s.preset].addSpellMod) ? getAbilityMod(resolveSpellAbility(s)) : null;
+        var total = rolled.total + (s.dmgBonus || 0) + (autoMod || 0);
+        var partsStr = rolled.partsStr + (autoMod !== null ? " + " + autoMod + " (spellcasting modifier)" : "") + " + " + (s.dmgBonus||0);
         var bfS = applyBuffs(total, partsStr, isCrit, s.useBuffs === true); total = bfS.total; partsStr = bfS.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
         addLog(s.name + " Damage" + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
@@ -4396,6 +4454,12 @@
       coreFields.appendChild(dmgBonusLabel);
       var tickS = buffTick(state.spells[idx], true); if(tickS) coreFields.appendChild(tickS);
       fields.appendChild(coreFields);
+      if(currentSpell.addSpellMod){
+        var modNote = document.createElement("div");
+        modNote.style.cssText = "font-size:0.76rem;color:var(--ink-soft);margin:2px 0 6px;";
+        modNote.textContent = "Spellcasting modifier is added to the damage automatically (" + (getAbilityMod(resolvedAbility) >= 0 ? "+" : "") + getAbilityMod(resolvedAbility) + ").";
+        fields.appendChild(modNote);
+      }
 
       var rollButtons = document.createElement("div");
       rollButtons.className = "attack-roll-buttons";
