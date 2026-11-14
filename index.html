@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.87.0</title>
+<title>Roll Tracker V1.87.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -933,7 +933,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.87.0</div>
+      <div class="version-tag" id="version-tag">Version 1.87.1</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -2288,20 +2288,7 @@
     app.activeIndex = i;
     state = app.characters[i];
     saveState();
-    renderTabs();
-    renderSettingsBar();
-    renderClass();
-    renderHp();
-    renderAbilities();
-    renderAttacks();
-    renderSpellAbilitySelect();
-    renderSpells();
-    renderLog();
-    renderProficiencies();
-    renderInventory();
-    renderNotes();
-    updateLockOverlay();
-    renderCombat();  // Join Combat is only clickable while you're on your own tab
+    renderAll();   // one full refresh so a tab switch and a remote update show exactly the same things
   }
 
   // ---------- Class, subclass and level ----------
@@ -3671,6 +3658,7 @@
         state.attacks.splice(idx,1);
         saveState();
         renderAttacks();
+        renderSpells();   // a Shillelagh card must notice its weapon is gone
       });
       top.appendChild(presetSelect);
       top.appendChild(nameInput);
@@ -4209,9 +4197,9 @@
     function refresh(){ saveState(); renderAttacks(); renderSpells(); }
     if(active !== -1){
       var info = document.createElement("div"); info.className = "shill-msg";
-      info.textContent = "Active on " + state.attacks[active].name + ". It uses " + resolveSpellAbility(shillSpell()) + " for attack and damage with a d8, and it's magical. It ends on a short or long rest.";
+      info.textContent = "Active on " + (state.attacks[active].name || "weapon") + ". It uses " + resolveSpellAbility(shillSpell()) + " for attack and damage with a d8, and it's magical. It ends on a short or long rest.";
       var endBtn = document.createElement("button"); endBtn.type = "button"; endBtn.className = "roll-btn"; endBtn.textContent = "End Shillelagh";
-      endBtn.addEventListener("click", function(){ var nm = state.attacks[active].name; endShillelagh(); addLog("Shillelagh ended", nm, "—", false, null); refresh(); });
+      endBtn.addEventListener("click", function(){ var nm = (state.attacks[active] || {}).name || "weapon"; endShillelagh(); addLog("Shillelagh ended", nm, "—", false, null); refresh(); });
       wrap.appendChild(info); wrap.appendChild(endBtn);
       return wrap;
     }
@@ -4545,7 +4533,11 @@
       coreFields.appendChild(diceLabel);
       if(hpToggleLabel) coreFields.appendChild(hpToggleLabel);
       coreFields.appendChild(dmgBonusLabel);
-      var tickS = buffTick(state.spells[idx], true); if(tickS) coreFields.appendChild(tickS);
+      var tickS = buffTick(state.spells[idx], true);
+      if(tickS){
+        if(currentSpell && currentSpell.noDamage){ tickS.classList.add("disabled-field"); var tcb = tickS.querySelector("input"); if(tcb){ tcb.checked = false; tcb.disabled = true; } }
+        coreFields.appendChild(tickS);
+      }
       fields.appendChild(coreFields);
       if(currentSpell.addSpellMod){
         var modNote = document.createElement("div");
@@ -6301,7 +6293,15 @@
     renderTabs();
     renderSettingsBar();
     renderClass();
+    renderFightingStyle();
+    renderAc();
     renderHp();
+    renderHitDice();
+    renderRestBox();
+    renderSd();
+    renderBuffs();
+    renderInspExh();
+    renderSenses();
     renderAbilities();
     renderAttacks();
     renderSpellAbilitySelect();
@@ -6310,6 +6310,7 @@
     renderProficiencies();
     renderInventory();
     renderNotes();
+    renderParty();
     updateLockOverlay();
   }
 
