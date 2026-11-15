@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Roll Tracker V1.87.1</title>
+<title>Roll Tracker V1.88.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 <style>
   :root{
@@ -440,6 +440,7 @@
   .shill-end{font:inherit;font-size:0.74rem;padding:2px 10px;border-radius:999px;cursor:pointer;background:transparent;color:#4f7d3a;border:1px solid #4f7d3a;}
   .shill-ctl{display:flex;flex-direction:column;gap:8px;margin-top:10px;align-items:flex-start;}
   .shill-pick{display:flex;gap:8px;align-items:center;}
+  .shill-pick select{max-width:none;min-width:140px;}
   .shill-msg{font-size:0.8rem;color:var(--ink-soft);line-height:1.4;}
   .rest-food{display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:0.85rem;color:var(--ink);}
   .conc-mode{font-size:0.72rem;}
@@ -933,7 +934,7 @@
       <div class="account-switcher" id="account-switcher" style="display:none;"></div>
     </div>
     <div class="header-right">
-      <div class="version-tag" id="version-tag">Version 1.87.1</div>
+      <div class="version-tag" id="version-tag">Version 1.88.0</div>
       <div class="char-tabs" id="char-tabs"></div>
       <div class="quickroll" id="quickroll"></div>
     </div>
@@ -1406,9 +1407,84 @@
       saveAbility:"WIS",
       damageType:"Psychic",
       description:"You target a creature you can see within range. If it can hear you (it doesn't need to understand you), it must succeed on a Wisdom saving throw or take psychic damage and have disadvantage on the next attack roll it makes before the end of its next turn."
+    },
+    acidsplash: {
+      label:"Acid Splash", name:"Acid Splash", dice:"1d6", ability:null, noAttackRoll:true, twoTargets:true, category:"Area Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Artificer, Sorcerer, Wizard",
+      saveAbility:"DEX",
+      damageType:"Acid",
+      description:"You hurl a bubble of acid at one creature you can see within range, or at two creatures you can see within range that are within 5 feet of each other. A target must succeed on a Dexterity saving throw or take acid damage. Tick the 2 targets box when you hit two creatures. Damage is rolled once and applies to both."
+    },
+    boomingblade: {
+      label:"Booming Blade", name:"Booming Blade", dice:"1d8", ability:null, noAttackRoll:true, noDamage:true, noScale:true, blade:"booming", category:"Melee Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"Self (5-foot radius)", concentration:false, duration:"1 round",
+      ritual:false, components:"S, M", material:"a melee weapon worth at least 1 sp",
+      scaling:"At 5th level the attack deals an extra 1d8 thunder damage on a hit and the damage for moving becomes 2d8. Both increase by 1d8 at 11th level (2d8 and 3d8) and 17th level (3d8 and 4d8).",
+      spellLists:"Artificer, Sorcerer, Warlock, Wizard",
+      damageType:"Thunder",
+      description:"You swing the weapon used to cast the spell and make a melee attack with it against one creature within 5 feet of you. On a hit, the target suffers the weapon attack's normal effects and is sheathed in booming energy until the start of your next turn. If the target willingly moves 5 feet or more before then, it takes thunder damage and the spell ends. Make the weapon attack from your weapon card, then use the buttons on this card. (Tasha's Cauldron of Everything)"
+    },
+    firebolt: {
+      label:"Fire Bolt", name:"Fire Bolt", dice:"1d10", ability:null, noAttackRoll:false, category:"Ranged Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"120 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d10 at 5th level (2d10), 11th level (3d10), and 17th level (4d10).",
+      spellLists:"Artificer, Sorcerer, Wizard",
+      damageType:"Fire",
+      description:"You hurl a mote of fire at a creature or object within range and make a ranged spell attack. On a hit, the target takes fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried."
+    },
+    greenflameblade: {
+      label:"Green-Flame Blade", name:"Green-Flame Blade", dice:"1d8", ability:null, noAttackRoll:true, noDamage:true, noScale:true, blade:"greenflame", category:"Melee Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"Self (5-foot radius)", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"S, M", material:"a melee weapon worth at least 1 sp",
+      scaling:"At 5th level the melee attack deals an extra 1d8 fire damage on a hit, and the fire damage to the second creature becomes 1d8 + your spellcasting modifier. Both rolls increase to 2d8 at 11th level and 3d8 at 17th level.",
+      spellLists:"Artificer, Sorcerer, Warlock, Wizard",
+      damageType:"Fire",
+      description:"You swing the weapon used to cast the spell and make a melee attack with it against one creature within 5 feet of you. On a hit, the target suffers the weapon attack's normal effects, and green fire leaps from the target to a different creature of your choice that you can see within 5 feet of it. That creature takes fire damage equal to your spellcasting modifier. Make the weapon attack from your weapon card, then use the buttons on this card. (Tasha's Cauldron of Everything, Sword Coast Adventurer's Guide)"
+    },
+    lightninglure: {
+      label:"Lightning Lure", name:"Lightning Lure", dice:"1d8", ability:null, noAttackRoll:true, category:"Ranged Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"Self (15-foot radius)", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Artificer, Sorcerer, Warlock, Wizard",
+      saveAbility:"STR",
+      damageType:"Lightning",
+      description:"You create a lash of lightning energy that strikes one creature of your choice that you can see within 15 feet of you. The target must succeed on a Strength saving throw or be pulled up to 10 feet in a straight line toward you and then take lightning damage if it is within 5 feet of you. (Tasha's Cauldron of Everything)"
+    },
+    rayoffrost: {
+      label:"Ray of Frost", name:"Ray of Frost", dice:"1d8", ability:null, noAttackRoll:false, category:"Ranged Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"60 feet", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Artificer, Sorcerer, Wizard",
+      damageType:"Cold",
+      description:"A frigid beam of blue-white light streaks toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes cold damage, and its speed is reduced by 10 feet until the start of your next turn."
+    },
+    shockinggrasp: {
+      label:"Shocking Grasp", name:"Shocking Grasp", dice:"1d8", ability:null, noAttackRoll:false, category:"Melee Cantrip",
+      school:"Evocation", castingTime:"1 action", range:"Touch", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V, S", material:null,
+      scaling:"Damage increases by 1d8 at 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      spellLists:"Artificer, Sorcerer, Wizard",
+      damageType:"Lightning",
+      description:"Lightning springs from your hand to deliver a shock to a creature you try to touch. Make a melee spell attack against the target. You have advantage on the attack roll if the target is wearing armor made of metal (set the Advantage toggle yourself). On a hit, the target takes lightning damage, and it can't take reactions until the start of its next turn."
+    },
+    swordburst: {
+      label:"Sword Burst", name:"Sword Burst", dice:"1d6", ability:null, noAttackRoll:true, category:"Area Cantrip",
+      school:"Conjuration", castingTime:"1 action", range:"Self (5-foot radius)", concentration:false, duration:"Instantaneous",
+      ritual:false, components:"V", material:null,
+      scaling:"Damage increases by 1d6 at 5th level (2d6), 11th level (3d6), and 17th level (4d6).",
+      spellLists:"Artificer, Sorcerer, Warlock, Wizard",
+      saveAbility:"DEX",
+      damageType:"Force",
+      description:"You create a momentary circle of spectral blades that sweep around you. Each creature other than you within 5 feet of you must succeed on a Dexterity saving throw or take force damage. (Tasha's Cauldron of Everything)"
     }
   };
-  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance","createbonfire","frostbite","infestation","magicstone","primalsavagery","produceflame","shillelagh"];
+  var SPELL_PRESET_ORDER = ["custom","thornwhip","poisonspray","sacredflame","tolldead","thunderclap","viciousmockery","wordofradiance","createbonfire","frostbite","infestation","magicstone","primalsavagery","produceflame","shillelagh","acidsplash","boomingblade","firebolt","greenflameblade","lightninglure","rayoffrost","shockinggrasp","swordburst"];
   var SPELL_CATEGORY_ORDER = [
     "Melee Cantrip","Ranged Cantrip","Area Cantrip",
     "Melee 1st-Level Spell","Ranged 1st-Level Spell",
@@ -4189,6 +4265,46 @@
     var n = 1 + (lvl >= 5 ? 1 : 0) + (lvl >= 11 ? 1 : 0) + (lvl >= 17 ? 1 : 0);
     return n + "d" + m[1];
   }
+  // Booming Blade and Green-Flame Blade: the weapon attack is rolled on the weapon card; these two buttons add the spell's own damage.
+  function buildBlade(sp, pr){
+    var lvl = state.level || 1;
+    var tier = (lvl >= 17 ? 3 : lvl >= 11 ? 2 : lvl >= 5 ? 1 : 0);
+    var mod = getAbilityMod(resolveSpellAbility(sp));
+    var type = pr.damageType.toLowerCase();
+    var booming = pr.blade === "booming";
+    var wrap = document.createElement("div"); wrap.className = "shill-ctl";
+    var msg = document.createElement("div"); msg.className = "shill-msg";
+    msg.textContent = "Make the weapon attack on its weapon card first. If it hits, use these.";
+    var hitDice = tier > 0 ? tier + "d8" : null;
+    var riderDice = booming ? (tier + 1) + "d8" : (tier > 0 ? tier + "d8" : null);
+    var row = document.createElement("div"); row.className = "shill-pick";
+    var b1 = document.createElement("button"); b1.type = "button"; b1.className = "roll-btn";
+    b1.textContent = hitDice ? "1. On Hit (+" + hitDice + " " + type + ")" : "1. On Hit (no extra yet)";
+    if(!hitDice){ b1.disabled = true; b1.title = "The extra damage on a hit starts at 5th level."; }
+    b1.addEventListener("click", function(){
+      var isCrit = !!state.critMode;
+      var rolled = rollDiceGroups(parseDiceGroups(hitDice), isCrit);
+      addLog(sp.name + " — On Hit" + (isCrit ? " (Crit)" : ""), rolled.partsStr, rolled.total, false, null);
+    });
+    var b2 = document.createElement("button"); b2.type = "button"; b2.className = "roll-btn save";
+    b2.textContent = booming ? "2. Target Moves (" + riderDice + " " + type + ")"
+                             : "2. Second Creature (" + (riderDice ? riderDice + " + " : "") + signStr(mod).replace("+","") + " " + type + ")";
+    b2.addEventListener("click", function(){
+      var total, parts;
+      if(booming){
+        var r = rollDiceGroups(parseDiceGroups(riderDice), false);
+        total = r.total; parts = r.partsStr;
+      } else {
+        var r2 = riderDice ? rollDiceGroups(parseDiceGroups(riderDice), false) : null;
+        total = Math.max(0, (r2 ? r2.total : 0) + mod);
+        parts = (r2 ? r2.partsStr + " + " : "") + mod + " (spellcasting modifier)";
+      }
+      addLog(sp.name + (booming ? " — Target Moves" : " — Second Creature"), parts, total, false, null);
+    });
+    row.appendChild(b1); row.appendChild(b2);
+    wrap.appendChild(msg); wrap.appendChild(row);
+    return wrap;
+  }
   // Shillelagh controls on the spell card: Transform Weapon (with a picker when there are several), or End Shillelagh.
   function buildShillelagh(){
     var wrap = document.createElement("div"); wrap.className = "shill-ctl";
@@ -4205,7 +4321,7 @@
     }
     var btn = document.createElement("button"); btn.type = "button"; btn.className = "roll-btn"; btn.textContent = "Transform Weapon";
     var pick = document.createElement("div"); pick.className = "shill-pick"; pick.style.display = "none";
-    var sel = document.createElement("select");
+    var sel = document.createElement("select"); sel.className = "attack-preset";
     var go = document.createElement("button"); go.type = "button"; go.className = "roll-btn"; go.textContent = "Confirm";
     function apply(i){
       var a = state.attacks[i];
@@ -4264,6 +4380,7 @@
         state.spells[idx].preset = key;
         state.spells[idx].critArmed = false;
         state.spells[idx].notFullHp = false;
+        state.spells[idx].twoTargets = false;
         if(key !== "custom"){
           state.spells[idx].name = preset.name;
           state.spells[idx].dice = preset.dice;
@@ -4429,7 +4546,7 @@
       diceInput.title = "You can mix dice sizes here, e.g. 1d8+1d4.";
       if(currentSpell.noDamage){
         diceInput.value = "N/A"; diceInput.disabled = true; diceLabel.classList.add("disabled-field");
-        diceInput.title = "This cantrip deals no damage of its own.";
+        diceInput.title = currentSpell.blade ? "Damage comes from the buttons below this cantrip." : "This cantrip deals no damage of its own.";
       } else if(isCantripPreset(currentSpell)){
         diceInput.readOnly = true;
         diceInput.title = "Cantrip damage follows your Level (1 die, 2 at 5th, 3 at 11th, 4 at 17th). Switch the spell to Custom to type your own dice.";
@@ -4456,6 +4573,22 @@
         });
         hpToggleLabel.appendChild(hpToggleCheck);
         hpToggleLabel.appendChild(document.createTextNode("Target not at full HP"));
+      }
+
+      var twoTargetLabel = null;
+      if(currentSpell.twoTargets){
+        twoTargetLabel = document.createElement("label");
+        twoTargetLabel.className = "prof";
+        var twoTargetCheck = document.createElement("input");
+        twoTargetCheck.type = "checkbox";
+        twoTargetCheck.checked = !!sp.twoTargets;
+        twoTargetCheck.title = "Acid Splash can hit two creatures within 5 feet of each other. Damage is rolled once and applies to both.";
+        twoTargetCheck.addEventListener("change", function(){
+          state.spells[idx].twoTargets = twoTargetCheck.checked;
+          saveState();
+        });
+        twoTargetLabel.appendChild(twoTargetCheck);
+        twoTargetLabel.appendChild(document.createTextNode("2 targets"));
       }
 
       var dmgBonusLabel = document.createElement("label");
@@ -4499,7 +4632,7 @@
       var critArmedSp = !!sp.critArmed;
       dmgBtn.className = "roll-btn save" + (critArmedSp ? " crit-armed" : "");
       dmgBtn.textContent = critArmedSp ? "Damage (Crit!)" : "Damage";
-      if(currentSpell.noDamage){ dmgBtn.textContent = "No damage"; dmgBtn.disabled = true; dmgBtn.title = "This cantrip deals no damage of its own."; }
+      if(currentSpell.noDamage){ dmgBtn.textContent = currentSpell.blade ? "Use buttons below" : "No damage"; dmgBtn.disabled = true; dmgBtn.title = currentSpell.blade ? "Make the weapon attack from your weapon card, then use the On Hit and rider buttons below." : "This cantrip deals no damage of its own."; }
       if(critArmedSp){
         dmgBtn.title = "Natural 20! The next Damage roll for this spell will double its dice.";
       }
@@ -4519,7 +4652,8 @@
         var partsStr = rolled.partsStr + (autoMod !== null ? " + " + autoMod + " (spellcasting modifier)" : "") + " + " + (s.dmgBonus||0);
         var bfS = applyBuffs(total, partsStr, isCrit, s.useBuffs === true); total = bfS.total; partsStr = bfS.partsStr;
         if(isHalf){ partsStr = "(" + partsStr + ") ÷ 2, rounded down"; total = Math.floor(total / 2); }
-        addLog(s.name + " Damage" + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : ""), partsStr, total, false, null);
+        var two = !!(SPELL_PRESETS[s.preset] && SPELL_PRESETS[s.preset].twoTargets && s.twoTargets);
+        addLog(s.name + " Damage" + (isCrit ? " (Crit)" : "") + (isHalf ? " (Half)" : "") + (two ? " — Target 1 & Target 2" : ""), partsStr + (two ? " (one roll, both targets)" : ""), total, false, null);
         if(wasArmed){
           s.critArmed = false;
           saveState();
@@ -4532,6 +4666,7 @@
       coreFields.appendChild(atkLabel);
       coreFields.appendChild(diceLabel);
       if(hpToggleLabel) coreFields.appendChild(hpToggleLabel);
+      if(twoTargetLabel) coreFields.appendChild(twoTargetLabel);
       coreFields.appendChild(dmgBonusLabel);
       var tickS = buffTick(state.spells[idx], true);
       if(tickS){
@@ -4553,6 +4688,7 @@
       fields.appendChild(rollButtons);
 
       if(currentSpell.shillelagh) fields.appendChild(buildShillelagh());
+      if(currentSpell.blade) fields.appendChild(buildBlade(sp, currentSpell));
 
       box.appendChild(fields);
       spellsEl.appendChild(box);
@@ -5284,6 +5420,12 @@
       title: "Shillelagh",
       showIf: function(){ return !!shillSpell(); },
       text: "If you have the Shillelagh cantrip, its card has a Transform Weapon button. It turns a club or quarterstaff from your weapon list into a Shillelagh weapon: it uses your spellcasting ability for attack and damage, deals a d8 whichever way you hold it, and gets a green vine border. If you have more than one valid weapon you pick which. The card's button becomes End Shillelagh, and you can't start another until it ends. A short or long rest ends it for you."
+    },
+    {
+      targetSelector: "#spells .attack-top",
+      title: "Blade Cantrips & Acid Splash",
+      showIf: function(){ return state.spells.some(function(x){ var q = SPELL_PRESETS[x.preset]; return q && (q.blade || q.twoTargets); }); },
+      text: "Booming Blade and Green-Flame Blade: roll the weapon attack and its damage on the weapon card as usual. If it hits, press button 1 on the spell card for the extra damage (it starts at 5th level), then button 2 for the rider damage when the target moves (Booming Blade) or for the second creature (Green-Flame Blade, which adds your spellcasting modifier). Acid Splash has a 2 targets box. Tick it and one damage roll is logged for both targets, since a spell's damage is rolled once for everything it hits."
     },
     {
       targetSelector: "#log-list",
